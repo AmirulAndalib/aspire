@@ -26,7 +26,7 @@ public sealed class AzureManifestUtils
         {
             var executionContext = new DistributedApplicationExecutionContext(DistributedApplicationOperation.Publish);
             var azurePreparer = new AzureResourcePreparer(Options.Create(new AzureProvisioningOptions()), executionContext);
-            await azurePreparer.OnBeforeStartAsync(new BeforeStartEvent(new TestServiceProvider(), appModel), cancellationToken: default);
+            await azurePreparer.PrepareResourcesAsync(appModel, cancellationToken: default);
         }
 
         string manifestDir = Directory.CreateTempSubdirectory(resource.Name).FullName;
