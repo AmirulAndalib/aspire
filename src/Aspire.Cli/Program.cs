@@ -369,7 +369,8 @@ public class Program
 
         // Bundle layout services (for polyglot apphost without .NET SDK).
         // Registered before NuGetPackageCache so the factory can choose implementation.
-        builder.Services.AddSingleton<ILayoutDiscovery, LayoutDiscovery>();
+        builder.Services.AddSingleton<ILayoutDiscovery>(sp =>
+            new LayoutDiscovery(sp.GetRequiredService<CliExecutionContext>(), sp.GetRequiredService<ILogger<LayoutDiscovery>>()));
         builder.Services.AddSingleton<BundleNuGetService>();
 
         // Git repository operations.
