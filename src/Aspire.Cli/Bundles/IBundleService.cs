@@ -39,6 +39,14 @@ internal interface IBundleService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The discovered layout, or <see langword="null"/> if no layout is found.</returns>
     Task<LayoutConfiguration?> EnsureExtractedAndGetLayoutAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Determines the default extraction directory for the given CLI binary path.
+    /// Returns the well-known <c>~/.aspire/</c> directory for non-standard install locations.
+    /// </summary>
+    /// <param name="processPath">The path to the CLI binary.</param>
+    /// <returns>The directory to extract the bundle into.</returns>
+    string GetDefaultExtractDir(string processPath);
 }
 
 /// <summary>

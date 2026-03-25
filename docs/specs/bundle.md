@@ -247,7 +247,8 @@ When a polyglot project runs `aspire run`, `AppHostServerProjectFactory.CreateAs
 
 ### Extraction Directory Resolution
 
-The default extraction directory is determined by `BundleService.GetDefaultExtractDir()`:
+The default extraction directory is determined by `BundleService.GetDefaultExtractDir()`, which uses
+`CliExecutionContext.AspireDirectory` as the well-known `~/.aspire/` path:
 
 1. **Standard layout** (`~/.aspire/bin/aspire`): extracts to the parent directory (`~/.aspire/`), keeping
    all components co-located in the user's Aspire directory.

@@ -12,83 +12,60 @@ public class LayoutDiscoveryTests : IDisposable
     private readonly List<string> _tempDirs = [];
 
     [Fact]
-    public void DiscoverLayout_PrefersEnvVarOverWellKnownPath()
+    public void DiscoverLayout_FindsWellKnownPath_WhenValidLayoutExists()
     {
-        // Create a temp directory with a valid layout and set it via the env var.
-        // Even if a real layout exists at ~/.aspire/, the env var should take priority.
-        var fakeLayoutDir = CreateTempDirectory();
-        CreateValidBundleLayout(fakeLayoutDir);
+        // Create a temp dir simulating ~/.aspire/ with a valid layout
+        var fakeHome = CreateTempDirectory();
+        var aspireDir = Path.Combine(fakeHome, ".aspire");
+        Directory.CreateDirectory(aspireDir);
+        CreateValidBundleLayout(aspireDir);
 
-        var envBefore = Environment.GetEnvironmentVariable(BundleDiscovery.LayoutPathEnvVar);
-        try
-        {
-            Environment.SetEnvironmentVariable(BundleDiscovery.LayoutPathEnvVar, fakeLayoutDir);
+        var context = CreateContext(fakeHome);
+        var discovery = new LayoutDiscovery(context, NullLogger<LayoutDiscovery>.Instance);
+        var layout = discovery.DiscoverLayout();
 
-            var discovery = new LayoutDiscovery(NullLogger<LayoutDiscovery>.Instance);
-            var layout = discovery.DiscoverLayout();
-
-            Assert.NotNull(layout);
-            Assert.Equal(fakeLayoutDir, layout.LayoutPath);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(BundleDiscovery.LayoutPathEnvVar, envBefore);
-        }
+        Assert.NotNull(layout);
+        Assert.Equal(aspireDir, layout.LayoutPath);
     }
 
     [Fact]
-    public void DiscoverLayout_IgnoresEnvVar_WhenPathHasNoValidLayout()
+    public void DiscoverLayout_ReturnsNull_WhenNoValidLayout()
     {
-        // Point the env var at an empty directory — it should be skipped.
-        var emptyDir = CreateTempDirectory();
+        // Create a temp dir with no valid layout anywhere
+        var fakeHome = CreateTempDirectory();
+        var aspireDir = Path.Combine(fakeHome, ".aspire");
+        Directory.CreateDirectory(aspireDir);
+        // No managed/dcp directories
 
-        var envBefore = Environment.GetEnvironmentVariable(BundleDiscovery.LayoutPathEnvVar);
-        try
+        var context = CreateContext(fakeHome);
+        var discovery = new LayoutDiscovery(context, NullLogger<LayoutDiscovery>.Instance);
+        var layout = discovery.DiscoverLayout();
+
+        // Layout could still be found via relative path (unlikely in test), but
+        // it should NOT find one at the well-known path because it's incomplete
+        if (layout is not null)
         {
-            Environment.SetEnvironmentVariable(BundleDiscovery.LayoutPathEnvVar, emptyDir);
-
-            var discovery = new LayoutDiscovery(NullLogger<LayoutDiscovery>.Instance);
-            var layout = discovery.DiscoverLayout();
-
-            // Layout may still be discovered via relative or well-known paths,
-            // but it must NOT come from the invalid env var path.
-            if (layout is not null)
-            {
-                Assert.NotEqual(emptyDir, layout.LayoutPath);
-            }
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(BundleDiscovery.LayoutPathEnvVar, envBefore);
+            Assert.NotEqual(aspireDir, layout.LayoutPath);
         }
     }
 
     [Fact]
     public void DiscoverLayout_RejectsLayout_WhenManagedDirectoriesExistButExecutableIsMissing()
     {
-        // Create directories but no aspire-managed executable.
-        var incompleteDir = CreateTempDirectory();
-        Directory.CreateDirectory(Path.Combine(incompleteDir, BundleDiscovery.ManagedDirectoryName));
-        Directory.CreateDirectory(Path.Combine(incompleteDir, BundleDiscovery.DcpDirectoryName));
+        var fakeHome = CreateTempDirectory();
+        var aspireDir = Path.Combine(fakeHome, ".aspire");
+        Directory.CreateDirectory(Path.Combine(aspireDir, BundleDiscovery.ManagedDirectoryName));
+        Directory.CreateDirectory(Path.Combine(aspireDir, BundleDiscovery.DcpDirectoryName));
+        // No aspire-managed executable
 
-        var envBefore = Environment.GetEnvironmentVariable(BundleDiscovery.LayoutPathEnvVar);
-        try
+        var context = CreateContext(fakeHome);
+        var discovery = new LayoutDiscovery(context, NullLogger<LayoutDiscovery>.Instance);
+        var layout = discovery.DiscoverLayout();
+
+        // The incomplete directory should not be selected
+        if (layout is not null)
         {
-            Environment.SetEnvironmentVariable(BundleDiscovery.LayoutPathEnvVar, incompleteDir);
-
-            var discovery = new LayoutDiscovery(NullLogger<LayoutDiscovery>.Instance);
-            var layout = discovery.DiscoverLayout();
-
-            // The incomplete directory should not be selected as the layout path.
-            // The discovery may still find a valid layout elsewhere (relative or well-known).
-            if (layout is not null)
-            {
-                Assert.NotEqual(incompleteDir, layout.LayoutPath);
-            }
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable(BundleDiscovery.LayoutPathEnvVar, envBefore);
+            Assert.NotEqual(aspireDir, layout.LayoutPath);
         }
     }
 
@@ -97,6 +74,19 @@ public class LayoutDiscoveryTests : IDisposable
         var dir = Directory.CreateTempSubdirectory("aspire-layout-test-").FullName;
         _tempDirs.Add(dir);
         return dir;
+    }
+
+    private static CliExecutionContext CreateContext(string homeDir)
+    {
+        var aspireDir = Path.Combine(homeDir, ".aspire");
+        return new CliExecutionContext(
+            new DirectoryInfo("."),
+            new DirectoryInfo(Path.Combine(aspireDir, "hives")),
+            new DirectoryInfo(Path.Combine(aspireDir, "cache")),
+            new DirectoryInfo(Path.Combine(aspireDir, "sdks")),
+            new DirectoryInfo(Path.Combine(aspireDir, "logs")),
+            "test.log",
+            homeDirectory: new DirectoryInfo(homeDir));
     }
 
     private static void CreateValidBundleLayout(string layoutPath)

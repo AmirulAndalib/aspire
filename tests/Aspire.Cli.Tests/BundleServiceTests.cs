@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Cli.Bundles;
+using Aspire.Cli.Tests.Utils;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Aspire.Cli.Tests;
 
@@ -55,54 +57,75 @@ public class BundleServiceTests
     [Fact]
     public void GetDefaultExtractDir_ReturnsAspireDir_ForStandardLayout()
     {
-        if (OperatingSystem.IsWindows())
+        // Create a temp directory simulating {home}/.aspire/bin/aspire
+        var fakeHome = Directory.CreateTempSubdirectory("aspire-test-home");
+        try
         {
-            var result = BundleService.GetDefaultExtractDir(@"C:\Users\test\.aspire\bin\aspire.exe");
-            Assert.Equal(@"C:\Users\test\.aspire", result);
+            var aspireDir = Path.Combine(fakeHome.FullName, ".aspire");
+            var binDir = Path.Combine(aspireDir, "bin");
+            Directory.CreateDirectory(binDir);
+            var processPath = Path.Combine(binDir, "aspire");
+
+            var context = CreateContext(fakeHome.FullName);
+            var service = CreateBundleService(context);
+
+            var result = service.GetDefaultExtractDir(processPath);
+            Assert.Equal(aspireDir, result);
         }
-        else
+        finally
         {
-            var result = BundleService.GetDefaultExtractDir("/home/test/.aspire/bin/aspire");
-            Assert.Equal("/home/test/.aspire", result);
+            fakeHome.Delete(recursive: true);
         }
     }
 
     [Fact]
-    public void GetDefaultExtractDir_FallsBackToWellKnownDir_ForNonStandardLayout()
+    public void GetDefaultExtractDir_FallsBackToAspireDir_ForNonStandardLayout()
     {
-        var expected = BundleService.GetWellKnownAspireDir();
+        var fakeHome = Directory.CreateTempSubdirectory("aspire-test-home");
+        try
+        {
+            var expectedAspireDir = Path.Combine(fakeHome.FullName, ".aspire");
+            var context = CreateContext(fakeHome.FullName);
+            var service = CreateBundleService(context);
 
-        if (OperatingSystem.IsWindows())
-        {
-            Assert.Equal(expected, BundleService.GetDefaultExtractDir(@"C:\Program Files\WinGet\Links\aspire.exe"));
+            // Simulate Homebrew/Winget paths that are NOT under the aspire directory
+            Assert.Equal(expectedAspireDir, service.GetDefaultExtractDir("/usr/local/bin/aspire"));
+            Assert.Equal(expectedAspireDir, service.GetDefaultExtractDir("/opt/homebrew/bin/aspire"));
+
+            if (OperatingSystem.IsWindows())
+            {
+                Assert.Equal(expectedAspireDir, service.GetDefaultExtractDir(@"C:\Program Files\WinGet\Links\aspire.exe"));
+            }
         }
-        else
+        finally
         {
-            Assert.Equal(expected, BundleService.GetDefaultExtractDir("/usr/local/bin/aspire"));
-            Assert.Equal(expected, BundleService.GetDefaultExtractDir("/opt/homebrew/bin/aspire"));
+            fakeHome.Delete(recursive: true);
         }
     }
 
     [Fact]
-    public void GetDefaultExtractDir_FallsBackToWellKnownDir_ForCustomInstallLocation()
+    public void GetDefaultExtractDir_FallsBackToAspireDir_ForCustomInstallLocation()
     {
-        var expected = BundleService.GetWellKnownAspireDir();
-
-        if (OperatingSystem.IsWindows())
+        var fakeHome = Directory.CreateTempSubdirectory("aspire-test-home");
+        try
         {
-            Assert.Equal(expected, BundleService.GetDefaultExtractDir(@"D:\tools\aspire\bin\aspire.exe"));
-        }
-        else
-        {
-            Assert.Equal(expected, BundleService.GetDefaultExtractDir("/opt/aspire/bin/aspire"));
-        }
-    }
+            var expectedAspireDir = Path.Combine(fakeHome.FullName, ".aspire");
+            var context = CreateContext(fakeHome.FullName);
+            var service = CreateBundleService(context);
 
-    [Fact]
-    public void GetWellKnownAspireDir_ReturnsExpectedPath()
-    {
-        var expected = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".aspire");
-        Assert.Equal(expected, BundleService.GetWellKnownAspireDir());
+            if (OperatingSystem.IsWindows())
+            {
+                Assert.Equal(expectedAspireDir, service.GetDefaultExtractDir(@"D:\tools\aspire\bin\aspire.exe"));
+            }
+            else
+            {
+                Assert.Equal(expectedAspireDir, service.GetDefaultExtractDir("/opt/aspire/bin/aspire"));
+            }
+        }
+        finally
+        {
+            fakeHome.Delete(recursive: true);
+        }
     }
 
     [Fact]
@@ -111,5 +134,26 @@ public class BundleServiceTests
         var version = BundleService.GetCurrentVersion();
         Assert.NotNull(version);
         Assert.NotEqual("unknown", version);
+    }
+
+    private static CliExecutionContext CreateContext(string homeDir)
+    {
+        var aspireDir = Path.Combine(homeDir, ".aspire");
+        return new CliExecutionContext(
+            new DirectoryInfo("."),
+            new DirectoryInfo(Path.Combine(aspireDir, "hives")),
+            new DirectoryInfo(Path.Combine(aspireDir, "cache")),
+            new DirectoryInfo(Path.Combine(aspireDir, "sdks")),
+            new DirectoryInfo(Path.Combine(aspireDir, "logs")),
+            "test.log",
+            homeDirectory: new DirectoryInfo(homeDir));
+    }
+
+    private static BundleService CreateBundleService(CliExecutionContext context)
+    {
+        return new BundleService(
+            new NullLayoutDiscovery(),
+            context,
+            NullLogger<BundleService>.Instance);
     }
 }

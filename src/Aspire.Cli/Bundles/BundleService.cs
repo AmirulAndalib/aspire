@@ -14,7 +14,7 @@ namespace Aspire.Cli.Bundles;
 /// <summary>
 /// Manages extraction of the embedded bundle payload from self-extracting CLI binaries.
 /// </summary>
-internal sealed class BundleService(ILayoutDiscovery layoutDiscovery, ILogger<BundleService> logger) : IBundleService
+internal sealed class BundleService(ILayoutDiscovery layoutDiscovery, CliExecutionContext executionContext, ILogger<BundleService> logger) : IBundleService
 {
     private const string PayloadResourceName = "bundle.tar.gz";
 
@@ -62,11 +62,6 @@ internal sealed class BundleService(ILayoutDiscovery layoutDiscovery, ILogger<Bu
         }
 
         var extractDir = GetDefaultExtractDir(processPath);
-        if (extractDir is null)
-        {
-            logger.LogDebug("Could not determine extraction directory from {ProcessPath}, skipping.", processPath);
-            return;
-        }
 
         logger.LogDebug("Ensuring bundle is extracted to {ExtractDir}.", extractDir);
         var result = await ExtractAsync(extractDir, force: false, cancellationToken);
@@ -161,47 +156,24 @@ internal sealed class BundleService(ILayoutDiscovery layoutDiscovery, ILogger<Bu
     /// falls back to the well-known <c>~/.aspire/</c> directory so that extraction artifacts
     /// stay in a user-writable, predictable location.
     /// </summary>
-    internal static string? GetDefaultExtractDir(string processPath)
+    public string GetDefaultExtractDir(string processPath)
     {
+        var aspireDir = executionContext.AspireDirectory.FullName;
+
         var cliDir = Path.GetDirectoryName(processPath);
-        if (string.IsNullOrEmpty(cliDir))
-        {
-            return null;
-        }
+        var parentDir = cliDir is not null ? Path.GetDirectoryName(cliDir) : null;
 
-        var parentDir = Path.GetDirectoryName(cliDir);
-        if (parentDir is null)
-        {
-            return GetWellKnownAspireDir();
-        }
-
-        // If the parent directory is the well-known .aspire directory (standard layout),
+        // If the parent directory matches the well-known aspire directory (standard layout),
         // use it directly so extraction lands alongside the CLI.
-        if (IsAspireDirectory(parentDir))
+        if (parentDir is not null &&
+            string.Equals(Path.GetFullPath(parentDir), Path.GetFullPath(aspireDir), StringComparison.OrdinalIgnoreCase))
         {
             return parentDir;
         }
 
         // Non-standard install location — fall back to ~/.aspire/ to avoid writing into
         // system directories like /usr/local/ or C:\Program Files\.
-        return GetWellKnownAspireDir();
-    }
-
-    /// <summary>
-    /// Gets the well-known <c>~/.aspire/</c> directory path.
-    /// </summary>
-    internal static string GetWellKnownAspireDir()
-    {
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".aspire");
-    }
-
-    /// <summary>
-    /// Checks whether the given directory path is a <c>.aspire</c> directory.
-    /// </summary>
-    private static bool IsAspireDirectory(string directoryPath)
-    {
-        var dirName = Path.GetFileName(directoryPath);
-        return string.Equals(dirName, ".aspire", StringComparison.OrdinalIgnoreCase);
+        return aspireDir;
     }
 
     /// <summary>

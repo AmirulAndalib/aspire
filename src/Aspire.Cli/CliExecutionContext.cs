@@ -29,6 +29,14 @@ internal sealed class CliExecutionContext(DirectoryInfo workingDirectory, Direct
     public string LogFilePath { get; } = logFilePath;
 
     public DirectoryInfo HomeDirectory { get; } = homeDirectory ?? new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+    /// <summary>
+    /// Gets the well-known <c>~/.aspire/</c> directory used for CLI data storage, bundles, and settings.
+    /// </summary>
+    public DirectoryInfo AspireDirectory { get; } = new DirectoryInfo(Path.Combine(
+        (homeDirectory ?? new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))).FullName,
+        ".aspire"));
+
     public bool DebugMode { get; } = debugMode;
 
     /// <summary>

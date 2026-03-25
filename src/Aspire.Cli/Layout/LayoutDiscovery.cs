@@ -36,9 +36,11 @@ public interface ILayoutDiscovery
 public sealed class LayoutDiscovery : ILayoutDiscovery
 {
     private readonly ILogger<LayoutDiscovery> _logger;
+    private readonly CliExecutionContext _executionContext;
 
-    public LayoutDiscovery(ILogger<LayoutDiscovery> logger)
+    internal LayoutDiscovery(CliExecutionContext executionContext, ILogger<LayoutDiscovery> logger)
     {
+        _executionContext = executionContext;
         _logger = logger;
     }
 
@@ -192,7 +194,7 @@ public sealed class LayoutDiscovery : ILayoutDiscovery
 
     private LayoutConfiguration? TryDiscoverWellKnownLayout()
     {
-        var wellKnownPath = Bundles.BundleService.GetWellKnownAspireDir();
+        var wellKnownPath = _executionContext.AspireDirectory.FullName;
 
         _logger.LogDebug("TryDiscoverWellKnownLayout: Checking well-known path {Path}...", wellKnownPath);
 
