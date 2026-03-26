@@ -250,6 +250,40 @@ This is a large body of work. A possible progression:
 6. **Azure DevOps support** — validate the abstraction generalizes.
 7. **Bring-your-own-pipeline** — support for existing pipeline structures.
 
+### Pipeline CLI Commands
+
+We propose two new CLI commands for managing pipeline definitions:
+
+#### `aspire pipeline save`
+
+Writes out the pipeline structure as defined in the app model. This is analogous to `aspire publish` for compute environments — it materializes the pipeline definition (e.g., a GitHub Actions workflow YAML) to disk so it can be committed to the repository.
+
+#### `aspire pipeline verify`
+
+Validates that the pipeline artifacts on disk match what the app model defines. The primary purpose is to fail early in CI — if someone modifies the generated workflow by hand, or if the app model changes but the pipeline files haven't been regenerated, `aspire pipeline verify` fails the pipeline before any real work happens. This is the same pattern as `dotnet format --verify-no-changes` — a cheap check at the start of the pipeline that catches drift before you waste time building and deploying against a stale configuration.
+
+**Bootstrapping challenge**: There's a chicken-and-egg problem with PR merges. If a PR changes the app model in a way that affects the pipeline definition, the verify step in the *existing* pipeline would fail — but the updated pipeline files are part of the same PR. Options to explore:
+
+- Require that `aspire pipeline save` is run locally before committing (like `dotnet format`), so the PR always includes both the app model change and the updated pipeline files.
+- Have a separate "pipeline sync check" that runs as a GitHub status check or bot comment rather than as a step inside the pipeline itself.
+- Accept that the verify step runs in the pipeline defined by the *base branch*, so it validates the previous contract, and only enforce strict verification on the default branch after merge.
+
+#### Validating Existing Pipeline References
+
+When using the bring-your-own-pipeline model:
+
+```csharp
+builder.AddGitHubActions("ci")
+    .AddExistingWorkflow(".github/workflows/deploy.yml")
+    .AddExistingStage("deploy")
+    .AddExistingJob("deploy-to-aca")
+    .AddExistingStep("run-aspire-deploy");
+```
+
+`aspire pipeline verify` could parse the referenced workflow file and validate that the declared stages, jobs, and steps actually exist. This gives developers a compile-time-like check that their app model references match reality.
+
+**Caveat**: GitHub Actions workflow files can contain template expression syntax (`${{ }}`) that makes static parsing unreliable — a job name might be dynamically constructed, or a step might be conditionally included. We should handle this gracefully: validate what we can, and warn (rather than error) when we encounter expressions that prevent full validation. It may also be worth considering whether there is a subset of validation that is always safe (e.g., file exists, top-level job names are present) vs. deeper structural validation that is best-effort.
+
 ## Pillar 3: Make Azure Awesome
 
 Aspire is cloud-agnostic, but the Azure integrations live in this repository and it's our job to maintain them. As the maintainers of Azure functionality for Aspire, we have a dual responsibility: get the abstractions right so that other cloud providers can integrate with Aspire, and take full advantage of Azure's capabilities. In many ways, solving the problems for Azure helps clear the path for others to follow.
