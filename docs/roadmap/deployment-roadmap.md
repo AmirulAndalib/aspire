@@ -13,7 +13,7 @@ Aspire's deployment story has matured significantly. Today we ship:
 - **Kubernetes** (`Aspire.Hosting.Kubernetes`) — manifest generation and Helm chart support exist, but the developer experience has significant gaps.
 - **22+ Azure resource packages** — from Cosmos DB and Service Bus to Key Vault and Virtual Networks.
 - **Pipeline execution framework** — internal infrastructure for orchestrating build, publish, and deploy steps.
-- **CLI commands** — `aspire publish`, `aspire deploy`, and `aspire export`.
+- **CLI commands** — `aspire publish` and `aspire deploy`.
 
 What follows are the four pillars of investment we believe will take the deployment experience from good to transformative.
 
