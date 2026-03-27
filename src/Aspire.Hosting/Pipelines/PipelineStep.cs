@@ -58,6 +58,17 @@ public class PipelineStep
     public IResource? Resource { get; set; }
 
     /// <summary>
+    /// Gets or sets the pipeline step target that this step is scheduled onto.
+    /// </summary>
+    /// <remarks>
+    /// When set, the step is intended to execute in the context of the specified target
+    /// (e.g., a specific job in a CI/CD workflow). The scheduling resolver validates that
+    /// step-to-target assignments are consistent with the step dependency graph.
+    /// When <c>null</c>, the step is assigned to a default target or runs locally.
+    /// </remarks>
+    public IPipelineStepTarget? ScheduledBy { get; set; }
+
+    /// <summary>
     /// Adds a dependency on another step.
     /// </summary>
     /// <param name="stepName">The name of the step to depend on.</param>

@@ -25,12 +25,15 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
 {
     private readonly List<PipelineStep> _steps = [];
     private readonly List<Func<PipelineConfigurationContext, Task>> _configurationCallbacks = [];
+    private readonly DistributedApplicationModel _model;
 
     // Store resolved pipeline data for diagnostics
     private List<PipelineStep>? _lastResolvedSteps;
 
-    public DistributedApplicationPipeline()
+    public DistributedApplicationPipeline(DistributedApplicationModel model)
     {
+        _model = model;
+
         // Dependency order
         // {verb} -> {user steps} -> {verb}-prereq
 
@@ -266,12 +269,21 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         });
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DistributedApplicationPipeline"/> class with an empty model.
+    /// Used for testing scenarios where the model is not needed.
+    /// </summary>
+    public DistributedApplicationPipeline() : this(new DistributedApplicationModel(Array.Empty<IResource>()))
+    {
+    }
+
     public bool HasSteps => _steps.Count > 0;
 
     public void AddStep(string name,
         Func<PipelineStepContext, Task> action,
         object? dependsOn = null,
-        object? requiredBy = null)
+        object? requiredBy = null,
+        IPipelineStepTarget? scheduledBy = null)
     {
         if (_steps.Any(s => s.Name == name))
         {
@@ -282,7 +294,8 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         var step = new PipelineStep
         {
             Name = name,
-            Action = action
+            Action = action,
+            ScheduledBy = scheduledBy
         };
 
         if (dependsOn != null)
@@ -355,6 +368,40 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
     {
         ArgumentNullException.ThrowIfNull(callback);
         _configurationCallbacks.Add(callback);
+    }
+
+    public async Task<IPipelineEnvironment> GetEnvironmentAsync(CancellationToken cancellationToken = default)
+    {
+        var relevantEnvironments = new List<IPipelineEnvironment>();
+        var checkContext = new PipelineEnvironmentCheckContext { CancellationToken = cancellationToken };
+
+        foreach (var resource in _model.Resources.OfType<IPipelineEnvironment>())
+        {
+            if (resource is IResource resourceWithAnnotations &&
+                resourceWithAnnotations.TryGetAnnotationsOfType<PipelineEnvironmentCheckAnnotation>(out var annotations))
+            {
+                foreach (var annotation in annotations)
+                {
+                    if (await annotation.CheckAsync(checkContext).ConfigureAwait(false))
+                    {
+                        relevantEnvironments.Add(resource);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (relevantEnvironments.Count > 1)
+        {
+            var environmentNames = string.Join(", ", relevantEnvironments.Select(e => ((IResource)e).Name));
+            throw new InvalidOperationException(
+                $"Multiple pipeline environments reported as relevant for the current invocation: {environmentNames}. " +
+                $"Only one pipeline environment can be active at a time.");
+        }
+
+        return relevantEnvironments.Count == 1
+            ? relevantEnvironments[0]
+            : new LocalPipelineEnvironment();
     }
 
     public async Task ExecuteAsync(PipelineContext context)
