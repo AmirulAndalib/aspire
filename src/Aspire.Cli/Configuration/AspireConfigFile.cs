@@ -103,10 +103,47 @@ internal sealed class AspireConfigFile
 
     /// <summary>
     /// Integration references for non-first-class languages.
+    /// Written as <c>"integrations"</c> in new files.
     /// </summary>
     [JsonPropertyName("integrations")]
     [Description("Integration references for non-first-class languages. Key is package name, value is version. A value ending in \".csproj\" is treated as a project reference.")]
     public Dictionary<string, string>? Packages { get; set; }
+
+    /// <summary>
+    /// Legacy property for backward compatibility. Reads the <c>"packages"</c> key from
+    /// older aspire.config.json files. Merged into <see cref="Packages"/> after deserialization
+    /// via <see cref="MergeLegacyPackages"/> (which sets this to <c>null</c>).
+    /// Never written back because <c>DefaultIgnoreCondition = WhenWritingNull</c> is configured
+    /// on the serializer context.
+    /// </summary>
+    [JsonPropertyName("packages")]
+    public Dictionary<string, string>? LegacyPackages { get; set; }
+
+    /// <summary>
+    /// Merges any entries from the legacy <c>"packages"</c> key into <see cref="Packages"/>
+    /// (the <c>"integrations"</c> key). Entries already in <see cref="Packages"/> take precedence.
+    /// </summary>
+    internal void MergeLegacyPackages()
+    {
+        if (LegacyPackages is null)
+        {
+            return;
+        }
+
+        if (Packages is null)
+        {
+            Packages = LegacyPackages;
+        }
+        else
+        {
+            foreach (var (key, val) in LegacyPackages)
+            {
+                Packages.TryAdd(key, val);
+            }
+        }
+
+        LegacyPackages = null;
+    }
 
     /// <summary>
     /// Loads aspire.config.json from the specified directory.
@@ -124,8 +161,10 @@ internal sealed class AspireConfigFile
         try
         {
             var json = File.ReadAllText(filePath);
-            return JsonSerializer.Deserialize(json, JsonSourceGenerationContext.Default.AspireConfigFile)
+            var config = JsonSerializer.Deserialize(json, JsonSourceGenerationContext.Default.AspireConfigFile)
                 ?? new AspireConfigFile();
+            config.MergeLegacyPackages();
+            return config;
         }
         catch (JsonException ex)
         {
@@ -138,9 +177,11 @@ internal sealed class AspireConfigFile
     /// <summary>
     /// Saves aspire.config.json to the specified directory.
     /// Uses relaxed JSON escaping so non-ASCII characters (CJK, etc.) are preserved as-is.
+    /// Always writes the <c>"integrations"</c> key (never legacy <c>"packages"</c>).
     /// </summary>
     public void Save(string directory)
     {
+        MergeLegacyPackages();
         Directory.CreateDirectory(directory);
         var filePath = Path.Combine(directory, FileName);
         var json = JsonSerializer.Serialize(this, JsonSourceGenerationContext.RelaxedEscaping.AspireConfigFile);
