@@ -57,12 +57,12 @@ internal sealed class CertificateService(
         var trustResult = await CheckMachineReadableAsync();
         await HandleMachineReadableTrustAsync(trustResult, environmentVariables);
 
-        ExportDevCertificatePem();
+        var devCertPemPath = ExportDevCertificatePem();
 
         return new EnsureCertificatesTrustedResult
         {
             EnvironmentVariables = environmentVariables,
-            DevCertPemPath = File.Exists(DevCertPemPath) ? DevCertPemPath : null
+            DevCertPemPath = devCertPemPath
         };
     }
 
@@ -145,7 +145,7 @@ internal sealed class CertificateService(
         }
     }
 
-    private void ExportDevCertificatePem()
+    private string? ExportDevCertificatePem()
     {
         try
         {
@@ -158,10 +158,13 @@ internal sealed class CertificateService(
             {
                 logger.LogDebug("No valid dev certificate found to export as PEM");
             }
+
+            return result;
         }
         catch (Exception ex)
         {
             logger.LogDebug(ex, "Failed to export dev certificate as PEM");
+            return null;
         }
     }
 

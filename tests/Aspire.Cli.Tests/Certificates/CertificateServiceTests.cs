@@ -254,9 +254,10 @@ public class CertificateServiceTests(ITestOutputHelper outputHelper)
         var sp = services.BuildServiceProvider();
         var cs = sp.GetRequiredService<ICertificateService>();
 
-        await cs.EnsureCertificatesTrustedAsync(TestContext.Current.CancellationToken).DefaultTimeout();
+        var result = await cs.EnsureCertificatesTrustedAsync(TestContext.Current.CancellationToken).DefaultTimeout();
 
         Assert.True(exportCalled);
+        Assert.NotNull(result.DevCertPemPath);
     }
 
     [Fact]
@@ -290,6 +291,7 @@ public class CertificateServiceTests(ITestOutputHelper outputHelper)
         // Should not throw even when PEM export fails
         var result = await cs.EnsureCertificatesTrustedAsync(TestContext.Current.CancellationToken).DefaultTimeout();
         Assert.NotNull(result);
+        Assert.Null(result.DevCertPemPath);
     }
 
     private sealed class TestCertificateToolRunner : ICertificateToolRunner
