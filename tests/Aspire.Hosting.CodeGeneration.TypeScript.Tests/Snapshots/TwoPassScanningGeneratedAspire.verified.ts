@@ -287,6 +287,14 @@ export enum EndpointProperty {
     TlsEnabled = "TlsEnabled",
 }
 
+/** Enum type for HttpCommandResultMode */
+export enum HttpCommandResultMode {
+    None = "None",
+    Auto = "Auto",
+    Json = "Json",
+    Text = "Text",
+}
+
 /** Enum type for IconVariant */
 export enum IconVariant {
     Regular = "Regular",
@@ -441,6 +449,19 @@ export interface ReferenceEnvironmentInjectionOptions {
     connectionProperties?: boolean;
     serviceDiscovery?: boolean;
     endpoints?: boolean;
+}
+
+/** DTO interface for HttpCommandExportOptions */
+export interface HttpCommandExportOptions {
+    description?: string;
+    confirmationMessage?: string;
+    iconName?: string;
+    iconVariant?: IconVariant;
+    isHighlighted?: boolean;
+    commandName?: string;
+    endpointName?: string;
+    methodName?: string;
+    resultMode?: HttpCommandResultMode;
 }
 
 /** DTO interface for ResourceEventDto */
@@ -9451,6 +9472,22 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
     }
 
     /** @internal */
+    private async _withHttpCommandInternal(path: string, displayName: string, options?: HttpCommandExportOptions): Promise<ContainerResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, path, displayName };
+        if (options !== undefined) rpcArgs.options = options;
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withHttpCommand',
+            rpcArgs
+        );
+        return new ContainerResource(result, this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ContainerResourcePromise {
+        return new ContainerResourcePromise(this._withHttpCommandInternal(path, displayName, options));
+    }
+
+    /** @internal */
     private async _withDeveloperCertificateTrustInternal(trust: boolean): Promise<ContainerResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, trust };
         const result = await this._client.invokeCapability<ContainerResourceHandle>(
@@ -10543,6 +10580,11 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
     /** Adds a resource command */
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withCommand(name, displayName, executeCommand, options)), this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ContainerResourcePromise {
+        return new ContainerResourcePromise(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
     }
 
     /** Configures developer certificate trust */
@@ -11751,6 +11793,22 @@ class CSharpAppResourceImpl extends ResourceBuilderBase<CSharpAppResourceHandle>
     }
 
     /** @internal */
+    private async _withHttpCommandInternal(path: string, displayName: string, options?: HttpCommandExportOptions): Promise<CSharpAppResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, path, displayName };
+        if (options !== undefined) rpcArgs.options = options;
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withHttpCommand',
+            rpcArgs
+        );
+        return new CSharpAppResource(result, this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromise(this._withHttpCommandInternal(path, displayName, options));
+    }
+
+    /** @internal */
     private async _withDeveloperCertificateTrustInternal(trust: boolean): Promise<CSharpAppResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, trust };
         const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
@@ -12754,6 +12812,11 @@ class CSharpAppResourcePromiseImpl implements CSharpAppResourcePromise {
     /** Adds a resource command */
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withCommand(name, displayName, executeCommand, options)), this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromise(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
     }
 
     /** Configures developer certificate trust */
@@ -14056,6 +14119,22 @@ class DotnetToolResourceImpl extends ResourceBuilderBase<DotnetToolResourceHandl
     }
 
     /** @internal */
+    private async _withHttpCommandInternal(path: string, displayName: string, options?: HttpCommandExportOptions): Promise<DotnetToolResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, path, displayName };
+        if (options !== undefined) rpcArgs.options = options;
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withHttpCommand',
+            rpcArgs
+        );
+        return new DotnetToolResource(result, this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromise(this._withHttpCommandInternal(path, displayName, options));
+    }
+
+    /** @internal */
     private async _withDeveloperCertificateTrustInternal(trust: boolean): Promise<DotnetToolResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, trust };
         const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
@@ -15089,6 +15168,11 @@ class DotnetToolResourcePromiseImpl implements DotnetToolResourcePromise {
     /** Adds a resource command */
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withCommand(name, displayName, executeCommand, options)), this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromise(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
     }
 
     /** Configures developer certificate trust */
@@ -16289,6 +16373,22 @@ class ExecutableResourceImpl extends ResourceBuilderBase<ExecutableResourceHandl
     }
 
     /** @internal */
+    private async _withHttpCommandInternal(path: string, displayName: string, options?: HttpCommandExportOptions): Promise<ExecutableResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, path, displayName };
+        if (options !== undefined) rpcArgs.options = options;
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withHttpCommand',
+            rpcArgs
+        );
+        return new ExecutableResource(result, this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ExecutableResourcePromise {
+        return new ExecutableResourcePromise(this._withHttpCommandInternal(path, displayName, options));
+    }
+
+    /** @internal */
     private async _withDeveloperCertificateTrustInternal(trust: boolean): Promise<ExecutableResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, trust };
         const result = await this._client.invokeCapability<ExecutableResourceHandle>(
@@ -17292,6 +17392,11 @@ class ExecutableResourcePromiseImpl implements ExecutableResourcePromise {
     /** Adds a resource command */
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ExecutableResourcePromise {
         return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withCommand(name, displayName, executeCommand, options)), this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ExecutableResourcePromise {
+        return new ExecutableResourcePromise(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
     }
 
     /** Configures developer certificate trust */
@@ -20797,6 +20902,22 @@ class ProjectResourceImpl extends ResourceBuilderBase<ProjectResourceHandle> imp
     }
 
     /** @internal */
+    private async _withHttpCommandInternal(path: string, displayName: string, options?: HttpCommandExportOptions): Promise<ProjectResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, path, displayName };
+        if (options !== undefined) rpcArgs.options = options;
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withHttpCommand',
+            rpcArgs
+        );
+        return new ProjectResource(result, this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ProjectResourcePromise {
+        return new ProjectResourcePromise(this._withHttpCommandInternal(path, displayName, options));
+    }
+
+    /** @internal */
     private async _withDeveloperCertificateTrustInternal(trust: boolean): Promise<ProjectResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, trust };
         const result = await this._client.invokeCapability<ProjectResourceHandle>(
@@ -21800,6 +21921,11 @@ class ProjectResourcePromiseImpl implements ProjectResourcePromise {
     /** Adds a resource command */
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withCommand(name, displayName, executeCommand, options)), this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ProjectResourcePromise {
+        return new ProjectResourcePromise(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
     }
 
     /** Configures developer certificate trust */
@@ -23251,6 +23377,22 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
     }
 
     /** @internal */
+    private async _withHttpCommandInternal(path: string, displayName: string, options?: HttpCommandExportOptions): Promise<TestDatabaseResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, path, displayName };
+        if (options !== undefined) rpcArgs.options = options;
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withHttpCommand',
+            rpcArgs
+        );
+        return new TestDatabaseResource(result, this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromise(this._withHttpCommandInternal(path, displayName, options));
+    }
+
+    /** @internal */
     private async _withDeveloperCertificateTrustInternal(trust: boolean): Promise<TestDatabaseResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, trust };
         const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
@@ -24343,6 +24485,11 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
     /** Adds a resource command */
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withCommand(name, displayName, executeCommand, options)), this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromise(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
     }
 
     /** Configures developer certificate trust */
@@ -25870,6 +26017,22 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
     }
 
     /** @internal */
+    private async _withHttpCommandInternal(path: string, displayName: string, options?: HttpCommandExportOptions): Promise<TestRedisResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, path, displayName };
+        if (options !== undefined) rpcArgs.options = options;
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withHttpCommand',
+            rpcArgs
+        );
+        return new TestRedisResource(result, this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestRedisResourcePromise {
+        return new TestRedisResourcePromise(this._withHttpCommandInternal(path, displayName, options));
+    }
+
+    /** @internal */
     private async _withDeveloperCertificateTrustInternal(trust: boolean): Promise<TestRedisResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, trust };
         const result = await this._client.invokeCapability<TestRedisResourceHandle>(
@@ -27166,6 +27329,11 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
     /** Adds a resource command */
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withCommand(name, displayName, executeCommand, options)), this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestRedisResourcePromise {
+        return new TestRedisResourcePromise(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
     }
 
     /** Configures developer certificate trust */
@@ -28689,6 +28857,22 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
     }
 
     /** @internal */
+    private async _withHttpCommandInternal(path: string, displayName: string, options?: HttpCommandExportOptions): Promise<TestVaultResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, path, displayName };
+        if (options !== undefined) rpcArgs.options = options;
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withHttpCommand',
+            rpcArgs
+        );
+        return new TestVaultResource(result, this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestVaultResourcePromise {
+        return new TestVaultResourcePromise(this._withHttpCommandInternal(path, displayName, options));
+    }
+
+    /** @internal */
     private async _withDeveloperCertificateTrustInternal(trust: boolean): Promise<TestVaultResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, trust };
         const result = await this._client.invokeCapability<TestVaultResourceHandle>(
@@ -29796,6 +29980,11 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
     /** Adds a resource command */
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withCommand(name, displayName, executeCommand, options)), this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestVaultResourcePromise {
+        return new TestVaultResourcePromise(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
     }
 
     /** Configures developer certificate trust */
@@ -31875,6 +32064,22 @@ class ResourceWithEndpointsImpl extends ResourceBuilderBase<IResourceWithEndpoin
     }
 
     /** @internal */
+    private async _withHttpCommandInternal(path: string, displayName: string, options?: HttpCommandExportOptions): Promise<ResourceWithEndpoints> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, path, displayName };
+        if (options !== undefined) rpcArgs.options = options;
+        const result = await this._client.invokeCapability<IResourceWithEndpointsHandle>(
+            'Aspire.Hosting/withHttpCommand',
+            rpcArgs
+        );
+        return new ResourceWithEndpoints(result, this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ResourceWithEndpointsPromise {
+        return new ResourceWithEndpointsPromise(this._withHttpCommandInternal(path, displayName, options));
+    }
+
+    /** @internal */
     private async _withHttpProbeInternal(probeType: ProbeType, path?: string, initialDelaySeconds?: number, periodSeconds?: number, timeoutSeconds?: number, failureThreshold?: number, successThreshold?: number, endpointName?: string): Promise<ResourceWithEndpoints> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, probeType };
         if (path !== undefined) rpcArgs.path = path;
@@ -31985,6 +32190,11 @@ class ResourceWithEndpointsPromiseImpl implements ResourceWithEndpointsPromise {
     /** Adds an HTTP health check */
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): ResourceWithEndpointsPromise {
         return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withHttpHealthCheck(options)), this._client);
+    }
+
+    /** Adds an HTTP resource command */
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ResourceWithEndpointsPromise {
+        return new ResourceWithEndpointsPromise(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
     }
 
     /** Adds an HTTP health probe to the resource */
