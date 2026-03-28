@@ -5,6 +5,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Pipelines.GitHubActions.Yaml;
+using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.Pipelines.GitHubActions;
 
@@ -35,6 +37,31 @@ public static class GitHubActionsWorkflowExtensions
             // This environment is relevant when running inside GitHub Actions
             var isGitHubActions = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"));
             return Task.FromResult(isGitHubActions);
+        }));
+
+        resource.Annotations.Add(new PipelineWorkflowGeneratorAnnotation(async context =>
+        {
+            var workflow = (GitHubActionsWorkflowResource)context.Environment;
+            var logger = context.StepContext.Logger;
+
+            // Resolve scheduling (which steps run in which jobs)
+            var scheduling = SchedulingResolver.Resolve(context.Steps.ToList(), workflow);
+
+            // Generate the YAML model
+            var yamlModel = WorkflowYamlGenerator.Generate(scheduling, workflow);
+
+            // Serialize to YAML string
+            var yamlContent = WorkflowYamlSerializer.Serialize(yamlModel);
+
+            // Write to .github/workflows/{name}.yml
+            var outputDir = Path.Combine(context.OutputDirectory, ".github", "workflows");
+            Directory.CreateDirectory(outputDir);
+
+            var outputPath = Path.Combine(outputDir, workflow.WorkflowFileName);
+            await File.WriteAllTextAsync(outputPath, yamlContent, context.CancellationToken).ConfigureAwait(false);
+
+            logger.LogInformation("Generated GitHub Actions workflow: {Path}", outputPath);
+            context.StepContext.Summary.Add("📄 Workflow", outputPath);
         }));
 
         return builder.AddResource(resource)

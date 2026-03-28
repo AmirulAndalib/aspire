@@ -267,6 +267,14 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
                 DumpDependencyGraphDiagnostics(stepsToAnalyze, context);
             }
         });
+
+        // Add pipeline-init step for generating CI/CD workflow files
+        _steps.Add(new PipelineStep
+        {
+            Name = WellKnownPipelineSteps.PipelineInit,
+            Description = "Generates CI/CD pipeline workflow files from pipeline environment resources in the app model.",
+            Action = ExecutePipelineInitAsync
+        });
     }
 
     /// <summary>
@@ -1300,5 +1308,46 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         }
 
         return sb.ToString();
+    }
+
+    private async Task ExecutePipelineInitAsync(PipelineStepContext context)
+    {
+        // Discover all pipeline environment resources in the app model
+        var environments = _model.Resources.OfType<IPipelineEnvironment>().ToList();
+
+        if (environments.Count == 0)
+        {
+            context.Logger.LogWarning(
+                "No pipeline environment resources found in the app model. " +
+                "Add a pipeline environment (e.g., builder.AddGitHubActionsWorkflow(\"deploy\")) to generate workflow files.");
+            return;
+        }
+
+        foreach (var env in environments)
+        {
+            var resource = (IResource)env;
+
+            if (!resource.TryGetAnnotationsOfType<PipelineWorkflowGeneratorAnnotation>(out var generators))
+            {
+                context.Logger.LogWarning(
+                    "Pipeline environment '{Name}' does not have a workflow generator annotation. Skipping.",
+                    resource.Name);
+                continue;
+            }
+
+            context.Logger.LogInformation("Generating workflow files for pipeline environment: {Name}", resource.Name);
+
+            var generationContext = new PipelineWorkflowGenerationContext
+            {
+                StepContext = context,
+                Environment = env,
+                Steps = _steps,
+            };
+
+            foreach (var generator in generators)
+            {
+                await generator.GenerateAsync(generationContext).ConfigureAwait(false);
+            }
+        }
     }
 }
