@@ -25,12 +25,58 @@ internal static class SchedulingResolver
         ArgumentNullException.ThrowIfNull(steps);
         ArgumentNullException.ThrowIfNull(workflow);
 
-        // Build step-to-job mapping, resolving workflow/stage targets to concrete jobs
-        var stepToJob = new Dictionary<string, GitHubActionsJobResource>(StringComparer.Ordinal);
+        // Build reverse dependency map: step name → steps that depend on it
+        var reverseDeps = new Dictionary<string, List<PipelineStep>>(StringComparer.Ordinal);
 
         foreach (var step in steps)
         {
-            stepToJob[step.Name] = ResolveJobForStep(step, workflow);
+            foreach (var dep in step.DependsOnSteps)
+            {
+                if (!reverseDeps.TryGetValue(dep, out var list))
+                {
+                    list = [];
+                    reverseDeps[dep] = list;
+                }
+
+                list.Add(step);
+            }
+        }
+
+        // Phase 1: resolve all explicitly scheduled steps (ScheduledBy is set)
+        var explicitStepToJob = new Dictionary<string, GitHubActionsJobResource>(StringComparer.Ordinal);
+        var hasExplicitTargets = false;
+
+        foreach (var step in steps)
+        {
+            if (step.ScheduledBy is not null)
+            {
+                explicitStepToJob[step.Name] = ResolveExplicitTarget(step, workflow);
+                hasExplicitTargets = true;
+            }
+        }
+
+        // Pre-existing jobs/stages on the workflow also count as explicit targets
+        hasExplicitTargets = hasExplicitTargets || workflow.Jobs.Count > 0 || workflow.Stages.Count > 0;
+
+        // Phase 2: resolve unscheduled steps by pulling them into the first consumer's target
+        var stepToJob = new Dictionary<string, GitHubActionsJobResource>(explicitStepToJob, StringComparer.Ordinal);
+
+        foreach (var step in steps)
+        {
+            if (step.ScheduledBy is not null)
+            {
+                continue;
+            }
+
+            if (hasExplicitTargets)
+            {
+                var consumerJob = FindFirstConsumerJob(step.Name, reverseDeps, explicitStepToJob);
+                stepToJob[step.Name] = consumerJob ?? GetFirstAvailableJob(workflow);
+            }
+            else
+            {
+                stepToJob[step.Name] = workflow.GetOrAddDefaultJob();
+            }
         }
 
         // Build step lookup
@@ -124,7 +170,10 @@ internal static class SchedulingResolver
         };
     }
 
-    private static GitHubActionsJobResource ResolveJobForStep(PipelineStep step, GitHubActionsWorkflowResource workflow)
+    /// <summary>
+    /// Resolves the job for a step that has an explicit <see cref="PipelineStep.ScheduledBy"/> target.
+    /// </summary>
+    private static GitHubActionsJobResource ResolveExplicitTarget(PipelineStep step, GitHubActionsWorkflowResource workflow)
     {
         return step.ScheduledBy switch
         {
@@ -148,12 +197,68 @@ internal static class SchedulingResolver
 
             GitHubActionsWorkflowResource w => w.GetOrAddDefaultJob(),
 
-            null => workflow.GetOrAddDefaultJob(),
-
             _ => throw new SchedulingValidationException(
-                    $"Step '{step.Name}' has a ScheduledBy target of type '{step.ScheduledBy.GetType().Name}' " +
+                    $"Step '{step.Name}' has a ScheduledBy target of type '{step.ScheduledBy!.GetType().Name}' " +
                     $"which is not a recognized GitHub Actions target (workflow, stage, or job).")
         };
+    }
+
+    /// <summary>
+    /// BFS through reverse dependencies to find the first explicitly-scheduled consumer's job.
+    /// This enables unscheduled steps to be "pulled into" the target of their nearest consumer.
+    /// </summary>
+    private static GitHubActionsJobResource? FindFirstConsumerJob(
+        string stepName,
+        Dictionary<string, List<PipelineStep>> reverseDeps,
+        Dictionary<string, GitHubActionsJobResource> explicitStepToJob)
+    {
+        var visited = new HashSet<string>(StringComparer.Ordinal) { stepName };
+        var queue = new Queue<string>();
+        queue.Enqueue(stepName);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+
+            if (!reverseDeps.TryGetValue(current, out var consumers))
+            {
+                continue;
+            }
+
+            foreach (var consumer in consumers)
+            {
+                if (explicitStepToJob.TryGetValue(consumer.Name, out var job))
+                {
+                    return job;
+                }
+
+                if (visited.Add(consumer.Name))
+                {
+                    queue.Enqueue(consumer.Name);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the first available job on the workflow for orphan unscheduled steps
+    /// (steps with no downstream consumer that has explicit scheduling).
+    /// </summary>
+    private static GitHubActionsJobResource GetFirstAvailableJob(GitHubActionsWorkflowResource workflow)
+    {
+        if (workflow.Stages.Count > 0)
+        {
+            return workflow.Stages[0].GetOrAddDefaultJob();
+        }
+
+        if (workflow.Jobs.Count > 0)
+        {
+            return workflow.Jobs[0];
+        }
+
+        return workflow.GetOrAddDefaultJob();
     }
 
     private static void ValidateNoCycles(Dictionary<string, HashSet<string>> jobDependencies)

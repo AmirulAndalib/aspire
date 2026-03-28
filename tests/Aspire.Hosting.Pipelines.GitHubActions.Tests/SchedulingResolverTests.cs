@@ -112,47 +112,45 @@ public class SchedulingResolverTests
     }
 
     [Fact]
-    public void Resolve_DefaultJob_UnscheduledStepsGrouped()
+    public void Resolve_DefaultJob_UnscheduledStepsPulledToFirstJob()
     {
         var workflow = new GitHubActionsWorkflowResource("deploy");
         var buildJob = workflow.AddJob("build");
 
-        var step1 = CreateStep("step1"); // No scheduledBy — goes to auto-created default job
-        var step2 = CreateStep("step2"); // No scheduledBy — goes to auto-created default job
+        var step1 = CreateStep("step1"); // No scheduledBy — pulled to first available job
+        var step2 = CreateStep("step2"); // No scheduledBy — pulled to first available job
         var step3 = CreateStep("step3", scheduledBy: buildJob);
 
         var result = SchedulingResolver.Resolve([step1, step2, step3], workflow);
 
-        // step1 and step2 should be on the auto-created default job, separate from buildJob
-        Assert.Same(result.DefaultJob!, result.StepToJob["step1"]);
-        Assert.Same(result.DefaultJob!, result.StepToJob["step2"]);
+        // Orphan unscheduled steps (no consumer) go to the first available job
+        Assert.Same(buildJob, result.StepToJob["step1"]);
+        Assert.Same(buildJob, result.StepToJob["step2"]);
         Assert.Same(buildJob, result.StepToJob["step3"]);
-        Assert.NotSame(buildJob, result.DefaultJob!);
-        Assert.Equal("default", result.DefaultJob!.Id);
     }
 
     [Fact]
-    public void Resolve_MixedScheduledAndUnscheduled()
+    public void Resolve_MixedScheduledAndUnscheduled_PullsToConsumer()
     {
         var workflow = new GitHubActionsWorkflowResource("deploy");
         var publishJob = workflow.AddJob("publish");
         var deployJob = workflow.AddJob("deploy");
 
-        var buildStep = CreateStep("build"); // No scheduledBy → auto-created default job
+        var buildStep = CreateStep("build"); // No scheduledBy → pulled to first consumer (publish)
         var publishStep = CreateStep("publish", publishJob, "build");
         var deployStep = CreateStep("deploy", deployJob, "publish");
 
         var result = SchedulingResolver.Resolve([buildStep, publishStep, deployStep], workflow);
 
-        // build goes to the auto-created default job
-        Assert.Same(result.DefaultJob!, result.StepToJob["build"]);
+        // build is pulled into publishJob because publish is the first thing that needs it
+        Assert.Same(publishJob, result.StepToJob["build"]);
         Assert.Same(publishJob, result.StepToJob["publish"]);
         Assert.Same(deployJob, result.StepToJob["deploy"]);
 
-        // publish depends on default job (build-step is on default, publish-step depends on build-step)
-        Assert.Contains(result.DefaultJob!.Id, result.JobDependencies["publish"]);
+        // No cross-job dependency for build→publish (same job)
         // deploy depends on publish job
         Assert.Contains("publish", result.JobDependencies["deploy"]);
+        Assert.DoesNotContain("default", result.JobDependencies.Keys);
     }
 
     [Fact]
@@ -357,6 +355,68 @@ public class SchedulingResolverTests
             () => SchedulingResolver.Resolve([step], workflow1));
 
         Assert.Contains("workflow", ex.Message);
+    }
+
+    [Fact]
+    public void Resolve_UnscheduledChain_PulledToFirstExplicitConsumer()
+    {
+        // A → B → C, where C is explicitly scheduled. A and B should be pulled into C's job.
+        var workflow = new GitHubActionsWorkflowResource("deploy");
+        var publishJob = workflow.AddJob("publish");
+
+        var stepA = CreateStep("A");
+        var stepB = CreateStep("B", null, "A");
+        var stepC = CreateStep("C", publishJob, "B");
+
+        var result = SchedulingResolver.Resolve([stepA, stepB, stepC], workflow);
+
+        Assert.Same(publishJob, result.StepToJob["A"]);
+        Assert.Same(publishJob, result.StepToJob["B"]);
+        Assert.Same(publishJob, result.StepToJob["C"]);
+        Assert.Empty(result.JobDependencies["publish"]);
+    }
+
+    [Fact]
+    public void Resolve_ExplicitStages_NoDefaultStageCreated()
+    {
+        // Two stages: publish and deploy. Unscheduled "build" depends on nothing,
+        // but publish depends on build → build is pulled into publish stage.
+        var workflow = new GitHubActionsWorkflowResource("deploy");
+        var publishStage = workflow.AddStage("publish");
+        var deployStage = workflow.AddStage("deploy");
+
+        var buildStep = CreateStep("build");
+        var publishStep = CreateStep("publish", publishStage, "build");
+        var deployStep = CreateStep("deploy", deployStage, "publish");
+
+        var result = SchedulingResolver.Resolve([buildStep, publishStep, deployStep], workflow);
+
+        // build is pulled into publish stage's default job
+        Assert.Equal("publish-default", result.StepToJob["build"].Id);
+        Assert.Equal("publish-default", result.StepToJob["publish"].Id);
+        Assert.Equal("deploy-default", result.StepToJob["deploy"].Id);
+
+        // No default stage should have been created
+        Assert.DoesNotContain(workflow.Stages, s => s.Name == "default");
+    }
+
+    [Fact]
+    public void Resolve_FanOut_UnscheduledPulledToFirstConsumer()
+    {
+        // A is unscheduled, both B (job1) and C (job2) depend on A.
+        // A is pulled to the first consumer found (job1).
+        var workflow = new GitHubActionsWorkflowResource("deploy");
+        var job1 = workflow.AddJob("job1");
+        var job2 = workflow.AddJob("job2");
+
+        var stepA = CreateStep("A");
+        var stepB = CreateStep("B", job1, "A");
+        var stepC = CreateStep("C", job2, "A");
+
+        var result = SchedulingResolver.Resolve([stepA, stepB, stepC], workflow);
+
+        // A pulled to the first consumer's job (job1)
+        Assert.Same(job1, result.StepToJob["A"]);
     }
 
     // Helper methods
