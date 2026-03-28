@@ -67,4 +67,38 @@ public static class GitHubActionsWorkflowExtensions
         return builder.AddResource(resource)
             .ExcludeFromManifest();
     }
+
+    /// <summary>
+    /// Adds a stage to the GitHub Actions workflow. Stages are a logical grouping of jobs.
+    /// </summary>
+    /// <param name="builder">The workflow resource builder.</param>
+    /// <param name="name">The unique stage name within the workflow.</param>
+    /// <returns>The created <see cref="GitHubActionsStageResource"/>.</returns>
+    [AspireExportIgnore(Reason = "Pipeline generation is not yet ATS-compatible")]
+    public static GitHubActionsStageResource AddStage(
+        this IResourceBuilder<GitHubActionsWorkflowResource> builder,
+        string name)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        return builder.Resource.AddStage(name);
+    }
+
+    /// <summary>
+    /// Adds a job to the GitHub Actions workflow.
+    /// </summary>
+    /// <param name="builder">The workflow resource builder.</param>
+    /// <param name="id">The unique job identifier within the workflow.</param>
+    /// <returns>The created <see cref="GitHubActionsJobResource"/>.</returns>
+    [AspireExportIgnore(Reason = "Pipeline generation is not yet ATS-compatible")]
+    public static GitHubActionsJobResource AddJob(
+        this IResourceBuilder<GitHubActionsWorkflowResource> builder,
+        string id)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrEmpty(id);
+
+        return builder.Resource.AddJob(id);
+    }
 }
