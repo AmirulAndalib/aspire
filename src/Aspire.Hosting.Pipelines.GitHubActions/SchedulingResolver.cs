@@ -60,6 +60,7 @@ internal static class SchedulingResolver
 
         // Phase 2: resolve unscheduled steps by pulling them into the first consumer's target
         var stepToJob = new Dictionary<string, GitHubActionsJobResource>(explicitStepToJob, StringComparer.Ordinal);
+        var orphanSteps = new List<PipelineStep>();
 
         foreach (var step in steps)
         {
@@ -71,12 +72,57 @@ internal static class SchedulingResolver
             if (hasExplicitTargets)
             {
                 var consumerJob = FindFirstConsumerJob(step.Name, reverseDeps, explicitStepToJob);
-                stepToJob[step.Name] = consumerJob ?? GetFirstAvailableJob(workflow);
+                if (consumerJob is not null)
+                {
+                    stepToJob[step.Name] = consumerJob;
+                }
+                else
+                {
+                    orphanSteps.Add(step);
+                }
             }
             else
             {
                 stepToJob[step.Name] = workflow.GetOrAddDefaultJob();
             }
+        }
+
+        // Phase 2b: resolve orphan steps (no consumer chain to an explicit target) by
+        // co-locating them with their dependencies. This avoids creating spurious cross-job
+        // dependencies that can introduce cycles in the job dependency graph.
+        // Iterate until stable to handle chains of orphan-to-orphan dependencies.
+        var remaining = orphanSteps;
+        while (remaining.Count > 0)
+        {
+            var unresolved = new List<PipelineStep>();
+            var progress = false;
+
+            foreach (var step in remaining)
+            {
+                var depJob = FindDependencyJob(step, stepToJob);
+                if (depJob is not null)
+                {
+                    stepToJob[step.Name] = depJob;
+                    progress = true;
+                }
+                else
+                {
+                    unresolved.Add(step);
+                }
+            }
+
+            if (!progress)
+            {
+                // No progress — assign remaining orphans to first available job
+                foreach (var step in unresolved)
+                {
+                    stepToJob[step.Name] = GetFirstAvailableJob(workflow);
+                }
+
+                break;
+            }
+
+            remaining = unresolved;
         }
 
         // Build step lookup
@@ -236,6 +282,26 @@ internal static class SchedulingResolver
                 {
                     queue.Enqueue(consumer.Name);
                 }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Finds a job for an orphan step by looking at where its dependencies are assigned.
+    /// This co-locates orphan steps with their dependencies to avoid creating cross-job
+    /// dependencies that could introduce cycles in the job dependency graph.
+    /// </summary>
+    private static GitHubActionsJobResource? FindDependencyJob(
+        PipelineStep step,
+        Dictionary<string, GitHubActionsJobResource> stepToJob)
+    {
+        foreach (var depName in step.DependsOnSteps)
+        {
+            if (stepToJob.TryGetValue(depName, out var job))
+            {
+                return job;
             }
         }
 

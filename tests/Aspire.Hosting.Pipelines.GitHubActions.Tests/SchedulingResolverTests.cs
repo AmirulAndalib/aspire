@@ -398,6 +398,10 @@ public class SchedulingResolverTests
 
         // No default stage should have been created
         Assert.DoesNotContain(workflow.Stages, s => s.Name == "default");
+
+        // deploy-default job should depend on publish-default job
+        Assert.True(result.JobDependencies.TryGetValue("deploy-default", out var deployDeps), "deploy-default should have job dependencies");
+        Assert.Contains("publish-default", deployDeps);
     }
 
     [Fact]

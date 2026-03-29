@@ -1431,7 +1431,7 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
             {
                 StepContext = context,
                 Environment = env,
-                Steps = _steps,
+                Steps = _lastResolvedSteps ?? _steps,
                 RepositoryRootDirectory = repoRoot,
             };
 
