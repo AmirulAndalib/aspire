@@ -118,9 +118,9 @@ public sealed class ProjectReferenceTests(ITestOutputHelper output)
             // Update aspire.config.json to add the project reference.
             var config = JsonNode.Parse(configJson)?.AsObject()
                 ?? throw new InvalidOperationException("Expected aspire.config.json to contain a JSON object.");
-            var packages = config["integrations"] as JsonObject ?? new JsonObject();
-            packages["MyIntegration"] = "./MyIntegration/MyIntegration.csproj";
-            config["integrations"] = packages;
+            var integrations = config["integrations"] as JsonObject ?? new JsonObject();
+            integrations["MyIntegration"] = "./MyIntegration/MyIntegration.csproj";
+            config["integrations"] = integrations;
 
             var updatedJson = config.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(configPath, updatedJson);

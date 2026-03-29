@@ -117,6 +117,7 @@ internal sealed class AspireConfigFile
     /// on the serializer context.
     /// </summary>
     [JsonPropertyName("packages")]
+    [Description("Deprecated. Use \"integrations\" instead. Legacy key kept for backward compatibility with older aspire.config.json files.")]
     public Dictionary<string, string>? LegacyPackages { get; set; }
 
     /// <summary>
