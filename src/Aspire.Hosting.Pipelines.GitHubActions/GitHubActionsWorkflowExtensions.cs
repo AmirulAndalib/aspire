@@ -70,7 +70,9 @@ public static class GitHubActionsWorkflowExtensions
             // Filter out orphaned steps that have no connection to the deployment graph.
             // Steps like "publish-manifest", "diagnostics", and "pipeline-init" are
             // standalone tools for the CLI, not part of the deployment DAG.
-            var connectedSteps = FilterConnectedSteps(existingSteps);
+            // Also exclude synthetic scheduling-target steps from prior runs to avoid
+            // circular dependencies when `aspire pipeline init` is run more than once.
+            var connectedSteps = FilterConnectedSteps(existingSteps, workflow.Name);
 
             if (connectedSteps.Count == 0)
             {
@@ -143,7 +145,7 @@ public static class GitHubActionsWorkflowExtensions
             // Filter out orphaned steps (same as the annotation factory) so the YAML
             // generator only includes steps that are part of the deployment graph.
             // Note: scope map is already registered by the PipelineStepAnnotation factory above.
-            var connectedSteps = FilterConnectedSteps(context.Steps);
+            var connectedSteps = FilterConnectedSteps(context.Steps, workflow.Name);
             var scheduling = SchedulingResolver.Resolve(connectedSteps, workflow);
 
             // Generate the YAML model
@@ -268,9 +270,14 @@ public static class GitHubActionsWorkflowExtensions
     /// A step is "connected" if it has dependencies, is depended upon by other steps,
     /// or has explicit scheduling. Steps like "publish-manifest", "diagnostics", and
     /// "pipeline-init" are standalone CLI tools and should not be scheduled into CI jobs.
+    /// Synthetic scheduling-target steps from prior runs (matching <c>gha-{workflowName}-*-job</c>)
+    /// are also excluded to prevent circular dependencies when running pipeline init again.
     /// </summary>
-    private static List<PipelineStep> FilterConnectedSteps(IReadOnlyList<PipelineStep> steps)
+    private static List<PipelineStep> FilterConnectedSteps(IReadOnlyList<PipelineStep> steps, string workflowName)
     {
+        var syntheticPrefix = $"gha-{workflowName}-";
+        const string syntheticSuffix = "-job";
+
         // Build set of step names that are depended upon
         var dependedUpon = new HashSet<string>(StringComparer.Ordinal);
         foreach (var step in steps)
@@ -288,6 +295,13 @@ public static class GitHubActionsWorkflowExtensions
         var connected = new List<PipelineStep>();
         foreach (var step in steps)
         {
+            // Exclude synthetic scheduling-target steps from prior runs
+            if (step.Name.StartsWith(syntheticPrefix, StringComparison.Ordinal) &&
+                step.Name.EndsWith(syntheticSuffix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             // A step is connected if:
             // - It depends on other steps
             // - Other steps depend on it (via DependsOn or RequiredBy)
