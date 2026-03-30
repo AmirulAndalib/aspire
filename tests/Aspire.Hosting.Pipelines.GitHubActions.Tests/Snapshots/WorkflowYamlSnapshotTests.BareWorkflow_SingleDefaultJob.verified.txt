@@ -35,5 +35,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: aspire-do-state-default
-          path: '.aspire/state/${{ github.run_id }}-${{ github.run_attempt }}/'
+          path: '${{ env.HOME }}/.aspire/deployments/'
           if-no-files-found: ignore

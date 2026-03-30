@@ -14,7 +14,9 @@ namespace Aspire.Hosting.Pipelines.GitHubActions;
 internal static class WorkflowYamlGenerator
 {
     private const string StateArtifactPrefix = "aspire-do-state-";
-    private const string StatePathExpression = ".aspire/state/${{ github.run_id }}-${{ github.run_attempt }}/";
+    // Must match the path used by FileDeploymentStateManager at runtime:
+    // $HOME/.aspire/deployments/{appHostPathSha256}/{environment}.json
+    private const string StatePathExpression = "${{ env.HOME }}/.aspire/deployments/";
 
     /// <summary>
     /// Generates a workflow YAML model from the scheduling result.
