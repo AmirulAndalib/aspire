@@ -25,8 +25,6 @@ public static class AzureEnvironmentResourceExtensions
     [Experimental("ASPIREAZURE001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
     public static IResourceBuilder<AzureEnvironmentResource> AddAzureEnvironment(this IDistributedApplicationBuilder builder)
     {
-        builder.Services.TryAddSingleton<AzureProvisioningController>();
-
         if (builder.Resources.OfType<AzureEnvironmentResource>().SingleOrDefault() is { } existingResource)
         {
             // If the resource already exists, return the existing builder
@@ -41,6 +39,8 @@ public static class AzureEnvironmentResourceExtensions
         var resource = new AzureEnvironmentResource(resourceName, locationParam, resourceGroupName, principalId);
         if (builder.ExecutionContext.IsRunMode)
         {
+            builder.Services.TryAddSingleton<AzureProvisioningController>();
+
             var resourceBuilder = builder.AddResource(resource)
                 .WithInitialState(new CustomResourceSnapshot
                 {
