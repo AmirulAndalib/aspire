@@ -67,8 +67,18 @@ public static class GitHubActionsWorkflowExtensions
                 return [];
             }
 
+            // Filter out orphaned steps that have no connection to the deployment graph.
+            // Steps like "publish-manifest", "diagnostics", and "pipeline-init" are
+            // standalone tools for the CLI, not part of the deployment DAG.
+            var connectedSteps = FilterConnectedSteps(existingSteps);
+
+            if (connectedSteps.Count == 0)
+            {
+                return [];
+            }
+
             // Run the scheduler to compute job assignments and terminal steps
-            var scheduling = SchedulingResolver.Resolve(existingSteps.ToList(), workflow);
+            var scheduling = SchedulingResolver.Resolve(connectedSteps, workflow);
 
             // Register scope map so the executor can filter steps in continuation mode.
             // This must happen here (not in the generator callback) so it's available
@@ -114,8 +124,11 @@ public static class GitHubActionsWorkflowExtensions
             var logger = context.StepContext.Logger;
 
             // Resolve scheduling (which steps run in which jobs).
+            // Filter out orphaned steps (same as the annotation factory) so the YAML
+            // generator only includes steps that are part of the deployment graph.
             // Note: scope map is already registered by the PipelineStepAnnotation factory above.
-            var scheduling = SchedulingResolver.Resolve(context.Steps.ToList(), workflow);
+            var connectedSteps = FilterConnectedSteps(context.Steps);
+            var scheduling = SchedulingResolver.Resolve(connectedSteps, workflow);
 
             // Generate the YAML model
             var yamlModel = WorkflowYamlGenerator.Generate(scheduling, workflow, context.RepositoryRootDirectory);
@@ -228,5 +241,46 @@ public static class GitHubActionsWorkflowExtensions
         }
 
         return "default";
+    }
+
+    /// <summary>
+    /// Filters out orphaned steps that have no connection to the deployment graph.
+    /// A step is "connected" if it has dependencies, is depended upon by other steps,
+    /// or has explicit scheduling. Steps like "publish-manifest", "diagnostics", and
+    /// "pipeline-init" are standalone CLI tools and should not be scheduled into CI jobs.
+    /// </summary>
+    private static List<PipelineStep> FilterConnectedSteps(IReadOnlyList<PipelineStep> steps)
+    {
+        // Build set of step names that are depended upon
+        var dependedUpon = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var step in steps)
+        {
+            foreach (var dep in step.DependsOnSteps)
+            {
+                dependedUpon.Add(dep);
+            }
+            foreach (var req in step.RequiredBySteps)
+            {
+                dependedUpon.Add(req);
+            }
+        }
+
+        var connected = new List<PipelineStep>();
+        foreach (var step in steps)
+        {
+            // A step is connected if:
+            // - It depends on other steps
+            // - Other steps depend on it (via DependsOn or RequiredBy)
+            // - It has explicit scheduling (ScheduledBy is set)
+            if (step.DependsOnSteps.Count > 0 ||
+                step.RequiredBySteps.Count > 0 ||
+                dependedUpon.Contains(step.Name) ||
+                step.ScheduledBy is not null)
+            {
+                connected.Add(step);
+            }
+        }
+
+        return connected;
     }
 }
