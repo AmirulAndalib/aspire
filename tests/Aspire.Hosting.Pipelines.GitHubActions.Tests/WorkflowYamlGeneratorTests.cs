@@ -417,6 +417,8 @@ public class WorkflowYamlGeneratorTests
         var installStep = Assert.Single(job.Steps, s => s.Name == "Install Aspire CLI");
         Assert.Contains("get-aspire-cli-pr.sh", installStep.Run);
         Assert.Contains("15643", installStep.Run);
+        Assert.NotNull(installStep.Env);
+        Assert.Equal("${{ github.token }}", installStep.Env["GH_TOKEN"]);
     }
 
     // ConfigureWorkflow callback tests

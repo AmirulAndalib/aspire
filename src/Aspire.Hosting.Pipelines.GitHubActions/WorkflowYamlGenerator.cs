@@ -213,7 +213,11 @@ internal static class WorkflowYamlGenerator
             return new StepYaml
             {
                 Name = "Install Aspire CLI",
-                Run = $"curl -sSL {PrInstallScriptUrl} | bash -s -- {prNumber}"
+                Run = $"curl -sSL {PrInstallScriptUrl} | bash -s -- {prNumber}",
+                Env = new Dictionary<string, string>
+                {
+                    ["GH_TOKEN"] = "${{ github.token }}"
+                }
             };
         }
 
