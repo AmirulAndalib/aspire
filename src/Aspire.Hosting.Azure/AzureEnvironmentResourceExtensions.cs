@@ -7,7 +7,6 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting.ApplicationModel;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Aspire.Hosting.Azure;
 
@@ -39,8 +38,6 @@ public static class AzureEnvironmentResourceExtensions
         var resource = new AzureEnvironmentResource(resourceName, locationParam, resourceGroupName, principalId);
         if (builder.ExecutionContext.IsRunMode)
         {
-            builder.Services.TryAddSingleton<AzureProvisioningController>();
-
             var resourceBuilder = builder.AddResource(resource)
                 .WithInitialState(new CustomResourceSnapshot
                 {

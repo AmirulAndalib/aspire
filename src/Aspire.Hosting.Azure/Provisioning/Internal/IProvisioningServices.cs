@@ -82,6 +82,15 @@ internal interface IAzureProvisioningOptionsManager
 }
 
 /// <summary>
+/// No-op implementation used in publish mode where interactive provisioning options management is not needed.
+/// </summary>
+internal sealed class NoOpAzureProvisioningOptionsManager : IAzureProvisioningOptionsManager
+{
+    public Task<bool> EnsureProvisioningOptionsAsync(bool forcePrompt, CancellationToken cancellationToken = default) => Task.FromResult(false);
+    public Task PersistProvisioningOptionsAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+}
+
+/// <summary>
 /// Abstraction for Azure ArmClient.
 /// </summary>
 internal interface IArmClient
