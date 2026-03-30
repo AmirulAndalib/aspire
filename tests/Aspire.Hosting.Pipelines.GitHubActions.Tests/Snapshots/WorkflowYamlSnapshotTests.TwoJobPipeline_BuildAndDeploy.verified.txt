@@ -36,7 +36,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: aspire-do-state-build
-          path: '${{ env.HOME }}/.aspire/deployments/'
+          path: ${{ env.HOME }}/.aspire/deployments/
           if-no-files-found: ignore
 
   deploy:
@@ -58,7 +58,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: aspire-do-state-build
-          path: '${{ env.HOME }}/.aspire/deployments/'
+          path: ${{ env.HOME }}/.aspire/deployments/
       - name: Run pipeline steps
         env:
           DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
@@ -67,5 +67,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: aspire-do-state-deploy
-          path: '${{ env.HOME }}/.aspire/deployments/'
+          path: ${{ env.HOME }}/.aspire/deployments/
           if-no-files-found: ignore

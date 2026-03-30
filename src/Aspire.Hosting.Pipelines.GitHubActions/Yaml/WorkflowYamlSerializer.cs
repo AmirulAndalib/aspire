@@ -237,6 +237,13 @@ internal static class WorkflowYamlSerializer
 
     private static string YamlQuote(string value)
     {
+        // GitHub Actions expressions (${{ ... }}) must NOT be single-quoted or they
+        // are treated as literal strings instead of being evaluated.
+        if (value.Contains("${{"))
+        {
+            return value;
+        }
+
         if (value.Contains('\'') || value.Contains('"') || value.Contains(':') ||
             value.Contains('#') || value.Contains('{') || value.Contains('}') ||
             value.Contains('[') || value.Contains(']') || value.Contains('&') ||
