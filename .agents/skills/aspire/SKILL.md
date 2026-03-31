@@ -1,13 +1,13 @@
 ---
 name: aspire
-description: "Orchestrates Aspire distributed applications using the Aspire CLI for running, debugging, deploying, and managing distributed apps. USE FOR: aspire start, aspire stop, start aspire app, aspire describe, list aspire integrations, debug aspire issues, view aspire logs, add aspire resource, aspire dashboard, update aspire apphost, aspire publish, aspire deploy, aspire secrets, aspire config. DO NOT USE FOR: non-Aspire .NET apps (use dotnet CLI), container-only deployments (use docker/podman). INVOKES: Aspire CLI commands (aspire start, aspire describe, aspire otel logs, aspire docs search, aspire add, aspire publish, aspire deploy), bash. FOR SINGLE OPERATIONS: Use Aspire CLI commands directly for quick resource status or doc lookups."
+description: "Use this skill when the user is working with an Aspire distributed application and needs to operate the AppHost or its resources through the Aspire CLI: start, restart, stop, or wait on the app; inspect resources, logs, traces, docs, or health; add integrations; manage secrets or config; or publish and deploy. Use it even if they describe the task in terms of an AppHost, resources, dashboard, or local distributed app workflow without explicitly naming Aspire. Do not use it for non-Aspire .NET apps, container-only repos with no AppHost, or ordinary build and test tasks."
 ---
 
 # Aspire Skill
 
 Use this skill when the task is about operating an Aspire distributed application through the Aspire CLI rather than falling back to ad-hoc `dotnet`, `docker`, or shell workflows.
 
-Resources are typically defined in an AppHost project such as `apphost.cs` or `apphost.ts`.
+Resources are typically defined in an AppHost such as, `AppHost.cs`, `apphost.ts`, or `AppHost/AppHost.csproj (Program.cs)`.
 
 ## Use this skill for
 
@@ -64,13 +64,11 @@ If Playwright CLI is already configured in the environment, use Aspire first to 
 
 ## References
 
-- For starting and restarting an AppHost, read `references/start-and-restart-apphost.md`.
-- For choosing the right AppHost or getting machine-readable state, read `references/target-apphosts-and-resources.md`.
-- For debugging a running app before changing code, read `references/investigate-running-app.md`.
-- For resource-scoped operations, read `references/operate-on-a-resource.md`.
-- For integrations and TypeScript AppHost workflows, read `references/integrations-and-typescript-apphosts.md`.
-- For secrets and config management, read `references/manage-secrets-and-config.md`.
-- For local environment maintenance and recovery, read `references/local-environment-maintenance.md`.
-- For publish, deploy, and pipeline-step workflows, read `references/publish-deploy-and-pipeline-steps.md`.
-- For Playwright handoff and bootstrap flows, read `references/playwright-and-bootstrap.md`.
-- For investigation order and common agent workflows, read `references/agent-workflows.md`.
+- For app-level lifecycle, bootstrap, and AppHost-wide commands, see [references/app-commands.md](references/app-commands.md).
+- For waiting on and operating on individual resources, see [references/resource-management.md](references/resource-management.md).
+- For app state, logs, traces, and export workflows, see [references/monitoring.md](references/monitoring.md).
+- For deployment and pipeline-step workflows, see [references/deployment.md](references/deployment.md).
+- For docs, secrets, config, diagnostics, cache, and certificates, see [references/tools-and-configuration.md](references/tools-and-configuration.md).
+- For TypeScript AppHost guidance, see [references/typescript-apphosts.md](references/typescript-apphosts.md).
+- For Playwright handoff after Aspire endpoint discovery, see [references/playwright-handoff.md](references/playwright-handoff.md).
+- For investigation order and common agent workflows, see [references/agent-workflows.md](references/agent-workflows.md).

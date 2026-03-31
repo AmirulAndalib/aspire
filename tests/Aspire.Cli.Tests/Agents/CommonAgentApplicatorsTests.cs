@@ -75,15 +75,13 @@ public class CommonAgentApplicatorsTests
         Assert.Contains(skillFiles, file => file.RelativePath == "SKILL.md");
         Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("evals", "evals.json"));
         Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "agent-workflows.md"));
-        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "start-and-restart-apphost.md"));
-        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "target-apphosts-and-resources.md"));
-        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "investigate-running-app.md"));
-        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "operate-on-a-resource.md"));
-        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "integrations-and-typescript-apphosts.md"));
-        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "manage-secrets-and-config.md"));
-        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "local-environment-maintenance.md"));
-        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "publish-deploy-and-pipeline-steps.md"));
-        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "playwright-and-bootstrap.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "app-commands.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "resource-management.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "monitoring.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "deployment.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "tools-and-configuration.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "typescript-apphosts.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "playwright-handoff.md"));
     }
 
     [Fact]
