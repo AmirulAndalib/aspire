@@ -88,6 +88,18 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
     internal IPortAllocator PortAllocator { get; } = new PortAllocator();
 
     /// <summary>
+    /// Captured parameter-to-values.yaml mappings populated during publish, consumed during deploy
+    /// to resolve secret and unresolved parameter values into values-deploy.yaml.
+    /// </summary>
+    internal List<CapturedHelmValue> CapturedHelmValues { get; } = [];
+
+    /// <summary>
+    /// Represents a captured mapping from a Helm values.yaml path to a <see cref="ParameterResource"/>
+    /// for deferred resolution during deploy.
+    /// </summary>
+    internal sealed record CapturedHelmValue(string Section, string ResourceKey, string ValueKey, ParameterResource Parameter);
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="KubernetesEnvironmentResource"/> class.
     /// </summary>
     /// <param name="name">The name of the Kubernetes environment.</param>
@@ -190,6 +202,7 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
             context.ExecutionContext,
             outputPath,
             context.Logger,
+            this,
             context.CancellationToken);
         return kubernetesContext.WriteModelAsync(context.Model, this);
     }

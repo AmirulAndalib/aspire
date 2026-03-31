@@ -503,4 +503,138 @@ public class KubernetesDeployTests(ITestOutputHelper output)
         Assert.True(container.TryGetLastAnnotation<DeploymentTargetAnnotation>(out var dta));
         Assert.NotNull(dta.ComputeEnvironment);
     }
+
+    [Fact]
+    public async Task PrepareAsync_ResolvesSecretParameterValues()
+    {
+        using var tempDir = new TestTempDirectory();
+        var outputPath = Path.Combine(tempDir.Path, "env");
+        Directory.CreateDirectory(outputPath);
+
+        // Write a values.yaml with empty secret placeholders
+        var valuesYaml = """
+            parameters: {}
+            secrets:
+              myapp:
+                password: ""
+            config: {}
+            """;
+        await File.WriteAllTextAsync(Path.Combine(outputPath, "values.yaml"), valuesYaml);
+
+        var environment = new KubernetesEnvironmentResource("env");
+
+        // Create a parameter with a known value and add it to CapturedHelmValues
+        var paramResource = ParameterResourceBuilderExtensions.CreateDefaultPasswordParameter(
+            TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish),
+            "mypassword",
+            special: false);
+
+        environment.CapturedHelmValues.Add(
+            new KubernetesEnvironmentResource.CapturedHelmValue(
+                "secrets", "myapp", "password", paramResource));
+
+        // Act
+        await HelmDeploymentEngine.ResolveAndWriteDeployValuesAsync(
+            outputPath, environment, CancellationToken.None);
+
+        // Assert: values-deploy.yaml should exist with the resolved value
+        var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.DeployValuesFileName);
+        Assert.True(File.Exists(deployValuesPath), "values-deploy.yaml should be created");
+
+        var content = await File.ReadAllTextAsync(deployValuesPath);
+        Assert.Contains("secrets:", content);
+        Assert.Contains("myapp:", content);
+        Assert.Contains("password:", content);
+
+        // The password should NOT be empty
+        Assert.DoesNotContain("password: \"\"", content);
+        Assert.DoesNotContain("password: ''", content);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_NoCapturedValues_DoesNotCreateDeployFile()
+    {
+        using var tempDir = new TestTempDirectory();
+        var outputPath = Path.Combine(tempDir.Path, "env");
+        Directory.CreateDirectory(outputPath);
+
+        await File.WriteAllTextAsync(Path.Combine(outputPath, "values.yaml"), "parameters: {}\nsecrets: {}\nconfig: {}");
+
+        var environment = new KubernetesEnvironmentResource("env");
+
+        // Act: no captured values
+        await HelmDeploymentEngine.ResolveAndWriteDeployValuesAsync(
+            outputPath, environment, CancellationToken.None);
+
+        // Assert: no override file created
+        var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.DeployValuesFileName);
+        Assert.False(File.Exists(deployValuesPath), "values-deploy.yaml should not be created when there are no captured values");
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ResolvesMultipleParametersAcrossResources()
+    {
+        using var tempDir = new TestTempDirectory();
+        var outputPath = Path.Combine(tempDir.Path, "env");
+        Directory.CreateDirectory(outputPath);
+
+        await File.WriteAllTextAsync(Path.Combine(outputPath, "values.yaml"), "parameters: {}\nsecrets: {}\nconfig: {}");
+
+        var environment = new KubernetesEnvironmentResource("env");
+        var appBuilder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+
+        // Create multiple parameters for different resources
+        var param1 = ParameterResourceBuilderExtensions.CreateDefaultPasswordParameter(appBuilder, "cache-password", special: false);
+        var param2 = ParameterResourceBuilderExtensions.CreateDefaultPasswordParameter(appBuilder, "db-password", special: false);
+
+        environment.CapturedHelmValues.Add(
+            new KubernetesEnvironmentResource.CapturedHelmValue("secrets", "cache", "password", param1));
+        environment.CapturedHelmValues.Add(
+            new KubernetesEnvironmentResource.CapturedHelmValue("secrets", "database", "password", param2));
+
+        // Act
+        await HelmDeploymentEngine.ResolveAndWriteDeployValuesAsync(
+            outputPath, environment, CancellationToken.None);
+
+        // Assert: both secrets should be in the deploy values file
+        var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.DeployValuesFileName);
+        Assert.True(File.Exists(deployValuesPath));
+
+        var content = await File.ReadAllTextAsync(deployValuesPath);
+        Assert.Contains("cache:", content);
+        Assert.Contains("database:", content);
+    }
+
+    [Fact]
+    public async Task PublishCapturesSecretParameterMappings()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Publish);
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+
+        var envBuilder = builder.AddKubernetesEnvironment("env");
+        var password = builder.AddParameter("my-password", secret: true);
+
+        builder.AddContainer("api", "myimage")
+            .WithHttpEndpoint(targetPort: 8080)
+            .WithEnvironment("DB_PASSWORD", password);
+
+        using var app = builder.Build();
+        var env = envBuilder.Resource;
+
+        await app.RunAsync();
+
+        // After publish, secret parameter mappings should be captured
+        Assert.NotEmpty(env.CapturedHelmValues);
+        Assert.Contains(env.CapturedHelmValues, c =>
+            c.Section == "secrets" &&
+            c.Parameter.Name == "my-password");
+    }
 }

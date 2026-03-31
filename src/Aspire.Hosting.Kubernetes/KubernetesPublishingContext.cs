@@ -18,6 +18,7 @@ internal sealed class KubernetesPublishingContext(
     DistributedApplicationExecutionContext executionContext,
     string outputPath,
     ILogger logger,
+    KubernetesEnvironmentResource? environment = null,
     CancellationToken cancellationToken = default)
 {
     public readonly string OutputPath = outputPath;
@@ -145,7 +146,22 @@ internal sealed class KubernetesPublishingContext(
             // If there's a parameter source, resolve its value asynchronously
             if (helmExpressionWithValue.ParameterSource is ParameterResource parameter)
             {
-                value = await parameter.GetValueAsync(cancellationToken).ConfigureAwait(false);
+                if (parameter.Secret || parameter.Default is null)
+                {
+                    // Don't resolve secrets or parameters without defaults during publish.
+                    // Write an empty placeholder and capture the mapping for deploy-time resolution.
+                    value = string.Empty;
+                    environment?.CapturedHelmValues.Add(
+                        new KubernetesEnvironmentResource.CapturedHelmValue(
+                            helmKey,
+                            resource.Name.ToHelmValuesSectionName(),
+                            key.ToHelmValuesSectionName(),
+                            parameter));
+                }
+                else
+                {
+                    value = await parameter.GetValueAsync(cancellationToken).ConfigureAwait(false);
+                }
             }
             else
             {

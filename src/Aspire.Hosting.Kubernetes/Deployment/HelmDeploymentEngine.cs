@@ -23,6 +23,7 @@ internal static class HelmDeploymentEngine
     private const string HelmDeployTag = "helm-deploy";
     private const string HelmUninstallTag = "helm-uninstall";
     private const string PrintSummaryTag = "print-summary";
+    internal const string DeployValuesFileName = "values-deploy.yaml";
 
     /// <summary>
     /// Creates the deployment pipeline steps for the Helm engine.
@@ -134,6 +135,12 @@ internal static class HelmDeploymentEngine
                     }
                 }
 
+                // Resolve captured parameter/secret values and write a deploy override file.
+                // During publish, secrets and parameters without defaults are written as empty
+                // placeholders in values.yaml. During deploy, we resolve them and provide the
+                // actual values via a separate override file passed to helm.
+                await ResolveAndWriteDeployValuesAsync(outputPath, environment, context.CancellationToken).ConfigureAwait(false);
+
                 await prepareTask.CompleteAsync(
                     new MarkdownString($"Helm chart values prepared for **{environment.Name}**"),
                     CompletionState.Completed,
@@ -147,6 +154,57 @@ internal static class HelmDeploymentEngine
                     context.CancellationToken).ConfigureAwait(false);
                 throw;
             }
+        }
+    }
+
+    /// <summary>
+    /// Resolves captured parameter/secret values from the publish step and writes a
+    /// values-deploy.yaml override file for use during helm upgrade --install.
+    /// </summary>
+    internal static async Task ResolveAndWriteDeployValuesAsync(
+        string outputPath,
+        KubernetesEnvironmentResource environment,
+        CancellationToken cancellationToken)
+    {
+        if (environment.CapturedHelmValues.Count == 0)
+        {
+            return;
+        }
+
+        // Build the override structure: { section: { resourceKey: { valueKey: resolvedValue } } }
+        var overrideValues = new Dictionary<string, Dictionary<string, Dictionary<string, object>>>();
+
+        foreach (var captured in environment.CapturedHelmValues)
+        {
+            var resolvedValue = await captured.Parameter.GetValueAsync(cancellationToken).ConfigureAwait(false);
+            if (resolvedValue is null)
+            {
+                continue;
+            }
+
+            if (!overrideValues.TryGetValue(captured.Section, out var section))
+            {
+                section = [];
+                overrideValues[captured.Section] = section;
+            }
+
+            if (!section.TryGetValue(captured.ResourceKey, out var resourceValues))
+            {
+                resourceValues = [];
+                section[captured.ResourceKey] = resourceValues;
+            }
+
+            resourceValues[captured.ValueKey] = resolvedValue;
+        }
+
+        if (overrideValues.Count > 0)
+        {
+            var serializer = new YamlDotNet.Serialization.SerializerBuilder()
+                .WithNewLine("\n")
+                .Build();
+            var overrideContent = serializer.Serialize(overrideValues);
+            var overrideFilePath = Path.Combine(outputPath, DeployValuesFileName);
+            await File.WriteAllTextAsync(overrideFilePath, overrideContent, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -197,6 +255,14 @@ internal static class HelmDeploymentEngine
                 if (File.Exists(valuesFilePath))
                 {
                     arguments.Append(CultureInfo.InvariantCulture, $" -f \"{valuesFilePath}\"");
+                }
+
+                // Pass deploy-time override values (resolved secrets/parameters) after the
+                // base values.yaml so they take precedence via Helm's merge behavior.
+                var deployValuesFilePath = Path.Combine(outputPath, DeployValuesFileName);
+                if (File.Exists(deployValuesFilePath))
+                {
+                    arguments.Append(CultureInfo.InvariantCulture, $" -f \"{deployValuesFilePath}\"");
                 }
 
                 context.Logger.LogDebug("Running helm {Arguments}", arguments);

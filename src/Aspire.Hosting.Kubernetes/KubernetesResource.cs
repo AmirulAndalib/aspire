@@ -595,15 +595,9 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
             formattedName.ToHelmSecretExpression(resource.Name) :
             formattedName.ToHelmConfigExpression(resource.Name);
 
-        // Store the parameter itself for deferred resolution instead of resolving the value immediately
-        if (parameter.Default is null || parameter.Secret)
-        {
-            return new(expression, (string?)null);
-        }
-        else
-        {
-            return new(expression, parameter);
-        }
+        // Always store the parameter reference for deferred resolution.
+        // Secrets and parameters without defaults are resolved at deploy time (not publish time).
+        return new(expression, parameter);
     }
     
     private static HelmValue ResolveUnknownValue(IManifestExpressionProvider parameter, IResource resource)
