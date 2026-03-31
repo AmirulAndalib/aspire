@@ -16,7 +16,8 @@ internal sealed class SkillDefinition
     public static readonly SkillDefinition Aspire = new(
         CommonAgentApplicators.AspireSkillName,
         AgentCommandStrings.SkillDescription_Aspire,
-        CommonAgentApplicators.SkillFileContent,
+        skillContent: null,
+        embeddedResourceRoot: CommonAgentApplicators.AspireSkillResourceRoot,
         isDefault: true);
 
     /// <summary>
@@ -25,7 +26,8 @@ internal sealed class SkillDefinition
     public static readonly SkillDefinition PlaywrightCli = new(
         "playwright-cli",
         AgentCommandStrings.SkillDescription_PlaywrightCli,
-        skillContent: null, // Playwright is installed via PlaywrightCliInstaller, not a static file
+        skillContent: null,
+        embeddedResourceRoot: null, // Playwright is installed via PlaywrightCliInstaller, not a static file
         isDefault: true);
 
     /// <summary>
@@ -35,13 +37,15 @@ internal sealed class SkillDefinition
         CommonAgentApplicators.DotnetInspectSkillName,
         AgentCommandStrings.SkillDescription_DotnetInspect,
         CommonAgentApplicators.DotnetInspectSkillFileContent,
+        embeddedResourceRoot: null,
         isDefault: true);
 
-    private SkillDefinition(string name, string description, string? skillContent, bool isDefault)
+    private SkillDefinition(string name, string description, string? skillContent, string? embeddedResourceRoot, bool isDefault)
     {
         Name = name;
         Description = description;
         SkillContent = skillContent;
+        EmbeddedResourceRoot = embeddedResourceRoot;
         IsDefault = isDefault;
     }
 
@@ -59,6 +63,11 @@ internal sealed class SkillDefinition
     /// Gets the content for the SKILL.md file, or <c>null</c> if this skill is installed by other means.
     /// </summary>
     public string? SkillContent { get; }
+
+    /// <summary>
+    /// Gets the embedded resource root for bundled skill files, or <c>null</c> if the skill is not installed from an embedded file tree.
+    /// </summary>
+    public string? EmbeddedResourceRoot { get; }
 
     /// <summary>
     /// Gets whether this skill should be selected by default.

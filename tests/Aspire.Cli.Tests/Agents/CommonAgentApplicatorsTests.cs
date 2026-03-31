@@ -61,14 +61,36 @@ public class CommonAgentApplicatorsTests
     public void SkillDefinition_PlaywrightCli_HasNoSkillContent()
     {
         Assert.Null(SkillDefinition.PlaywrightCli.SkillContent);
+        Assert.Null(SkillDefinition.PlaywrightCli.EmbeddedResourceRoot);
     }
 
     [Fact]
-    public void SkillDefinition_AspireAndDotnetInspect_HaveSkillContent()
+    public async Task SkillDefinition_Aspire_HasEmbeddedSkillAssets()
     {
-        Assert.NotNull(SkillDefinition.Aspire.SkillContent);
+        Assert.Null(SkillDefinition.Aspire.SkillContent);
+        Assert.Equal(CommonAgentApplicators.AspireSkillResourceRoot, SkillDefinition.Aspire.EmbeddedResourceRoot);
+
+        var skillFiles = await EmbeddedSkillResourceLoader.LoadTextFilesAsync(SkillDefinition.Aspire.EmbeddedResourceRoot!, CancellationToken.None);
+
+        Assert.Contains(skillFiles, file => file.RelativePath == "SKILL.md");
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("evals", "evals.json"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "agent-workflows.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "start-and-restart-apphost.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "target-apphosts-and-resources.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "investigate-running-app.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "operate-on-a-resource.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "integrations-and-typescript-apphosts.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "manage-secrets-and-config.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "local-environment-maintenance.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "publish-deploy-and-pipeline-steps.md"));
+        Assert.Contains(skillFiles, file => file.RelativePath == Path.Combine("references", "playwright-and-bootstrap.md"));
+    }
+
+    [Fact]
+    public void SkillDefinition_DotnetInspect_HasSkillContent()
+    {
         Assert.NotNull(SkillDefinition.DotnetInspect.SkillContent);
-        Assert.Contains("# Aspire Skill", SkillDefinition.Aspire.SkillContent);
+        Assert.Null(SkillDefinition.DotnetInspect.EmbeddedResourceRoot);
         Assert.Contains("# dotnet-inspect", SkillDefinition.DotnetInspect.SkillContent);
     }
 }
