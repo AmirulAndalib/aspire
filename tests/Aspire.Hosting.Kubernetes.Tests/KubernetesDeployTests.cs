@@ -869,4 +869,186 @@ public class KubernetesDeployTests(ITestOutputHelper output)
         var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.GetDeployValuesFileName("env"));
         Assert.False(File.Exists(deployValuesPath));
     }
+
+    [Fact]
+    public async Task CrossResourceSecretResolution_ValuesYamlKeysMatchTemplateReferences()
+    {
+        // Simulates the Redis+server scenario: cache has a password, server references it.
+        // The values.yaml keys must match the Helm expression paths in templates.
+        using var tempDir = new TestTempDirectory();
+
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Publish);
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+
+        var envBuilder = builder.AddKubernetesEnvironment("env");
+        var cachePassword = builder.AddParameter("cache-password", secret: true);
+
+        // Cache container with a password
+        var cache = builder.AddContainer("cache", "redis")
+            .WithEndpoint(targetPort: 6379, name: "tcp")
+            .WithEnvironment("REDIS_PASSWORD", cachePassword);
+
+        // Server container that directly references the cache password
+        builder.AddContainer("server", "myserver")
+            .WithHttpEndpoint(targetPort: 8080)
+            .WithEnvironment("CACHE_PASSWORD", cachePassword);
+
+        using var app = builder.Build();
+        var env = envBuilder.Resource;
+
+        await app.RunAsync();
+
+        // Verify: values.yaml should have cache_password key (parameter name) under both cache and server
+        var valuesPath = Path.Combine(tempDir.Path, "values.yaml");
+        Assert.True(File.Exists(valuesPath), "values.yaml should exist");
+        var valuesContent = await File.ReadAllTextAsync(valuesPath);
+        output.WriteLine("=== values.yaml ===");
+        output.WriteLine(valuesContent);
+
+        // The key should be "cache_password" (from parameter name via ValuesKey), not "CACHE_PASSWORD" or "REDIS_PASSWORD"
+        Assert.Contains("cache_password", valuesContent);
+
+        // Verify: CapturedHelmValues should include entries for BOTH resources
+        Assert.Contains(env.CapturedHelmValues, c =>
+            c.Section == "secrets" &&
+            c.ResourceKey == "cache" &&
+            c.ValueKey == "cache_password" &&
+            c.Parameter.Name == "cache-password");
+
+        Assert.Contains(env.CapturedHelmValues, c =>
+            c.Section == "secrets" &&
+            c.ResourceKey == "server" &&
+            c.ValueKey == "cache_password" &&
+            c.Parameter.Name == "cache-password");
+
+        // Verify: server's template should reference {{ .Values.secrets.server.cache_password }}
+        var serverSecretsTemplatePath = Path.Combine(tempDir.Path, "templates", "server", "secrets.yaml");
+        if (File.Exists(serverSecretsTemplatePath))
+        {
+            var templateContent = await File.ReadAllTextAsync(serverSecretsTemplatePath);
+            output.WriteLine("=== server secrets.yaml template ===");
+            output.WriteLine(templateContent);
+
+            // Template should reference the correct path
+            Assert.Contains(".Values.secrets.server.cache_password", templateContent);
+        }
+    }
+
+    [Fact]
+    public async Task CrossResourceSecretResolution_OverrideFileResolvesAllPaths()
+    {
+        // Verifies that Phase 1 and Phase 2 resolution produces a correct override file.
+        // Phase 1: Resolves direct ParameterResource values (both cache and server entries)
+        // Phase 2: Substitutes Helm expressions in cross-reference templates with Phase 1 values
+        using var tempDir = new TestTempDirectory();
+        var outputPath = Path.Combine(tempDir.Path, "deploy");
+        Directory.CreateDirectory(outputPath);
+
+        var environment = new KubernetesEnvironmentResource("myenv");
+
+        // Create a parameter with a known value callback
+        var cachePasswordParam = new ParameterResource("cache-password", _ => "test-password-123", secret: true);
+
+        environment.CapturedHelmValues.Add(
+            new KubernetesEnvironmentResource.CapturedHelmValue(
+                "secrets", "cache", "cache_password", cachePasswordParam));
+
+        environment.CapturedHelmValues.Add(
+            new KubernetesEnvironmentResource.CapturedHelmValue(
+                "secrets", "server", "cache_password", cachePasswordParam));
+
+        // Simulate cross-reference: server's connection string embeds the cache password
+        environment.CapturedHelmCrossReferences.Add(
+            new KubernetesEnvironmentResource.CapturedHelmCrossReference(
+                "secrets", "server", "connectionstrings__cache",
+                "cache-service:6379,password={{ .Values.secrets.server.cache_password }}"));
+
+        environment.CapturedHelmCrossReferences.Add(
+            new KubernetesEnvironmentResource.CapturedHelmCrossReference(
+                "secrets", "server", "cache_uri",
+                "redis://:{{ .Values.secrets.server.cache_password }}@cache-service:6379"));
+
+        // Act
+        await HelmDeploymentEngine.ResolveAndWriteDeployValuesAsync(
+            outputPath, environment, CancellationToken.None);
+
+        // Assert: override file should exist and have fully resolved values
+        var overridePath = Path.Combine(outputPath, HelmDeploymentEngine.GetDeployValuesFileName("myenv"));
+        Assert.True(File.Exists(overridePath), "Override file should be created");
+
+        var content = await File.ReadAllTextAsync(overridePath);
+        output.WriteLine("=== Override file ===");
+        output.WriteLine(content);
+
+        // Phase 1: Both cache and server should have the resolved password
+        Assert.Contains("cache_password: test-password-123", content);
+
+        // Phase 2: Cross-references should be fully resolved (no {{ .Values... }} expressions)
+        Assert.DoesNotContain("{{ .Values.", content);
+
+        // Phase 2: Connection string should be fully resolved
+        Assert.Contains("connectionstrings__cache: cache-service:6379,password=test-password-123", content);
+        Assert.Contains("cache_uri: redis://:test-password-123@cache-service:6379", content);
+    }
+
+    [Fact]
+    public async Task CrossResourceSecretResolution_EndToEnd_PublishAndResolve()
+    {
+        // Full end-to-end: publish generates correct captures, then resolve produces correct override
+        using var tempDir = new TestTempDirectory();
+
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Publish);
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+
+        var envBuilder = builder.AddKubernetesEnvironment("env");
+        var cachePassword = builder.AddParameter("cache-password", "e2e-test-pw-42", secret: true);
+
+        // Cache with password
+        builder.AddContainer("cache", "redis")
+            .WithEndpoint(targetPort: 6379, name: "tcp")
+            .WithEnvironment("REDIS_PASSWORD", cachePassword);
+
+        // Server with direct password reference
+        builder.AddContainer("server", "myserver")
+            .WithHttpEndpoint(targetPort: 8080)
+            .WithEnvironment("CACHE_PASSWORD", cachePassword);
+
+        using var app = builder.Build();
+        var env = envBuilder.Resource;
+        await app.RunAsync();
+
+        // Now simulate deploy-time resolution
+        await HelmDeploymentEngine.ResolveAndWriteDeployValuesAsync(
+            tempDir.Path, env, CancellationToken.None);
+
+        var overridePath = Path.Combine(tempDir.Path, HelmDeploymentEngine.GetDeployValuesFileName("env"));
+        Assert.True(File.Exists(overridePath), "Override file should be created");
+
+        var content = await File.ReadAllTextAsync(overridePath);
+        output.WriteLine("=== Override file (E2E) ===");
+        output.WriteLine(content);
+
+        // The override file should NOT contain any unresolved Helm expressions
+        Assert.DoesNotContain("{{ .Values.", content);
+
+        // Both cache and server should have resolved password values
+        Assert.Contains("cache:", content);   // cache resource section
+        Assert.Contains("server:", content);   // server resource section
+        Assert.Contains("cache_password:", content);
+
+        // Verify the actual password is in the resolved values
+        Assert.Contains("e2e-test-pw-42", content);
+    }
 }
