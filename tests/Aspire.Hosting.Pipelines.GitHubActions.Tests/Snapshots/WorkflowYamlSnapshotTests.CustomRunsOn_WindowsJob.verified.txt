@@ -32,9 +32,11 @@ jobs:
         env:
           DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
         run: aspire do gha-build-windows-default-stage-build-win-job
+      - name: Stage deployment state
+        run: mkdir -p .aspire-state-staging && cp -r $HOME/.aspire/deployments/. .aspire-state-staging/ 2>/dev/null || true
       - name: Upload state
         uses: actions/upload-artifact@v4
         with:
           name: aspire-do-state-build-win
-          path: ${{ env.HOME }}/.aspire/deployments/
+          path: .aspire-state-staging
           if-no-files-found: ignore

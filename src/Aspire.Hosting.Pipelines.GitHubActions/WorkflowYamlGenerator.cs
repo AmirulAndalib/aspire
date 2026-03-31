@@ -14,9 +14,12 @@ namespace Aspire.Hosting.Pipelines.GitHubActions;
 internal static class WorkflowYamlGenerator
 {
     private const string StateArtifactPrefix = "aspire-do-state-";
-    // Must match the path used by FileDeploymentStateManager at runtime:
-    // $HOME/.aspire/deployments/{appHostPathSha256}/{environment}.json
-    private const string StatePathExpression = "${{ env.HOME }}/.aspire/deployments/";
+    // Workspace-relative staging path for artifact upload/download.
+    // upload-artifact@v4 does NOT evaluate ${{ env.HOME }} or other env vars in
+    // the `path` parameter, so we must use a workspace-relative path and copy
+    // to/from the real state directory ($HOME/.aspire/deployments/) via run steps.
+    private const string StateStagingPath = ".aspire-state-staging";
+    private const string StateRealPath = "$HOME/.aspire/deployments";
 
     /// <summary>
     /// Generates a workflow YAML model from the scheduling result.
@@ -138,7 +141,7 @@ internal static class WorkflowYamlGenerator
             });
         }
 
-        // Download state artifacts from dependency jobs
+        // Download state artifacts from dependency jobs and restore to real path
         var jobDeps = scheduling.JobDependencies.GetValueOrDefault(job.Id);
         if (jobDeps is { Count: > 0 })
         {
@@ -151,10 +154,17 @@ internal static class WorkflowYamlGenerator
                     With = new Dictionary<string, string>
                     {
                         ["name"] = $"{StateArtifactPrefix}{depJobId}",
-                        ["path"] = StatePathExpression
+                        ["path"] = StateStagingPath
                     }
                 });
             }
+
+            // Restore downloaded state from workspace-relative staging to real path
+            steps.Add(new StepYaml
+            {
+                Name = "Restore deployment state",
+                Run = $"mkdir -p {StateRealPath} && cp -r {StateStagingPath}/. {StateRealPath}/"
+            });
         }
 
         // Run aspire do targeting the synthetic scheduling step for this job.
@@ -173,6 +183,13 @@ internal static class WorkflowYamlGenerator
             }
         });
 
+        // Stage deployment state from real path to workspace-relative dir for upload
+        steps.Add(new StepYaml
+        {
+            Name = "Stage deployment state",
+            Run = $"mkdir -p {StateStagingPath} && cp -r {StateRealPath}/. {StateStagingPath}/ 2>/dev/null || true"
+        });
+
         // Upload state artifacts for downstream jobs
         steps.Add(new StepYaml
         {
@@ -181,7 +198,7 @@ internal static class WorkflowYamlGenerator
             With = new Dictionary<string, string>
             {
                 ["name"] = $"{StateArtifactPrefix}{job.Id}",
-                ["path"] = StatePathExpression,
+                ["path"] = StateStagingPath,
                 ["if-no-files-found"] = "ignore"
             }
         });

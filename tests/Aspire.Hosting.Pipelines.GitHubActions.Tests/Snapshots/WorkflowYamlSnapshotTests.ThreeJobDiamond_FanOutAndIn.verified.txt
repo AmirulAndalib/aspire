@@ -32,11 +32,13 @@ jobs:
         env:
           DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
         run: aspire do gha-ci-cd-default-stage-build-job
+      - name: Stage deployment state
+        run: mkdir -p .aspire-state-staging && cp -r $HOME/.aspire/deployments/. .aspire-state-staging/ 2>/dev/null || true
       - name: Upload state
         uses: actions/upload-artifact@v4
         with:
           name: aspire-do-state-build
-          path: ${{ env.HOME }}/.aspire/deployments/
+          path: .aspire-state-staging
           if-no-files-found: ignore
 
   test:
@@ -58,16 +60,20 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: aspire-do-state-build
-          path: ${{ env.HOME }}/.aspire/deployments/
+          path: .aspire-state-staging
+      - name: Restore deployment state
+        run: mkdir -p $HOME/.aspire/deployments && cp -r .aspire-state-staging/. $HOME/.aspire/deployments/
       - name: Run pipeline steps
         env:
           DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
         run: aspire do gha-ci-cd-default-stage-test-job
+      - name: Stage deployment state
+        run: mkdir -p .aspire-state-staging && cp -r $HOME/.aspire/deployments/. .aspire-state-staging/ 2>/dev/null || true
       - name: Upload state
         uses: actions/upload-artifact@v4
         with:
           name: aspire-do-state-test
-          path: ${{ env.HOME }}/.aspire/deployments/
+          path: .aspire-state-staging
           if-no-files-found: ignore
 
   deploy:
@@ -89,19 +95,23 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: aspire-do-state-build
-          path: ${{ env.HOME }}/.aspire/deployments/
+          path: .aspire-state-staging
       - name: Download state from test
         uses: actions/download-artifact@v4
         with:
           name: aspire-do-state-test
-          path: ${{ env.HOME }}/.aspire/deployments/
+          path: .aspire-state-staging
+      - name: Restore deployment state
+        run: mkdir -p $HOME/.aspire/deployments && cp -r .aspire-state-staging/. $HOME/.aspire/deployments/
       - name: Run pipeline steps
         env:
           DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
         run: aspire do gha-ci-cd-default-stage-deploy-job
+      - name: Stage deployment state
+        run: mkdir -p .aspire-state-staging && cp -r $HOME/.aspire/deployments/. .aspire-state-staging/ 2>/dev/null || true
       - name: Upload state
         uses: actions/upload-artifact@v4
         with:
           name: aspire-do-state-deploy
-          path: ${{ env.HOME }}/.aspire/deployments/
+          path: .aspire-state-staging
           if-no-files-found: ignore
