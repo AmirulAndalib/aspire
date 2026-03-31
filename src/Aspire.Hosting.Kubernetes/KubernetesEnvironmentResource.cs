@@ -89,15 +89,28 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
 
     /// <summary>
     /// Captured parameter-to-values.yaml mappings populated during publish, consumed during deploy
-    /// to resolve secret and unresolved parameter values into values-deploy.yaml.
+    /// to resolve secret and unresolved parameter values into the environment values file.
     /// </summary>
     internal List<CapturedHelmValue> CapturedHelmValues { get; } = [];
+
+    /// <summary>
+    /// Captured cross-resource secret references populated during publish, consumed during deploy
+    /// to resolve composite values that reference other Helm values paths.
+    /// </summary>
+    internal List<CapturedHelmCrossReference> CapturedHelmCrossReferences { get; } = [];
 
     /// <summary>
     /// Represents a captured mapping from a Helm values.yaml path to a <see cref="ParameterResource"/>
     /// for deferred resolution during deploy.
     /// </summary>
     internal sealed record CapturedHelmValue(string Section, string ResourceKey, string ValueKey, ParameterResource Parameter);
+
+    /// <summary>
+    /// Represents a captured cross-resource secret reference where the value contains Helm expressions
+    /// referencing other values.yaml paths (e.g., connection strings containing <c>{{ .Values.secrets.cache.password }}</c>).
+    /// At deploy time, the Helm expressions in the template are substituted with resolved values.
+    /// </summary>
+    internal sealed record CapturedHelmCrossReference(string Section, string ResourceKey, string ValueKey, string TemplateValue);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="KubernetesEnvironmentResource"/> class.

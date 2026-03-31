@@ -6,6 +6,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Dcp.Process;
 using Aspire.Hosting.Pipelines;
@@ -18,12 +19,16 @@ namespace Aspire.Hosting.Kubernetes;
 /// Provides the Helm deployment engine that creates pipeline steps for deploying
 /// Aspire applications to Kubernetes using Helm charts.
 /// </summary>
-internal static class HelmDeploymentEngine
+internal static partial class HelmDeploymentEngine
 {
     private const string HelmDeployTag = "helm-deploy";
     private const string HelmUninstallTag = "helm-uninstall";
     private const string PrintSummaryTag = "print-summary";
-    internal const string DeployValuesFileName = "values-deploy.yaml";
+
+    /// <summary>
+    /// Gets the environment-specific values file name, mirroring Docker Compose's .env.{envName} pattern.
+    /// </summary>
+    internal static string GetDeployValuesFileName(string environmentName) => $"values.{environmentName}.yaml";
 
     /// <summary>
     /// Creates the deployment pipeline steps for the Helm engine.
@@ -158,21 +163,25 @@ internal static class HelmDeploymentEngine
     }
 
     /// <summary>
-    /// Resolves captured parameter/secret values from the publish step and writes a
-    /// values-deploy.yaml override file for use during helm upgrade --install.
+    /// Resolves captured parameter/secret values and cross-resource references from the publish step,
+    /// then writes an environment-specific values override file for use during helm upgrade --install.
     /// </summary>
     internal static async Task ResolveAndWriteDeployValuesAsync(
         string outputPath,
         KubernetesEnvironmentResource environment,
         CancellationToken cancellationToken)
     {
-        if (environment.CapturedHelmValues.Count == 0)
+        if (environment.CapturedHelmValues.Count == 0 && environment.CapturedHelmCrossReferences.Count == 0)
         {
             return;
         }
 
         // Build the override structure: { section: { resourceKey: { valueKey: resolvedValue } } }
         var overrideValues = new Dictionary<string, Dictionary<string, Dictionary<string, object>>>();
+
+        // Phase 1: Resolve direct ParameterResource values
+        // Also build a flat lookup for cross-reference substitution: "section.resourceKey.valueKey" → resolvedValue
+        var resolvedLookup = new Dictionary<string, string>();
 
         foreach (var captured in environment.CapturedHelmValues)
         {
@@ -182,19 +191,16 @@ internal static class HelmDeploymentEngine
                 continue;
             }
 
-            if (!overrideValues.TryGetValue(captured.Section, out var section))
-            {
-                section = [];
-                overrideValues[captured.Section] = section;
-            }
+            SetOverrideValue(overrideValues, captured.Section, captured.ResourceKey, captured.ValueKey, resolvedValue);
+            resolvedLookup[$"{captured.Section}.{captured.ResourceKey}.{captured.ValueKey}"] = resolvedValue;
+        }
 
-            if (!section.TryGetValue(captured.ResourceKey, out var resourceValues))
-            {
-                resourceValues = [];
-                section[captured.ResourceKey] = resourceValues;
-            }
-
-            resourceValues[captured.ValueKey] = resolvedValue;
+        // Phase 2: Resolve cross-resource secret references by substituting Helm expressions
+        // in the template value with values resolved in Phase 1.
+        foreach (var crossRef in environment.CapturedHelmCrossReferences)
+        {
+            var resolvedValue = ResolveHelmExpressions(crossRef.TemplateValue, resolvedLookup);
+            SetOverrideValue(overrideValues, crossRef.Section, crossRef.ResourceKey, crossRef.ValueKey, resolvedValue);
         }
 
         if (overrideValues.Count > 0)
@@ -203,10 +209,56 @@ internal static class HelmDeploymentEngine
                 .WithNewLine("\n")
                 .Build();
             var overrideContent = serializer.Serialize(overrideValues);
-            var overrideFilePath = Path.Combine(outputPath, DeployValuesFileName);
+            var overrideFilePath = Path.Combine(outputPath, GetDeployValuesFileName(environment.Name));
             await File.WriteAllTextAsync(overrideFilePath, overrideContent, cancellationToken).ConfigureAwait(false);
         }
     }
+
+    private static void SetOverrideValue(
+        Dictionary<string, Dictionary<string, Dictionary<string, object>>> overrideValues,
+        string section, string resourceKey, string valueKey, object value)
+    {
+        if (!overrideValues.TryGetValue(section, out var sectionDict))
+        {
+            sectionDict = [];
+            overrideValues[section] = sectionDict;
+        }
+
+        if (!sectionDict.TryGetValue(resourceKey, out var resourceValues))
+        {
+            resourceValues = [];
+            sectionDict[resourceKey] = resourceValues;
+        }
+
+        resourceValues[valueKey] = value;
+    }
+
+    /// <summary>
+    /// Substitutes Helm value expressions (e.g., <c>{{ .Values.secrets.cache.password }}</c>) in a template
+    /// string with resolved values from the lookup dictionary.
+    /// </summary>
+    internal static string ResolveHelmExpressions(string template, Dictionary<string, string> resolvedLookup)
+    {
+        // Match Helm expressions like {{ .Values.secrets.cache.password }} or {{ .Values.config.myapp.key }}
+        return HelmValuesExpressionRegex().Replace(template, match =>
+        {
+            var path = match.Groups[1].Value.Trim();
+
+            // Path is like ".Values.secrets.cache.password" → normalize to "secrets.cache.password"
+            if (path.StartsWith(".Values.", StringComparison.Ordinal))
+            {
+                path = path[".Values.".Length..];
+            }
+
+            // Convert to the same key format used in resolvedLookup (underscore-based)
+            path = path.Replace("-", "_");
+
+            return resolvedLookup.TryGetValue(path, out var resolved) ? resolved : match.Value;
+        });
+    }
+
+    [GeneratedRegex(@"\{\{\s*(\.Values\.[a-zA-Z0-9_.]+)\s*\}\}")]
+    private static partial Regex HelmValuesExpressionRegex();
 
     private static async Task HelmDeployAsync(PipelineStepContext context, KubernetesEnvironmentResource environment)
     {
@@ -259,7 +311,7 @@ internal static class HelmDeploymentEngine
 
                 // Pass deploy-time override values (resolved secrets/parameters) after the
                 // base values.yaml so they take precedence via Helm's merge behavior.
-                var deployValuesFilePath = Path.Combine(outputPath, DeployValuesFileName);
+                var deployValuesFilePath = Path.Combine(outputPath, GetDeployValuesFileName(environment.Name));
                 if (File.Exists(deployValuesFilePath))
                 {
                     arguments.Append(CultureInfo.InvariantCulture, $" -f \"{deployValuesFilePath}\"");

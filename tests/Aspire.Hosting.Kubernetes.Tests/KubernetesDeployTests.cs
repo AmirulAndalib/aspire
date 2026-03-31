@@ -537,9 +537,9 @@ public class KubernetesDeployTests(ITestOutputHelper output)
         await HelmDeploymentEngine.ResolveAndWriteDeployValuesAsync(
             outputPath, environment, CancellationToken.None);
 
-        // Assert: values-deploy.yaml should exist with the resolved value
-        var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.DeployValuesFileName);
-        Assert.True(File.Exists(deployValuesPath), "values-deploy.yaml should be created");
+        // Assert: values.env.yaml should exist with the resolved value
+        var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.GetDeployValuesFileName("env"));
+        Assert.True(File.Exists(deployValuesPath), "values.env.yaml should be created");
 
         var content = await File.ReadAllTextAsync(deployValuesPath);
         Assert.Contains("secrets:", content);
@@ -567,8 +567,8 @@ public class KubernetesDeployTests(ITestOutputHelper output)
             outputPath, environment, CancellationToken.None);
 
         // Assert: no override file created
-        var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.DeployValuesFileName);
-        Assert.False(File.Exists(deployValuesPath), "values-deploy.yaml should not be created when there are no captured values");
+        var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.GetDeployValuesFileName("env"));
+        Assert.False(File.Exists(deployValuesPath), "values.env.yaml should not be created when there are no captured values");
     }
 
     [Fact]
@@ -597,12 +597,100 @@ public class KubernetesDeployTests(ITestOutputHelper output)
             outputPath, environment, CancellationToken.None);
 
         // Assert: both secrets should be in the deploy values file
-        var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.DeployValuesFileName);
+        var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.GetDeployValuesFileName("env"));
         Assert.True(File.Exists(deployValuesPath));
 
         var content = await File.ReadAllTextAsync(deployValuesPath);
         Assert.Contains("cache:", content);
         Assert.Contains("database:", content);
+    }
+
+    [Fact]
+    public void ResolveHelmExpressions_SubstitutesDirectReferences()
+    {
+        var lookup = new Dictionary<string, string>
+        {
+            ["secrets.cache.password"] = "s3cret!"
+        };
+
+        var template = "{{ .Values.secrets.cache.password }}";
+        var result = HelmDeploymentEngine.ResolveHelmExpressions(template, lookup);
+
+        Assert.Equal("s3cret!", result);
+    }
+
+    [Fact]
+    public void ResolveHelmExpressions_SubstitutesCompositeConnectionString()
+    {
+        var lookup = new Dictionary<string, string>
+        {
+            ["secrets.cache.password"] = "myP@ss"
+        };
+
+        var template = "cache:6379,password={{ .Values.secrets.cache.password }}";
+        var result = HelmDeploymentEngine.ResolveHelmExpressions(template, lookup);
+
+        Assert.Equal("cache:6379,password=myP@ss", result);
+    }
+
+    [Fact]
+    public void ResolveHelmExpressions_PreservesUnresolvedExpressions()
+    {
+        var lookup = new Dictionary<string, string>();
+
+        var template = "host={{ .Values.config.myapp.host }},password={{ .Values.secrets.cache.password }}";
+        var result = HelmDeploymentEngine.ResolveHelmExpressions(template, lookup);
+
+        // Unresolved expressions are preserved as-is
+        Assert.Equal(template, result);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_ResolvesCrossResourceReferences()
+    {
+        using var tempDir = new TestTempDirectory();
+        var outputPath = Path.Combine(tempDir.Path, "env");
+        Directory.CreateDirectory(outputPath);
+
+        await File.WriteAllTextAsync(Path.Combine(outputPath, "values.yaml"), "parameters: {}\nsecrets: {}\nconfig: {}");
+
+        var environment = new KubernetesEnvironmentResource("env");
+        var appBuilder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+
+        // Direct secret parameter for cache resource
+        var cachePassword = ParameterResourceBuilderExtensions.CreateDefaultPasswordParameter(appBuilder, "cache-password", special: false);
+        environment.CapturedHelmValues.Add(
+            new KubernetesEnvironmentResource.CapturedHelmValue("secrets", "cache", "password", cachePassword));
+
+        // Cross-resource reference: server's connection string references cache's password
+        environment.CapturedHelmCrossReferences.Add(
+            new KubernetesEnvironmentResource.CapturedHelmCrossReference(
+                "secrets", "server", "ConnectionStrings__cache",
+                "cache:6379,password={{ .Values.secrets.cache.password }}"));
+
+        // Act
+        await HelmDeploymentEngine.ResolveAndWriteDeployValuesAsync(
+            outputPath, environment, CancellationToken.None);
+
+        // Assert
+        var deployValuesPath = Path.Combine(outputPath, HelmDeploymentEngine.GetDeployValuesFileName("env"));
+        Assert.True(File.Exists(deployValuesPath));
+
+        var content = await File.ReadAllTextAsync(deployValuesPath);
+
+        // Both the direct secret and the cross-reference should be present
+        Assert.Contains("cache:", content);
+        Assert.Contains("server:", content);
+
+        // The cross-reference should contain the resolved password, not the Helm expression
+        Assert.DoesNotContain("{{ .Values", content);
+    }
+
+    [Fact]
+    public void DeployValuesFileName_IncludesEnvironmentName()
+    {
+        Assert.Equal("values.myenv.yaml", HelmDeploymentEngine.GetDeployValuesFileName("myenv"));
+        Assert.Equal("values.k8s.yaml", HelmDeploymentEngine.GetDeployValuesFileName("k8s"));
     }
 
     [Fact]

@@ -5,6 +5,7 @@ secrets:
   myapp:
     param1: ""
     param3: ""
+    ConnectionStrings__cs: ""
 config:
   myapp:
     ASPNETCORE_ENVIRONMENT: "Development"

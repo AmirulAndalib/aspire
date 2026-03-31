@@ -136,8 +136,19 @@ internal sealed class KubernetesPublishingContext(
 
         foreach (var (key, helmExpressionWithValue) in contextItems)
         {
+            // Cross-resource secret references have their Value set to a string containing
+            // Helm expressions (e.g., "cache:6379,password={{ .Values.secrets.cache.password }}").
+            // These need empty placeholders in values.yaml so the YAML section structure exists,
+            // and the actual values are resolved at deploy time from the captured cross-reference.
             if (helmExpressionWithValue.ValueContainsHelmExpression)
             {
+                paramValues[key.ToHelmValuesSectionName()] = string.Empty;
+                environment?.CapturedHelmCrossReferences.Add(
+                    new KubernetesEnvironmentResource.CapturedHelmCrossReference(
+                        helmKey,
+                        resource.Name.ToHelmValuesSectionName(),
+                        key.ToHelmValuesSectionName(),
+                        helmExpressionWithValue.ValueString!));
                 continue;
             }
 

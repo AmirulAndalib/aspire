@@ -1,4 +1,4 @@
-﻿parameters:
+parameters:
   project1:
     port_http: 8080
     project1_image: "project1:latest"
@@ -7,7 +7,12 @@ config:
   project1:
     OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
     ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+    HTTP_PORTS: ""
   api:
+    PROJECT1_HTTP: ""
+    services__project1__http__0: ""
+    PROJECT1_HTTPS: ""
+    services__project1__https__0: ""
     PROJECT1_CUSTOM1: "http://project1-service:8000"
     services__project1__http__1: "http://project1-service:8000"
     PROJECT1_CUSTOM2: "http://project1-service:8001"
