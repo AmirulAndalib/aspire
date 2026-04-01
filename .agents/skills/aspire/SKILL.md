@@ -64,7 +64,7 @@ When the AppHost is `apphost.ts`, the `.modules/` folder at the project root con
 - For unfamiliar C# AppHost APIs, use Aspire docs as the primary API reference and, if available, use `dotnet-inspect` only to inspect local symbols, overloads, and builder chains.
 - Never install the obsolete Aspire workload.
 - When a TypeScript AppHost uses `.modules/`, do not edit generated files directly. Use `aspire add` to regenerate APIs and inspect `.modules/aspire.ts` afterward.
-- Prefer official docs from `aspire.dev` and `learn.microsoft.com/microsoft/aspire`.
+- Prefer official docs from `aspire.dev`.
 
 ## Common capabilities
 
