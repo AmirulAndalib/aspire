@@ -198,7 +198,7 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
 
         // Rule 2b (ASPIREEXPORT011): Warn when explicit id matches the convention-derived name
         if (isExportIdFormatValid &&
-            string.Equals(exportId, GetDerivedExportId(method), StringComparison.Ordinal))
+            string.Equals(exportId, GetDerivedExportId(method, containingTypeExportAttribute), StringComparison.Ordinal))
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 Diagnostics.s_redundantExportId,
@@ -210,7 +210,7 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
         // Compute the effective export ID: either from the explicit attribute or auto-derived from method name (camelCase)
         // Normalize empty/invalid exportId to null so the fallback applies
         var normalizedExportId = isExportIdFormatValid ? exportId : null;
-        var effectiveExportId = normalizedExportId ?? GetDerivedExportId(method);
+        var effectiveExportId = normalizedExportId ?? GetDerivedExportId(method, containingTypeExportAttribute);
 
         // Rule 3: Validate return type is ATS-compatible
         if (!IsAtsCompatibleType(method.ReturnType, wellKnownTypes, aspireExportAttribute, currentAssemblyExportedTypes))
@@ -824,13 +824,41 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
         return null;
     }
 
-    private static string? GetDerivedExportId(IMethodSymbol method)
+    private static string? GetDerivedExportId(IMethodSymbol method, AttributeData? containingTypeExportAttribute)
     {
         if (string.IsNullOrEmpty(method.Name))
         {
             return null;
         }
-        return char.ToLowerInvariant(method.Name[0]) + method.Name.Substring(1);
+
+        var camelCaseName = char.ToLowerInvariant(method.Name[0]) + method.Name.Substring(1);
+
+        // Non-static methods auto-exposed via ExposeMethods=true use TypeName.methodName to avoid collisions
+        if (!method.IsStatic && IsExposeMethodsEnabled(containingTypeExportAttribute))
+        {
+            return $"{method.ContainingType.Name}.{camelCaseName}";
+        }
+
+        return camelCaseName;
+    }
+
+    private static bool IsExposeMethodsEnabled(AttributeData? exportAttribute)
+    {
+        if (exportAttribute is null)
+        {
+            return false;
+        }
+
+        foreach (var namedArgument in exportAttribute.NamedArguments)
+        {
+            if (namedArgument.Key == "ExposeMethods" &&
+                namedArgument.Value.Value is bool enabled)
+            {
+                return enabled;
+            }
+        }
+
+        return false;
     }
 
     private static bool TryGetEffectiveAspireExportAttribute(IMethodSymbol method, INamedTypeSymbol aspireExportAttribute, out AttributeData? exportAttribute, out AttributeData? containingTypeExportAttribute)

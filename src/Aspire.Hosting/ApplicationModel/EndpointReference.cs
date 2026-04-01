@@ -9,7 +9,7 @@ namespace Aspire.Hosting.ApplicationModel;
 /// <summary>
 /// Represents an endpoint reference for a resource with endpoints.
 /// </summary>
-[AspireExport(ExposeProperties = true)]
+[AspireExport(ExposeProperties = true, ExposeMethods = true)]
 [DebuggerDisplay("Resource = {Resource.Name}, EndpointName = {EndpointName}, IsAllocated = {IsAllocated}")]
 public sealed class EndpointReference : IManifestExpressionProvider, IValueProvider, IValueWithReferences
 {
@@ -85,7 +85,7 @@ public sealed class EndpointReference : IManifestExpressionProvider, IValueProvi
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The URL of the endpoint.</returns>
-    [AspireExport(Description = "Gets the URL of the endpoint asynchronously")]
+    [AspireExport("getValueAsync", Description = "Gets the URL of the endpoint asynchronously")]
     public ValueTask<string?> GetValueAsync(CancellationToken cancellationToken = default) => Property(EndpointProperty.Url).GetValueAsync(cancellationToken);
 
     /// <summary>
@@ -94,6 +94,7 @@ public sealed class EndpointReference : IManifestExpressionProvider, IValueProvi
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <param name="context">The context for value resolution.</param>
     /// <returns>The URL of the endpoint.</returns>
+    [AspireExportIgnore]
     public ValueTask<string?> GetValueAsync(ValueProviderContext context, CancellationToken cancellationToken = default) => Property(EndpointProperty.Url).GetValueAsync(context, cancellationToken);
 
     /// <summary>
@@ -128,6 +129,7 @@ public sealed class EndpointReference : IManifestExpressionProvider, IValueProvi
     /// </summary>
     /// <param name="property">The <see cref="EndpointProperty"/> enum value to use in the reference.</param>
     /// <returns>An <see cref="EndpointReferenceExpression"/> representing the specified <see cref="EndpointProperty"/>.</returns>
+    [AspireExportIgnore]
     public EndpointReferenceExpression Property(EndpointProperty property)
     {
         return new(this, property);
