@@ -1,4 +1,4 @@
----
+﻿---
 apiVersion: "v1"
 kind: "ConfigMap"
 metadata:
@@ -11,3 +11,6 @@ data:
   OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "{{ .Values.config.project1.OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY }}"
   MYAPP_HTTP: "{{ .Values.config.project1.MYAPP_HTTP }}"
   services__myapp__http__0: "{{ .Values.config.project1.services__myapp__http__0 }}"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "{{ .Values.config.project1.OTEL_EXPORTER_OTLP_ENDPOINT }}"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "{{ .Values.config.project1.OTEL_EXPORTER_OTLP_PROTOCOL }}"
+  OTEL_SERVICE_NAME: "{{ .Values.config.project1.OTEL_SERVICE_NAME }}"

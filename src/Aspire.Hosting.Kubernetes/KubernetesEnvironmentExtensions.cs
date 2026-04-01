@@ -38,7 +38,8 @@ public static class KubernetesEnvironmentExtensions
 
         var resource = new KubernetesEnvironmentResource(name)
         {
-            HelmChartName = builder.Environment.ApplicationName.ToHelmChartName()
+            HelmChartName = builder.Environment.ApplicationName.ToHelmChartName(),
+            Dashboard = builder.CreateDashboard($"{name}-dashboard")
         };
         if (builder.ExecutionContext.IsRunMode)
         {
@@ -112,6 +113,50 @@ public static class KubernetesEnvironmentExtensions
         ArgumentNullException.ThrowIfNull(configure);
 
         configure(builder.Resource);
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Enables the Aspire dashboard for telemetry visualization in this Kubernetes environment.
+    /// </summary>
+    /// <param name="builder">The Kubernetes environment resource builder.</param>
+    /// <param name="enabled">Whether to enable the dashboard. Default is true.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{T}"/>.</returns>
+    /// <remarks>
+    /// When enabled, an Aspire Dashboard container is deployed alongside the application resources
+    /// in the Kubernetes cluster. All resources with OTLP telemetry support are automatically
+    /// configured to send telemetry data to the dashboard.
+    /// </remarks>
+    [AspireExport("withDashboard", Description = "Enables or disables the Aspire dashboard for the Kubernetes environment")]
+    public static IResourceBuilder<KubernetesEnvironmentResource> WithDashboard(this IResourceBuilder<KubernetesEnvironmentResource> builder, bool enabled = true)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Resource.DashboardEnabled = enabled;
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures the dashboard properties for this Kubernetes environment.
+    /// </summary>
+    /// <param name="builder">The Kubernetes environment resource builder.</param>
+    /// <param name="configure">A method that can be used for customizing the dashboard resource.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{T}"/>.</returns>
+    /// <remarks>
+    /// Use this overload to customize the dashboard container, for example to set a specific host port
+    /// or enable forwarded headers for ingress access.
+    /// </remarks>
+    [AspireExport("configureDashboard", MethodName = "configureDashboard", Description = "Configures the Aspire dashboard resource for the Kubernetes environment", RunSyncOnBackgroundThread = true)]
+    public static IResourceBuilder<KubernetesEnvironmentResource> WithDashboard(this IResourceBuilder<KubernetesEnvironmentResource> builder, Action<IResourceBuilder<KubernetesAspireDashboardResource>> configure)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(configure);
+
+        builder.Resource.DashboardEnabled = true;
+
+        configure(builder.Resource.Dashboard ?? throw new InvalidOperationException("Dashboard resource is not initialized"));
 
         return builder;
     }

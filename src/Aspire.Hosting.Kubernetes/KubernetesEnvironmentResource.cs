@@ -40,6 +40,13 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
     public string HelmChartDescription { get; set; } = "Aspire Helm Chart";
 
     /// <summary>
+    /// Determines whether to include an Aspire dashboard for telemetry visualization in this environment.
+    /// </summary>
+    public bool DashboardEnabled { get; set; } = true;
+
+    internal IResourceBuilder<KubernetesAspireDashboardResource>? Dashboard { get; set; }
+
+    /// <summary>
     /// Specifies the default type of storage used for Kubernetes deployments.
     /// </summary>
     /// <remarks>
@@ -155,11 +162,15 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
 
             var steps = await engineAnnotation.CreateSteps(environment, factoryContext).ConfigureAwait(false);
 
-            // Also expand deployment target steps for compute resources
+            // Also expand deployment target steps for compute resources (including dashboard if enabled)
             var model = factoryContext.PipelineContext.Model;
             var allSteps = new List<PipelineStep>(steps);
 
-            foreach (var computeResource in model.GetComputeResources())
+            var resources = environment.DashboardEnabled && environment.Dashboard?.Resource is KubernetesAspireDashboardResource dashboard
+                ? [.. model.GetComputeResources(), dashboard]
+                : model.GetComputeResources();
+
+            foreach (var computeResource in resources)
             {
                 var deploymentTarget = computeResource.GetDeploymentTargetAnnotation(environment)?.DeploymentTarget;
                 if (deploymentTarget is not null &&
@@ -185,7 +196,11 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
         // Pipeline configuration - wire up step dependencies
         Annotations.Add(new PipelineConfigurationAnnotation(context =>
         {
-            foreach (var computeResource in context.Model.GetComputeResources())
+            var resources = DashboardEnabled && Dashboard?.Resource is KubernetesAspireDashboardResource dashboardRes
+                ? [.. context.Model.GetComputeResources(), dashboardRes]
+                : context.Model.GetComputeResources();
+
+            foreach (var computeResource in resources)
             {
                 var deploymentTarget = computeResource.GetDeploymentTargetAnnotation(this)?.DeploymentTarget;
                 if (deploymentTarget is null)

@@ -37,6 +37,18 @@ internal sealed class KubernetesInfrastructure(
             var environmentContext = new KubernetesEnvironmentContext(environment, logger);
             var containerRegistry = GetContainerRegistry(environment, @event.Model);
 
+            // Create a Kubernetes resource for the dashboard if enabled
+            if (environment.DashboardEnabled && environment.Dashboard?.Resource is KubernetesAspireDashboardResource dashboard)
+            {
+                var dashboardService = await environmentContext.CreateKubernetesResourceAsync(dashboard, executionContext, cancellationToken).ConfigureAwait(false);
+
+                dashboard.Annotations.Add(new DeploymentTargetAnnotation(dashboardService)
+                {
+                    ComputeEnvironment = environment,
+                    ContainerRegistry = containerRegistry
+                });
+            }
+
             foreach (var r in @event.Model.GetComputeResources())
             {
                 // Skip resources that are explicitly targeted to a different compute environment
@@ -44,6 +56,12 @@ internal sealed class KubernetesInfrastructure(
                 if (resourceComputeEnvironment is not null && resourceComputeEnvironment != environment)
                 {
                     continue;
+                }
+
+                // Configure OTLP for resources if dashboard is enabled
+                if (environment.DashboardEnabled && environment.Dashboard?.Resource.OtlpGrpcEndpoint is EndpointReference otlpGrpcEndpoint)
+                {
+                    ConfigureOtlp(r, otlpGrpcEndpoint);
                 }
 
                 // Create a Kubernetes compute resource for the resource
@@ -87,6 +105,20 @@ internal sealed class KubernetesInfrastructure(
             {
                 throw new InvalidOperationException($"Resource '{r.Name}' is configured to publish as a Kubernetes service, but there are no '{nameof(KubernetesEnvironmentResource)}' resources. Ensure you have added one by calling '{nameof(KubernetesEnvironmentExtensions.AddKubernetesEnvironment)}'.");
             }
+        }
+    }
+
+    private static void ConfigureOtlp(IResource resource, EndpointReference otlpEndpoint)
+    {
+        if (resource is IResourceWithEnvironment resourceWithEnv && resource.Annotations.OfType<OtlpExporterAnnotation>().Any())
+        {
+            resourceWithEnv.Annotations.Add(new EnvironmentCallbackAnnotation(context =>
+            {
+                context.EnvironmentVariables[KnownOtelConfigNames.ExporterOtlpEndpoint] = otlpEndpoint;
+                context.EnvironmentVariables[KnownOtelConfigNames.ExporterOtlpProtocol] = "grpc";
+                context.EnvironmentVariables[KnownOtelConfigNames.ServiceName] = resource.Name;
+                return Task.CompletedTask;
+            }));
         }
     }
 

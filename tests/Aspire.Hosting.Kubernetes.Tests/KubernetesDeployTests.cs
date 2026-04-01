@@ -1111,4 +1111,127 @@ public class KubernetesDeployTests(ITestOutputHelper output)
         // Verify the actual password is in the resolved values
         Assert.Contains("e2e-test-pw-42", content);
     }
+
+    [Fact]
+    public void AddKubernetesEnvironment_CreatesDashboardByDefault()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+        var envBuilder = builder.AddKubernetesEnvironment("env");
+
+        var env = envBuilder.Resource;
+
+        Assert.True(env.DashboardEnabled);
+        Assert.NotNull(env.Dashboard);
+        Assert.IsType<KubernetesAspireDashboardResource>(env.Dashboard.Resource);
+    }
+
+    [Fact]
+    public void WithDashboard_Disabled_SetsDashboardEnabledFalse()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+        var envBuilder = builder.AddKubernetesEnvironment("env")
+            .WithDashboard(false);
+
+        var env = envBuilder.Resource;
+
+        Assert.False(env.DashboardEnabled);
+    }
+
+    [Fact]
+    public void WithDashboard_Configure_AllowsCustomization()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+        var envBuilder = builder.AddKubernetesEnvironment("env")
+            .WithDashboard(dashboard => dashboard.WithHostPort(9999));
+
+        var env = envBuilder.Resource;
+
+        Assert.True(env.DashboardEnabled);
+        Assert.NotNull(env.Dashboard);
+
+        // Verify the host port was configured
+        var httpEndpoint = env.Dashboard.Resource.PrimaryEndpoint;
+        Assert.NotNull(httpEndpoint);
+    }
+
+    [Fact]
+    public async Task Dashboard_OtlpConfigured_ForComputeResources()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Publish);
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+
+        var envBuilder = builder.AddKubernetesEnvironment("env");
+
+        // Use a project resource — projects get OtlpExporterAnnotation by default
+        builder.AddProject<Projects.ServiceA>("api");
+
+        using var app = builder.Build();
+        await app.RunAsync();
+
+        // Check that values.yaml contains OTLP configuration for the project resource
+        var valuesPath = Path.Combine(tempDir.Path, "values.yaml");
+        Assert.True(File.Exists(valuesPath));
+        var content = await File.ReadAllTextAsync(valuesPath);
+        output.WriteLine(content);
+
+        Assert.Contains("OTEL_EXPORTER_OTLP_ENDPOINT", content);
+        Assert.Contains("env-dashboard-service:18889", content);
+        Assert.Contains("OTEL_EXPORTER_OTLP_PROTOCOL", content);
+        Assert.Contains("OTEL_SERVICE_NAME", content);
+    }
+
+    [Fact]
+    public async Task Dashboard_Disabled_NoOtlpConfiguration()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Publish);
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+
+        builder.AddKubernetesEnvironment("env")
+            .WithDashboard(false);
+
+        // Use a project resource — projects get OtlpExporterAnnotation by default
+        builder.AddProject<Projects.ServiceA>("api");
+
+        using var app = builder.Build();
+        await app.RunAsync();
+
+        // Check that values.yaml does NOT contain OTLP configuration
+        var valuesPath = Path.Combine(tempDir.Path, "values.yaml");
+        Assert.True(File.Exists(valuesPath));
+        var content = await File.ReadAllTextAsync(valuesPath);
+        output.WriteLine(content);
+
+        Assert.DoesNotContain("OTEL_EXPORTER_OTLP_ENDPOINT", content);
+        Assert.DoesNotContain("OTEL_SERVICE_NAME", content);
+    }
+
+    [Fact]
+    public void Dashboard_ResourceHasCorrectEndpoints()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+        var envBuilder = builder.AddKubernetesEnvironment("env");
+
+        var dashboard = envBuilder.Resource.Dashboard!.Resource;
+
+        Assert.NotNull(dashboard.PrimaryEndpoint);
+        Assert.NotNull(dashboard.OtlpGrpcEndpoint);
+        Assert.Equal("http", dashboard.PrimaryEndpoint.EndpointName);
+        Assert.Equal("otlp-grpc", dashboard.OtlpGrpcEndpoint.EndpointName);
+    }
 }
