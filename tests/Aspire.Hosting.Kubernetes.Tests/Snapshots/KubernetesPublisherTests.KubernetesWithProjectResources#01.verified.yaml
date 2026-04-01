@@ -15,7 +15,6 @@ config:
     PROJECT1_HTTP: ""
     services__project1__http__0: ""
     PROJECT1_HTTPS: ""
-    services__project1__https__0: ""
     PROJECT1_CUSTOM1: "http://project1-service:8000"
     services__project1__http__1: "http://project1-service:8000"
     PROJECT1_CUSTOM2: "http://project1-service:8001"

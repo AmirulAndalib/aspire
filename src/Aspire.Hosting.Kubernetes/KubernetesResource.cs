@@ -327,6 +327,11 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
                 await c.Callback(context).ConfigureAwait(false);
             }
 
+            // Remove HTTPS service discovery variables — containers in Kubernetes don't have TLS certificates.
+            // TLS termination is handled externally by ingress controllers or service mesh.
+            // This matches the Docker Compose behavior in RemoveHttpsServiceDiscoveryVariables.
+            RemoveHttpsServiceDiscoveryVariables(context.EnvironmentVariables);
+
             foreach (var environmentVariable in context.EnvironmentVariables)
             {
                 var key = environmentVariable.Key;
@@ -378,6 +383,19 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
     {
         var configExpression = key.ToHelmConfigExpression(resourceName);
         EnvironmentVariables[key] = new(configExpression, value.ToString() ?? string.Empty);
+    }
+
+    private static void RemoveHttpsServiceDiscoveryVariables(Dictionary<string, object> environmentVariables)
+    {
+        var keysToRemove = environmentVariables
+            .Where(kvp => kvp.Value is EndpointReference epRef && epRef.Scheme == "https" && kvp.Key.StartsWith("services__"))
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        foreach (var key in keysToRemove)
+        {
+            environmentVariables.Remove(key);
+        }
     }
 
     private async Task<object> ProcessValueAsync(KubernetesEnvironmentContext context, DistributedApplicationExecutionContext executionContext, object value, bool embedded = false)
