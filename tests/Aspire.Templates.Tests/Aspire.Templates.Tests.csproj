@@ -3,6 +3,9 @@
   <PropertyGroup>
     <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
 
+    <!-- This test project requires built NuGet packages to run -->
+    <RequiredNuGetsForTesting>true</RequiredNuGetsForTesting>
+
     <TestUsingWorkloads>true</TestUsingWorkloads>
     <InstallWorkloadForTesting>true</InstallWorkloadForTesting>
 
@@ -17,7 +20,6 @@
     <TestClassNamePrefixForCI>Aspire.Templates.Tests</TestClassNamePrefixForCI>
 
     <!-- Templates tests require packages and SDK -->
-    <RequiresNugets>true</RequiresNugets>
     <RequiresTestSdk>true</RequiresTestSdk>
     <EnablePlaywrightInstall>true</EnablePlaywrightInstall>
 
@@ -43,7 +45,7 @@
 
     <!-- FIXME: do not run Template tests in the outerloop until further notice -->
     <SkipTests Condition=" '$(RunQuarantinedTests)' == 'true' ">true</SkipTests>
-    <TestRunnerAdditionalArguments Condition="'$(RunOnlyBasicBuildTemplateTests)' == 'true'">$(TestRunnerAdditionalArguments) --filter-trait category=basic-build</TestRunnerAdditionalArguments>
+    <TestRunnerAdditionalArguments Condition="'$(RunOnlyBasicBuildTemplateTests)' == 'true' or '$(ConditionalSelectionRunOnlyBasicBuildTemplateScenarios)' == 'true'">$(TestRunnerAdditionalArguments) --filter-trait category=basic-build</TestRunnerAdditionalArguments>
   </PropertyGroup>
 
   <Import Project="..\Shared\TemplatesTesting\Aspire.Shared.TemplatesTesting.targets" />

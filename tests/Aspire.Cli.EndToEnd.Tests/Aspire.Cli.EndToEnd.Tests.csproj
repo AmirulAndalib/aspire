@@ -11,7 +11,6 @@
     <SkipTests Condition="'$(IsGitHubActionsRunner)' == 'true' and '$(IsGithubPullRequest)' != 'true'">true</SkipTests>
 
     <SplitTestsOnCI>true</SplitTestsOnCI>
-    <RequiresNugets>true</RequiresNugets>
     <RequiresCliArchive>true</RequiresCliArchive>
 
     <!-- Disable strong name signing because Hex1b package is not signed -->
@@ -33,6 +32,7 @@
     <TestClassNamePrefixForCI>Aspire.Cli.EndToEnd.Tests</TestClassNamePrefixForCI>
 
     <!-- These tests require built NuGet packages -->
+    <RequiredNuGetsForTesting>true</RequiredNuGetsForTesting>
     <TestUsingWorkloads>true</TestUsingWorkloads>
     <InstallWorkloadForTesting>true</InstallWorkloadForTesting>
     <IncludeTestPackages>false</IncludeTestPackages>
