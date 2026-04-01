@@ -75,27 +75,8 @@ internal static class KubernetesDeployTestHelpers
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(30));
 
-        // Create a KinD cluster config with containerd registry mirror
-        await auto.TypeAsync("cat > /tmp/kind-config.yaml << 'KINDEOF'");
-        await auto.EnterAsync();
-        await auto.TypeAsync("kind: Cluster");
-        await auto.EnterAsync();
-        await auto.TypeAsync("apiVersion: kind.x-k8s.io/v1alpha4");
-        await auto.EnterAsync();
-        await auto.TypeAsync("containerdConfigPatches:");
-        await auto.EnterAsync();
-        await auto.TypeAsync("- |-");
-        await auto.EnterAsync();
-        await auto.TypeAsync("  [plugins.\"io.containerd.grpc.v1.cri\".registry.mirrors.\"localhost:5001\"]");
-        await auto.EnterAsync();
-        await auto.TypeAsync("    endpoint = [\"http://kind-registry:5000\"]");
-        await auto.EnterAsync();
-        await auto.TypeAsync("KINDEOF");
-        await auto.EnterAsync();
-        await auto.WaitForSuccessPromptAsync(counter);
-
-        // Create the cluster
-        await auto.TypeAsync($"kind create cluster --name={clusterName} --config=/tmp/kind-config.yaml --wait=120s");
+        // Create the cluster (no containerd config patches — registry is configured post-creation via hosts.toml)
+        await auto.TypeAsync($"kind create cluster --name={clusterName} --wait=120s");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(3));
 
@@ -103,6 +84,16 @@ internal static class KubernetesDeployTestHelpers
         await auto.TypeAsync($"docker network connect \"kind\" kind-registry 2>/dev/null || true");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
+
+        // Configure containerd on each node to resolve localhost:5001 via the registry container.
+        // This uses the config_path approach required by containerd v2+ (shipped in KinD v0.31.0+).
+        await auto.TypeAsync($"for node in $(kind get nodes --name={clusterName}); do " +
+            "docker exec \"$node\" mkdir -p /etc/containerd/certs.d/localhost:5001 && " +
+            "echo '[host.\"http://kind-registry:5000\"]' | docker exec -i \"$node\" tee /etc/containerd/certs.d/localhost:5001/hosts.toml > /dev/null && " +
+            "echo '  capabilities = [\"pull\", \"resolve\"]' | docker exec -i \"$node\" tee -a /etc/containerd/certs.d/localhost:5001/hosts.toml > /dev/null; " +
+            "done");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(30));
 
         // Create a ConfigMap so KinD knows about the local registry
         await auto.TypeAsync("cat > /tmp/local-registry-cm.yaml << 'CMEOF'");
