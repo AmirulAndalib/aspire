@@ -1,0 +1,166 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Aspire.Cli.EndToEnd.Tests.Helpers;
+using Aspire.Cli.Tests.Utils;
+using Hex1b.Automation;
+using Xunit;
+
+namespace Aspire.Cli.EndToEnd.Tests;
+
+/// <summary>
+/// E2E test for <c>aspire deploy</c> to Kubernetes: DeployBasicApiService.
+/// </summary>
+public sealed class KubernetesDeployBasicApiServiceTests(ITestOutputHelper output)
+{
+    private const string ProjectName = "K8sDeployTest";
+
+    [Fact]
+    [CaptureWorkspaceOnFailure]
+    public async Task DeployBasicApiService()
+    {
+        using var workspace = TemporaryWorkspace.Create(output);
+
+        var prNumber = CliE2ETestHelpers.GetRequiredPrNumber();
+        var commitSha = CliE2ETestHelpers.GetRequiredCommitSha();
+        var isCI = CliE2ETestHelpers.IsRunningInCI;
+        var clusterName = KubernetesDeployTestHelpers.GenerateUniqueClusterName();
+        var k8sNamespace = $"test-{clusterName[..16]}";
+
+        output.WriteLine($"Cluster name: {clusterName}");
+        output.WriteLine($"Namespace: {k8sNamespace}");
+
+        using var terminal = CliE2ETestHelpers.CreateTestTerminal();
+        var pendingRun = terminal.RunAsync(TestContext.Current.CancellationToken);
+
+        var counter = new SequenceCounter();
+        var auto = new Hex1bTerminalAutomator(terminal, defaultTimeout: TimeSpan.FromSeconds(500));
+
+        // Prepare environment
+        await auto.PrepareEnvironmentAsync(workspace, counter);
+
+        if (isCI)
+        {
+            await auto.InstallAspireCliFromPullRequestAsync(prNumber, counter);
+            await auto.SourceAspireCliEnvironmentAsync(counter);
+            await auto.VerifyAspireCliVersionAsync(commitSha, counter);
+        }
+
+        try
+        {
+            // =====================================================================
+            // Phase 1: Install KinD + Helm, create cluster with local registry
+            // =====================================================================
+
+            await auto.InstallKindAndHelmAsync(counter);
+            await auto.CreateKindClusterWithRegistryAsync(counter, clusterName);
+
+            // =====================================================================
+            // Phase 2: Scaffold the project on disk
+            // =====================================================================
+
+            var appHostCode = $$"""
+                using Aspire.Hosting;
+                using Aspire.Hosting.Kubernetes;
+
+                var builder = DistributedApplication.CreateBuilder(args);
+
+                var registryEndpoint = builder.AddParameter("registryendpoint");
+                var registry = builder.AddContainerRegistry("registry", registryEndpoint);
+
+                var api = builder.AddProject<Projects.{{ProjectName}}_ApiService>("server")
+                    .WithExternalHttpEndpoints();
+
+                builder.AddKubernetesEnvironment("env")
+                    .WithHelm(helm =>
+                    {
+                        helm.WithNamespace(builder.AddParameter("namespace"));
+                        helm.WithChartVersion(builder.AddParameter("chartversion"));
+                    });
+
+                builder.Build().Run();
+                """;
+
+            var apiProgramCode = """
+                var builder = WebApplication.CreateBuilder(args);
+                builder.AddServiceDefaults();
+
+                var app = builder.Build();
+                app.MapDefaultEndpoints();
+
+                app.MapGet("/test-deployment", () =>
+                {
+                    return Results.Ok("PASSED: basic API service is running");
+                });
+
+                app.Run();
+                """;
+
+            KubernetesDeployTestHelpers.ScaffoldK8sDeployProject(
+                workspace.WorkspaceRoot.FullName,
+                ProjectName,
+                appHostHostingPackages: ["Aspire.Hosting.Kubernetes"],
+                apiClientPackages: [],
+                appHostCode: appHostCode,
+                apiProgramCode: apiProgramCode);
+
+            // Navigate into the project directory
+            await auto.TypeAsync($"cd {ProjectName}");
+            await auto.EnterAsync();
+            await auto.WaitForSuccessPromptAsync(counter);
+
+            // Verify scaffold
+            await auto.TypeAsync($"ls -la {ProjectName}.AppHost/");
+            await auto.EnterAsync();
+            await auto.WaitForSuccessPromptAsync(counter);
+
+            // =====================================================================
+            // Phase 3: Unset ASPIRE_PLAYGROUND and run aspire deploy interactively
+            // =====================================================================
+
+            await auto.TypeAsync("unset ASPIRE_PLAYGROUND");
+            await auto.EnterAsync();
+            await auto.WaitForSuccessPromptAsync(counter);
+
+            // The deploy will prompt for:
+            // 1. registryendpoint - the container registry (localhost:5001 for KinD local registry)
+            // 2. namespace - the K8s namespace
+            // 3. chartversion - the Helm chart version
+            // Parameters are prompted in alphabetical order by name in a multi-input form.
+            await auto.AspireDeployInteractiveAsync(
+                counter,
+                parameterResponses:
+                [
+                    ("chartversion", "0.1.0"),
+                    ("namespace", k8sNamespace),
+                    ("registryendpoint", "localhost:5001"),
+                ]);
+
+            // =====================================================================
+            // Phase 4: Verify the deployment
+            // =====================================================================
+
+            await auto.VerifyDeploymentAsync(
+                counter,
+                @namespace: k8sNamespace,
+                serviceName: "server",
+                localPort: 18080,
+                testPath: "/test-deployment");
+
+            // =====================================================================
+            // Phase 5: Cleanup
+            // =====================================================================
+
+            await auto.CleanupKubernetesDeploymentAsync(counter, clusterName);
+
+            await auto.TypeAsync("exit");
+            await auto.EnterAsync();
+        }
+        finally
+        {
+            await KubernetesDeployTestHelpers.CleanupKindClusterOutOfBandAsync(clusterName, output);
+        }
+
+        await pendingRun;
+    }
+}
