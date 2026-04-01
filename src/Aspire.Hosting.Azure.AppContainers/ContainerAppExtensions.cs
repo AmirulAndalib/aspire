@@ -189,7 +189,7 @@ public static class ContainerAppExtensions
     /// </code>
     /// </example>
     /// </remarks>
-    [AspireExport("publishAsAzureContainerAppJob", Description = "Configures the compute resource as a manually triggered Azure Container App Job")]
+    [AspireExport(Description = "Configures the compute resource as a manually triggered Azure Container App Job")]
     [Experimental("ASPIREAZURE002", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
     public static IResourceBuilder<T> PublishAsAzureContainerAppJob<T>(this IResourceBuilder<T> resource)
         where T : IComputeResource

@@ -1406,14 +1406,23 @@ public static class AtsCapabilityScanner
         diagnostic = null;
         var methodLocation = $"{method.DeclaringType?.FullName ?? method.DeclaringType?.Name ?? "Unknown"}.{method.Name}";
 
-        // Get method name from attribute
-        var methodNameFromAttr = exportAttr.Id;
-        if (string.IsNullOrEmpty(methodNameFromAttr))
+        // Get method name from attribute, falling back to the camelCase of the method name
+        var rawId = exportAttr.Id;
+        string methodNameFromAttr;
+        if (rawId is not null)
         {
-            diagnostic = AtsDiagnostic.Warning(
-                $"[AspireExport] attribute on '{methodLocation}' is missing method name argument",
-                methodLocation);
-            return null;
+            if (string.IsNullOrWhiteSpace(rawId))
+            {
+                diagnostic = AtsDiagnostic.Warning(
+                    $"[AspireExport] attribute on '{methodLocation}' has an empty method name argument",
+                    methodLocation);
+                return null;
+            }
+            methodNameFromAttr = rawId;
+        }
+        else
+        {
+            methodNameFromAttr = ToCamelCase(method.Name);
         }
 
         // Get named arguments

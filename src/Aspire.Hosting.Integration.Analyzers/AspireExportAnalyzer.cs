@@ -187,13 +187,30 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
 
         // Rule 2: Validate export ID format
         var exportId = GetExportId(exportAttribute);
-        if (exportId is not null && !s_exportIdPattern.IsMatch(exportId))
+        var isExportIdFormatValid = exportId is not null && s_exportIdPattern.IsMatch(exportId);
+        if (exportId is not null && !isExportIdFormatValid)
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 Diagnostics.s_invalidExportIdFormat,
                 location,
                 exportId));
         }
+
+        // Rule 2b (ASPIREEXPORT011): Warn when explicit id matches the convention-derived name
+        if (isExportIdFormatValid &&
+            string.Equals(exportId, GetDerivedExportId(method), StringComparison.Ordinal))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                Diagnostics.s_redundantExportId,
+                location,
+                exportId,
+                method.Name));
+        }
+
+        // Compute the effective export ID: either from the explicit attribute or auto-derived from method name (camelCase)
+        // Normalize empty/invalid exportId to null so the fallback applies
+        var normalizedExportId = isExportIdFormatValid ? exportId : null;
+        var effectiveExportId = normalizedExportId ?? GetDerivedExportId(method);
 
         // Rule 3: Validate return type is ATS-compatible
         if (!IsAtsCompatibleType(method.ReturnType, wellKnownTypes, aspireExportAttribute, currentAssemblyExportedTypes))
@@ -226,11 +243,11 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
         }
 
         // Rule 6 (ASPIREEXPORT007): Track export for duplicate detection
-        if (exportId is not null && method.IsExtensionMethod && method.Parameters.Length > 0)
+        if (effectiveExportId is not null && method.IsExtensionMethod && method.Parameters.Length > 0)
         {
             var targetType = method.Parameters[0].Type;
             var targetTypeName = targetType.ToDisplayString();
-            var key = (exportId, targetTypeName);
+            var key = (effectiveExportId, targetTypeName);
             var bag = exportsByKey.GetOrAdd(key, _ => new ConcurrentBag<(IMethodSymbol, Location)>());
             bag.Add((method, location));
         }
@@ -805,6 +822,15 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
             return id;
         }
         return null;
+    }
+
+    private static string? GetDerivedExportId(IMethodSymbol method)
+    {
+        if (string.IsNullOrEmpty(method.Name))
+        {
+            return null;
+        }
+        return char.ToLowerInvariant(method.Name[0]) + method.Name.Substring(1);
     }
 
     private static bool TryGetEffectiveAspireExportAttribute(IMethodSymbol method, INamedTypeSymbol aspireExportAttribute, out AttributeData? exportAttribute, out AttributeData? containingTypeExportAttribute)
