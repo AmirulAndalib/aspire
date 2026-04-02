@@ -41,7 +41,7 @@ public static class ResourceBuilderExtensions
         return builder.WithAnnotation(new EnvironmentAnnotation(name, value ?? string.Empty));
     }
 
-    [AspireExport("withEnvironment", Description = "Sets an environment variable")]
+    [AspireExport(Description = "Sets an environment variable")]
     internal static IResourceBuilder<T> WithEnvironment<T>(
         this IResourceBuilder<T> builder,
         string name,
