@@ -129,9 +129,9 @@ internal static class KubernetesDeployTestHelpers
     }
 
     /// <summary>
-    /// Scaffolds an Aspire project using <c>aspire new</c> (empty apphost), then adds
-    /// an ApiService project and the required hosting/client packages.
-    /// Uses the CLI to ensure proper SDK version resolution.
+    /// Scaffolds an Aspire project using <c>aspire new</c> (Starter template, no Redis),
+    /// then adds hosting/client packages and injects custom code into the existing source files.
+    /// The Starter template provides AppHost, ApiService, ServiceDefaults, and solution — all wired up.
     /// </summary>
     internal static async Task ScaffoldK8sDeployProjectAsync(
         this Hex1bTerminalAutomator auto,
@@ -144,8 +144,8 @@ internal static class KubernetesDeployTestHelpers
         string apiProgramCode,
         ITestOutputHelper output)
     {
-        // Step 1: Create empty apphost via aspire new
-        await auto.AspireNewAsync(projectName, counter, template: AspireTemplate.EmptyAppHost);
+        // Step 1: Create project from Starter template (no Redis) — gives us AppHost + ApiService + ServiceDefaults + solution
+        await auto.AspireNewAsync(projectName, counter, template: AspireTemplate.Starter, useRedisCache: false);
 
         // Step 2: cd into the project
         await auto.TypeAsync($"cd {projectName}");
@@ -163,30 +163,7 @@ internal static class KubernetesDeployTestHelpers
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(180));
         }
 
-        var appHostDir = Path.Combine(projectDir, $"{projectName}.AppHost");
-        var apiDir = Path.Combine(projectDir, $"{projectName}.ApiService");
-
-        // Step 4: Create the ApiService project via dotnet new
-        await auto.TypeAsync($"dotnet new web -o {projectName}.ApiService --no-https");
-        await auto.EnterAsync();
-        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(60));
-
-        // Step 5: Add ApiService to the solution
-        await auto.TypeAsync($"dotnet sln add {projectName}.ApiService");
-        await auto.EnterAsync();
-        await auto.WaitForSuccessPromptAsync(counter);
-
-        // Step 6: Add project reference from AppHost to ApiService
-        await auto.TypeAsync($"dotnet add {projectName}.AppHost reference {projectName}.ApiService");
-        await auto.EnterAsync();
-        await auto.WaitForSuccessPromptAsync(counter);
-
-        // Step 7: Add ServiceDefaults reference to ApiService
-        await auto.TypeAsync($"dotnet add {projectName}.ApiService reference {projectName}.ServiceDefaults");
-        await auto.EnterAsync();
-        await auto.WaitForSuccessPromptAsync(counter);
-
-        // Step 8: Add client NuGet packages to ApiService
+        // Step 4: Add client NuGet packages to ApiService
         foreach (var package in apiClientPackages)
         {
             await auto.TypeAsync($"dotnet add {projectName}.ApiService package {package}");
@@ -194,7 +171,10 @@ internal static class KubernetesDeployTestHelpers
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(60));
         }
 
-        // Step 9: Write custom AppHost.cs and ApiService/Program.cs
+        // Step 5: Inject custom AppHost.cs and ApiService/Program.cs into the template-created project
+        var appHostDir = Path.Combine(projectDir, $"{projectName}.AppHost");
+        var apiDir = Path.Combine(projectDir, $"{projectName}.ApiService");
+
         output.WriteLine($"Writing AppHost.cs to: {Path.Combine(appHostDir, "AppHost.cs")}");
         File.WriteAllText(Path.Combine(appHostDir, "AppHost.cs"), appHostCode);
         File.WriteAllText(Path.Combine(apiDir, "Program.cs"), apiProgramCode);
