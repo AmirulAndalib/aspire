@@ -68,6 +68,7 @@
       <_CliToolRidPackageFilesWithRid Include="@(_CliToolRidPackageFiles)">
         <ExtractedRid>$([System.Text.RegularExpressions.Regex]::Match('%(_CliToolRidPackageFiles.FileName)', '^Aspire\.Cli\.($(_ExpectedCliToolRidPattern))\.\d+').Groups[1].Value)</ExtractedRid>
       </_CliToolRidPackageFilesWithRid>
+      <_DistinctCliToolPointerPackageFiles Include="@(_CliToolPointerPackageFiles -> '%(Filename)%(Extension)' -> Distinct())" />
 
       <_MissingRids Include="@(_ExpectedRids)" Exclude="@(_ArchiveFilesWithRid -> '%(ExtractedRid)')" />
       <_UnexpectedRids Include="@(_ArchiveFilesWithRid -> '%(ExtractedRid)')" Exclude="@(_ExpectedRids)" />
@@ -77,7 +78,7 @@
     <Warning Condition="@(_UnexpectedRids->Count()) > 0" Text="Found unexpected CLI archives for @(_UnexpectedRids, ',') . These are all the cli archives found - @(_ArchiveFiles, ', ')" />
     <Error Condition="@(_MissingRids->Count()) > 0" Text="Missing CLI archive(s) for runtime identifiers: @(_MissingRids, ', '). These are all the cli archives found - @(_ArchiveFiles, ', ')" />
     <Error Condition="@(_MissingCliToolRids->Count()) > 0" Text="Missing RID-specific Aspire.Cli tool package(s) for runtime identifiers: @(_MissingCliToolRids, ', '). These are all the CLI tool packages found - @(_CliToolRidPackageFiles, ', ')" />
-    <Error Condition="@(_CliToolPointerPackageFiles->Count()) != 1" Text="Expected exactly 1 Aspire.Cli pointer package but found @(_CliToolPointerPackageFiles->Count()). Files: @(_CliToolPointerPackageFiles, ', ')" />
+    <Error Condition="@(_DistinctCliToolPointerPackageFiles->Count()) != 1" Text="Expected exactly 1 Aspire.Cli pointer package but found @(_DistinctCliToolPointerPackageFiles->Count()). Unique package names: @(_DistinctCliToolPointerPackageFiles, ', '). Files: @(_CliToolPointerPackageFiles, ', ')" />
 
     <!-- Validate aspire-cli archive file extensions match expected format for each RID -->
     <ItemGroup>
