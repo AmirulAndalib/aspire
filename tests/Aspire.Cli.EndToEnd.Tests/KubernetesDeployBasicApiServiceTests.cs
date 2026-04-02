@@ -108,12 +108,8 @@ public sealed class KubernetesDeployBasicApiServiceTests(ITestOutputHelper outpu
                 output: output);
 
             // =====================================================================
-            // Phase 3: Unset ASPIRE_PLAYGROUND and run aspire deploy interactively
+            // Phase 3: Run aspire deploy interactively
             // =====================================================================
-
-            await auto.TypeAsync("unset ASPIRE_PLAYGROUND");
-            await auto.EnterAsync();
-            await auto.WaitForSuccessPromptAsync(counter);
 
             // The deploy will prompt for:
             // 1. registryendpoint - the container registry (localhost:5001 for KinD local registry)

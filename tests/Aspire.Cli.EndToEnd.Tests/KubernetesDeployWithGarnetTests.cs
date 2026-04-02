@@ -117,10 +117,6 @@ public sealed class KubernetesDeployWithGarnetTests(ITestOutputHelper output)
                 apiProgramCode: apiProgramCode,
                 output: output);
 
-            await auto.TypeAsync("unset ASPIRE_PLAYGROUND");
-            await auto.EnterAsync();
-            await auto.WaitForSuccessPromptAsync(counter);
-
             await auto.AspireDeployInteractiveAsync(
                 counter,
                 parameterResponses:

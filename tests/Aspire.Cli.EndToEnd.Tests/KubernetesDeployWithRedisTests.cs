@@ -122,10 +122,6 @@ public sealed class KubernetesDeployWithRedisTests(ITestOutputHelper output)
                 apiProgramCode: apiProgramCode,
                 output: output);
 
-            await auto.TypeAsync("unset ASPIRE_PLAYGROUND");
-            await auto.EnterAsync();
-            await auto.WaitForSuccessPromptAsync(counter);
-
             // Deploy prompts: chartversion, namespace, registryendpoint
             // Redis also generates a password parameter (cache_password)
             await auto.AspireDeployInteractiveAsync(
