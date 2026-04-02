@@ -129,7 +129,7 @@ internal sealed class SkillDefinition
             return false;
         }
 
-        return ApplicableLanguages.Contains(detectedLanguage.Value.Value);
+        return ApplicableLanguages.Any(l => string.Equals(l, detectedLanguage.Value.Value, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool PathMatchesOrIsUnder(string relativePath, string excludedPath)
