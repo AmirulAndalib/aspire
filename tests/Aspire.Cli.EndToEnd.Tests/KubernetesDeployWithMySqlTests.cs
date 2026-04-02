@@ -60,7 +60,7 @@ public sealed class KubernetesDeployWithMySqlTests(ITestOutputHelper output)
                 var registryEndpoint = builder.AddParameter("registryendpoint");
                 var registry = builder.AddContainerRegistry("registry", registryEndpoint);
 
-                var mysql = builder.AddMySql("mysql").AddDatabase("testdb");
+                var mysql = builder.AddMySql("mysql");
 
                 var api = builder.AddProject<Projects.{{ProjectName}}_ApiService>("server")
                     .WithReference(mysql)
@@ -82,7 +82,7 @@ public sealed class KubernetesDeployWithMySqlTests(ITestOutputHelper output)
 
                 var builder = WebApplication.CreateBuilder(args);
                 builder.AddServiceDefaults();
-                builder.AddMySqlDataSource("testdb");
+                builder.AddMySqlDataSource("mysql");
 
                 var app = builder.Build();
                 app.MapDefaultEndpoints();

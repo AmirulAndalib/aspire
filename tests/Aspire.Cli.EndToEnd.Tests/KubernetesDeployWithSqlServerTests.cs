@@ -60,7 +60,7 @@ public sealed class KubernetesDeployWithSqlServerTests(ITestOutputHelper output)
                 var registryEndpoint = builder.AddParameter("registryendpoint");
                 var registry = builder.AddContainerRegistry("registry", registryEndpoint);
 
-                var sql = builder.AddSqlServer("sql").AddDatabase("testdb");
+                var sql = builder.AddSqlServer("sql");
 
                 var api = builder.AddProject<Projects.{{ProjectName}}_ApiService>("server")
                     .WithReference(sql)
@@ -82,7 +82,7 @@ public sealed class KubernetesDeployWithSqlServerTests(ITestOutputHelper output)
 
                 var builder = WebApplication.CreateBuilder(args);
                 builder.AddServiceDefaults();
-                builder.AddSqlServerClient("testdb");
+                builder.AddSqlServerClient("sql");
 
                 var app = builder.Build();
                 app.MapDefaultEndpoints();

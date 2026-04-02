@@ -60,7 +60,7 @@ public sealed class KubernetesDeployWithPostgresTests(ITestOutputHelper output)
                 var registryEndpoint = builder.AddParameter("registryendpoint");
                 var registry = builder.AddContainerRegistry("registry", registryEndpoint);
 
-                var postgres = builder.AddPostgres("pg").AddDatabase("testdb");
+                var postgres = builder.AddPostgres("pg");
 
                 var api = builder.AddProject<Projects.{{ProjectName}}_ApiService>("server")
                     .WithReference(postgres)
@@ -82,7 +82,7 @@ public sealed class KubernetesDeployWithPostgresTests(ITestOutputHelper output)
 
                 var builder = WebApplication.CreateBuilder(args);
                 builder.AddServiceDefaults();
-                builder.AddNpgsqlDataSource("testdb");
+                builder.AddNpgsqlDataSource("pg");
 
                 var app = builder.Build();
                 app.MapDefaultEndpoints();
