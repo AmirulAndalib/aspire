@@ -250,15 +250,17 @@ internal static class KubernetesDeployTestHelpers
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
-        // Curl the test endpoint with retries, looking for "PASSED" in response body
-        await auto.TypeAsync($"for i in $(seq 1 10); do " +
-            $"result=$(curl -s http://localhost:{localPort}{testPath} 2>/dev/null); " +
+        // Curl the test endpoint with retries, looking for "PASSED" in response body.
+        // Database containers (Postgres, MySQL, SQL Server) may need 60-120s to fully initialize,
+        // so we retry up to 30 times with 5s intervals (150s total).
+        await auto.TypeAsync($"for i in $(seq 1 30); do " +
+            $"result=$(curl -s -w '\\nHTTP_%{{http_code}}' http://localhost:{localPort}{testPath} 2>/dev/null); " +
             "if echo \"$result\" | grep -q 'PASSED'; then echo \"VERIFY_OK: $result\"; break; fi; " +
             "echo \"Attempt $i: got $result, retrying...\"; sleep 5; done");
         await auto.EnterAsync();
 
         // Wait for the VERIFY_OK marker to appear
-        await auto.WaitUntilTextAsync("VERIFY_OK", timeout: TimeSpan.FromMinutes(2));
+        await auto.WaitUntilTextAsync("VERIFY_OK", timeout: TimeSpan.FromMinutes(4));
         await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(30));
 
         // Kill the port-forward background process
