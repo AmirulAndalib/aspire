@@ -122,15 +122,15 @@ public sealed class KubernetesDeployWithRedisTests(ITestOutputHelper output)
                 apiProgramCode: apiProgramCode,
                 output: output);
 
-            // Deploy prompts: chartversion, namespace, registryendpoint
+            // Deploy prompts: registryendpoint, namespace, chartversion (code declaration order)
             // Redis also generates a password parameter (cache_password)
             await auto.AspireDeployInteractiveAsync(
                 counter,
                 parameterResponses:
                 [
-                    ("chartversion", "0.1.0"),
-                    ("namespace", k8sNamespace),
                     ("registryendpoint", "localhost:5001"),
+                    ("namespace", k8sNamespace),
+                    ("chartversion", "0.1.0"),
                 ]);
 
             await auto.VerifyDeploymentAsync(

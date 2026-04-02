@@ -121,9 +121,9 @@ public sealed class KubernetesDeployWithValkeyTests(ITestOutputHelper output)
                 counter,
                 parameterResponses:
                 [
-                    ("chartversion", "0.1.0"),
-                    ("namespace", k8sNamespace),
                     ("registryendpoint", "localhost:5001"),
+                    ("namespace", k8sNamespace),
+                    ("chartversion", "0.1.0"),
                 ]);
 
             await auto.VerifyDeploymentAsync(

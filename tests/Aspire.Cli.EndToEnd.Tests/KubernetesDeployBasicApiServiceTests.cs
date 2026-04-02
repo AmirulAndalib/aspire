@@ -111,18 +111,17 @@ public sealed class KubernetesDeployBasicApiServiceTests(ITestOutputHelper outpu
             // Phase 3: Run aspire deploy interactively
             // =====================================================================
 
-            // The deploy will prompt for:
+            // The deploy will prompt for parameters in code declaration order:
             // 1. registryendpoint - the container registry (localhost:5001 for KinD local registry)
             // 2. namespace - the K8s namespace
             // 3. chartversion - the Helm chart version
-            // Parameters are prompted in alphabetical order by name in a multi-input form.
             await auto.AspireDeployInteractiveAsync(
                 counter,
                 parameterResponses:
                 [
-                    ("chartversion", "0.1.0"),
-                    ("namespace", k8sNamespace),
                     ("registryendpoint", "localhost:5001"),
+                    ("namespace", k8sNamespace),
+                    ("chartversion", "0.1.0"),
                 ]);
 
             // =====================================================================
