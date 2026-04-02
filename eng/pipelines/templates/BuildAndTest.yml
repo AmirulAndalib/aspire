@@ -64,7 +64,7 @@ steps:
                   -restore -build -pack
                   -sign $(_SignArgs)
                   -configuration ${{ parameters.buildConfig }}
-                  --projects $(Build.SourcesDirectory)/src/Aspire.Cli/Aspire.Cli.Tool.csproj
+                  -projects $(Build.SourcesDirectory)/src/Aspire.Cli/Aspire.Cli.Tool.csproj
                   /p:RuntimeIdentifier=${{ targetRid }}
                   /p:SelfContained=true
                   /p:BundlePayloadPath=$(Build.SourcesDirectory)/artifacts/bundle/aspire-ci-bundlepayload-${{ targetRid }}.tar.gz
