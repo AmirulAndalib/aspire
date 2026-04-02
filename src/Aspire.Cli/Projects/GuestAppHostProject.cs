@@ -958,9 +958,9 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         {
             try
             {
-                _logger.LogTrace("Attempting to connect to AppHost server backchannel at {SocketPath} (attempt {Attempt})", socketPath, ++connectionAttempts);
+                _logger.LogTrace("Attempting to connect to AppHost server backchannel at {SocketPath} (attempt {Attempt})", socketPath, connectionAttempts);
                 // Pass enableHotReload as autoReconnect - the backchannel will handle reconnection internally
-                await _backchannel.ConnectAsync(socketPath, autoReconnect: enableHotReload, cancellationToken).ConfigureAwait(false);
+                await _backchannel.ConnectAsync(socketPath, autoReconnect: enableHotReload, retryCount: connectionAttempts++, cancellationToken).ConfigureAwait(false);
                 backchannelCompletionSource.TrySetResult(_backchannel);
                 _logger.LogDebug("Connected to AppHost server backchannel at {SocketPath}", socketPath);
                 return;
