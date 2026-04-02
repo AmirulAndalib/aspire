@@ -30,10 +30,11 @@ internal sealed class SkillDefinition
         skillContent: null,
         embeddedResourceRoot: null, // Playwright is installed via PlaywrightCliInstaller, not a static file
         installExcludedRelativePaths: [],
-        isDefault: true);
+        isDefault: false);
 
     /// <summary>
     /// The dotnet-inspect skill for querying .NET API surfaces.
+    /// Only applicable when the workspace contains a .NET AppHost.
     /// </summary>
     public static readonly SkillDefinition DotnetInspect = new(
         CommonAgentApplicators.DotnetInspectSkillName,
@@ -41,9 +42,10 @@ internal sealed class SkillDefinition
         CommonAgentApplicators.DotnetInspectSkillFileContent,
         embeddedResourceRoot: null,
         installExcludedRelativePaths: [],
-        isDefault: true);
+        isDefault: false,
+        isDotNetOnly: true);
 
-    private SkillDefinition(string name, string description, string? skillContent, string? embeddedResourceRoot, IReadOnlyList<string> installExcludedRelativePaths, bool isDefault)
+    private SkillDefinition(string name, string description, string? skillContent, string? embeddedResourceRoot, IReadOnlyList<string> installExcludedRelativePaths, bool isDefault, bool isDotNetOnly = false)
     {
         Name = name;
         Description = description;
@@ -51,6 +53,7 @@ internal sealed class SkillDefinition
         EmbeddedResourceRoot = embeddedResourceRoot;
         InstallExcludedRelativePaths = installExcludedRelativePaths;
         IsDefault = isDefault;
+        IsDotNetOnly = isDotNetOnly;
     }
 
     /// <summary>
@@ -99,6 +102,12 @@ internal sealed class SkillDefinition
     /// Gets whether this skill should be selected by default.
     /// </summary>
     public bool IsDefault { get; }
+
+    /// <summary>
+    /// Gets whether this skill is only applicable to .NET AppHost projects.
+    /// When <c>true</c>, the skill is excluded from the selection list unless the workspace contains a .NET AppHost.
+    /// </summary>
+    public bool IsDotNetOnly { get; }
 
     private static bool PathMatchesOrIsUnder(string relativePath, string excludedPath)
     {

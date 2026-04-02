@@ -52,9 +52,19 @@ public class CommonAgentApplicatorsTests
     }
 
     [Fact]
-    public void SkillDefinition_AllDefaultsAreTrue()
+    public void SkillDefinition_OnlyAspireIsDefault()
     {
-        Assert.All(SkillDefinition.All, s => Assert.True(s.IsDefault));
+        Assert.True(SkillDefinition.Aspire.IsDefault);
+        Assert.False(SkillDefinition.PlaywrightCli.IsDefault);
+        Assert.False(SkillDefinition.DotnetInspect.IsDefault);
+    }
+
+    [Fact]
+    public void SkillDefinition_DotnetInspect_IsDotNetOnly()
+    {
+        Assert.True(SkillDefinition.DotnetInspect.IsDotNetOnly);
+        Assert.False(SkillDefinition.Aspire.IsDotNetOnly);
+        Assert.False(SkillDefinition.PlaywrightCli.IsDotNetOnly);
     }
 
     [Fact]
