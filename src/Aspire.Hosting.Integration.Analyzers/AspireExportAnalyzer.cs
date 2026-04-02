@@ -253,9 +253,9 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
         }
 
         // Rule 7 (ASPIREEXPORT009): Warn when export name may collide across integrations
-        if (exportId is not null && method.IsExtensionMethod && method.Parameters.Length > 0)
+        if (effectiveExportId is not null && method.IsExtensionMethod && method.Parameters.Length > 0)
         {
-            AnalyzeExportNameUniqueness(context, method, exportId, wellKnownTypes, location);
+            AnalyzeExportNameUniqueness(context, method, effectiveExportId, wellKnownTypes, location);
         }
     }
 
