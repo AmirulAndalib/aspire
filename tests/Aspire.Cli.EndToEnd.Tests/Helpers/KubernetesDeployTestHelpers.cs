@@ -129,188 +129,75 @@ internal static class KubernetesDeployTestHelpers
     }
 
     /// <summary>
-    /// Scaffolds an Aspire AppHost project with a minimal API service on disk.
-    /// Files are created directly for speed and determinism (no aspire new).
+    /// Scaffolds an Aspire project using <c>aspire new</c> (empty apphost), then adds
+    /// an ApiService project and the required hosting/client packages.
+    /// Uses the CLI to ensure proper SDK version resolution.
     /// </summary>
-    internal static void ScaffoldK8sDeployProject(
-        string workspaceRoot,
+    internal static async Task ScaffoldK8sDeployProjectAsync(
+        this Hex1bTerminalAutomator auto,
+        SequenceCounter counter,
         string projectName,
+        string projectDir,
         string[] appHostHostingPackages,
         string[] apiClientPackages,
         string appHostCode,
-        string apiProgramCode)
+        string apiProgramCode,
+        ITestOutputHelper output)
     {
-        var projectDir = Path.Combine(workspaceRoot, projectName);
+        // Step 1: Create empty apphost via aspire new
+        await auto.AspireNewAsync(projectName, counter, template: AspireTemplate.EmptyAppHost);
+
+        // Step 2: cd into the project
+        await auto.TypeAsync($"cd {projectName}");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
+
+        // Step 3: Add hosting packages via aspire add (handles version selection)
+        foreach (var package in appHostHostingPackages)
+        {
+            await auto.TypeAsync($"aspire add {package}");
+            await auto.EnterAsync();
+            // aspire add shows a version selection prompt — accept the first (latest) version
+            await auto.WaitUntilTextAsync("(based on NuGet.config)", timeout: TimeSpan.FromSeconds(60));
+            await auto.EnterAsync();
+            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(180));
+        }
+
         var appHostDir = Path.Combine(projectDir, $"{projectName}.AppHost");
         var apiDir = Path.Combine(projectDir, $"{projectName}.ApiService");
-        var serviceDefaultsDir = Path.Combine(projectDir, $"{projectName}.ServiceDefaults");
 
-        Directory.CreateDirectory(appHostDir);
-        Directory.CreateDirectory(apiDir);
-        Directory.CreateDirectory(serviceDefaultsDir);
+        // Step 4: Create the ApiService project via dotnet new
+        await auto.TypeAsync($"dotnet new web -o {projectName}.ApiService --no-https");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(60));
 
-        // Solution file — use non-interpolated string to avoid brace escaping issues with GUIDs
-        var slnContent = """
-Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "APPHOST_NAME", "APPHOST_NAME\APPHOST_NAME.csproj", "{00000000-0000-0000-0000-000000000001}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API_NAME", "API_NAME\API_NAME.csproj", "{00000000-0000-0000-0000-000000000002}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DEFAULTS_NAME", "DEFAULTS_NAME\DEFAULTS_NAME.csproj", "{00000000-0000-0000-0000-000000000003}"
-EndProject
-Global
-    GlobalSection(SolutionConfigurationPlatforms) = preSolution
-        Debug|Any CPU = Debug|Any CPU
-        Release|Any CPU = Release|Any CPU
-    EndGlobalSection
-    GlobalSection(ProjectConfigurationPlatforms) = postSolution
-        {00000000-0000-0000-0000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-        {00000000-0000-0000-0000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
-        {00000000-0000-0000-0000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
-        {00000000-0000-0000-0000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
-        {00000000-0000-0000-0000-000000000002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-        {00000000-0000-0000-0000-000000000002}.Debug|Any CPU.Build.0 = Debug|Any CPU
-        {00000000-0000-0000-0000-000000000002}.Release|Any CPU.ActiveCfg = Release|Any CPU
-        {00000000-0000-0000-0000-000000000002}.Release|Any CPU.Build.0 = Release|Any CPU
-        {00000000-0000-0000-0000-000000000003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-        {00000000-0000-0000-0000-000000000003}.Debug|Any CPU.Build.0 = Debug|Any CPU
-        {00000000-0000-0000-0000-000000000003}.Release|Any CPU.ActiveCfg = Release|Any CPU
-        {00000000-0000-0000-0000-000000000003}.Release|Any CPU.Build.0 = Release|Any CPU
-    EndGlobalSection
-EndGlobal
-""";
-        slnContent = slnContent
-            .Replace("APPHOST_NAME", $"{projectName}.AppHost")
-            .Replace("API_NAME", $"{projectName}.ApiService")
-            .Replace("DEFAULTS_NAME", $"{projectName}.ServiceDefaults");
-        File.WriteAllText(Path.Combine(projectDir, $"{projectName}.sln"), slnContent);
+        // Step 5: Add ApiService to the solution
+        await auto.TypeAsync($"dotnet sln add {projectName}.ApiService");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
 
-        // AppHost csproj
-        var hostingPackageRefs = string.Join(Environment.NewLine + "    ",
-            appHostHostingPackages.Select(p => $"""<PackageReference Include="{p}" />"""));
+        // Step 6: Add project reference from AppHost to ApiService
+        await auto.TypeAsync($"dotnet add {projectName}.AppHost reference {projectName}.ApiService");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
 
-        File.WriteAllText(Path.Combine(appHostDir, $"{projectName}.AppHost.csproj"), $"""
-<Project Sdk="Microsoft.NET.Sdk">
-  <Sdk Name="Aspire.AppHost.Sdk" Version="10.0.0-dev" />
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <UserSecretsId>{Guid.NewGuid()}</UserSecretsId>
-  </PropertyGroup>
-  <ItemGroup>
-    {hostingPackageRefs}
-    <ProjectReference Include="..\{projectName}.ApiService\{projectName}.ApiService.csproj" />
-    <ProjectReference Include="..\{projectName}.ServiceDefaults\{projectName}.ServiceDefaults.csproj" />
-  </ItemGroup>
-</Project>
-""");
+        // Step 7: Add ServiceDefaults reference to ApiService
+        await auto.TypeAsync($"dotnet add {projectName}.ApiService reference {projectName}.ServiceDefaults");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
 
-        // AppHost code
+        // Step 8: Add client NuGet packages to ApiService
+        foreach (var package in apiClientPackages)
+        {
+            await auto.TypeAsync($"dotnet add {projectName}.ApiService package {package}");
+            await auto.EnterAsync();
+            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(60));
+        }
+
+        // Step 9: Write custom AppHost.cs and ApiService/Program.cs
+        output.WriteLine($"Writing AppHost.cs to: {Path.Combine(appHostDir, "AppHost.cs")}");
         File.WriteAllText(Path.Combine(appHostDir, "AppHost.cs"), appHostCode);
-
-        // ApiService csproj
-        var clientPackageRefs = apiClientPackages.Length > 0
-            ? string.Join(Environment.NewLine + "    ",
-                apiClientPackages.Select(p => $"""<PackageReference Include="{p}" />"""))
-            : "";
-
-        var clientItemGroup = apiClientPackages.Length > 0
-            ? $"""
-  <ItemGroup>
-    {clientPackageRefs}
-    <ProjectReference Include="..\{projectName}.ServiceDefaults\{projectName}.ServiceDefaults.csproj" />
-  </ItemGroup>
-"""
-            : $"""
-  <ItemGroup>
-    <ProjectReference Include="..\{projectName}.ServiceDefaults\{projectName}.ServiceDefaults.csproj" />
-  </ItemGroup>
-""";
-
-        File.WriteAllText(Path.Combine(apiDir, $"{projectName}.ApiService.csproj"), $"""
-<Project Sdk="Microsoft.NET.Sdk.Web">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-{clientItemGroup}
-</Project>
-""");
-
-        // ApiService Program.cs
         File.WriteAllText(Path.Combine(apiDir, "Program.cs"), apiProgramCode);
-
-        // ServiceDefaults project
-        File.WriteAllText(Path.Combine(serviceDefaultsDir, $"{projectName}.ServiceDefaults.csproj"), """
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <IsAspireSharedProject>true</IsAspireSharedProject>
-  </PropertyGroup>
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
-    <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
-  </ItemGroup>
-</Project>
-""");
-
-        // ServiceDefaults Extensions.cs (minimal)
-        File.WriteAllText(Path.Combine(serviceDefaultsDir, "Extensions.cs"), """
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-
-namespace Microsoft.Extensions.Hosting;
-
-public static class Extensions
-{
-    public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
-    {
-        builder.Services.AddHealthChecks()
-            .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
-
-        builder.Services.AddServiceDiscovery();
-        builder.Services.ConfigureHttpClientDefaults(http =>
-        {
-            http.AddStandardResilienceHandler();
-            http.AddServiceDiscovery();
-        });
-
-        return builder;
-    }
-
-    public static WebApplication MapDefaultEndpoints(this WebApplication app)
-    {
-        app.MapHealthChecks("/health");
-        app.MapHealthChecks("/alive", new HealthCheckOptions
-        {
-            Predicate = r => r.Tags.Contains("live")
-        });
-        return app;
-    }
-}
-""");
-
-        // aspire.config.json
-        File.WriteAllText(Path.Combine(projectDir, "aspire.config.json"), """
-{
-  "sdk": {
-    "version": "10.0.0-dev"
-  }
-}
-""");
     }
 
     /// <summary>

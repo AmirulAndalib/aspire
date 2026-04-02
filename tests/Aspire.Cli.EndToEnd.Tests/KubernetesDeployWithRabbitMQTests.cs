@@ -99,17 +99,15 @@ public sealed class KubernetesDeployWithRabbitMQTests(ITestOutputHelper output)
                 app.Run();
                 """;
 
-            KubernetesDeployTestHelpers.ScaffoldK8sDeployProject(
-                workspace.WorkspaceRoot.FullName,
+            await auto.ScaffoldK8sDeployProjectAsync(
+                counter,
                 ProjectName,
+                Path.Combine(workspace.WorkspaceRoot.FullName, ProjectName),
                 appHostHostingPackages: ["Aspire.Hosting.Kubernetes", "Aspire.Hosting.RabbitMQ"],
                 apiClientPackages: ["Aspire.RabbitMQ.Client"],
                 appHostCode: appHostCode,
-                apiProgramCode: apiProgramCode);
-
-            await auto.TypeAsync($"cd {ProjectName}");
-            await auto.EnterAsync();
-            await auto.WaitForSuccessPromptAsync(counter);
+                apiProgramCode: apiProgramCode,
+                output: output);
 
             await auto.TypeAsync("unset ASPIRE_PLAYGROUND");
             await auto.EnterAsync();

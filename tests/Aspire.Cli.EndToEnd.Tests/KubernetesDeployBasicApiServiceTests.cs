@@ -96,23 +96,15 @@ public sealed class KubernetesDeployBasicApiServiceTests(ITestOutputHelper outpu
                 app.Run();
                 """;
 
-            KubernetesDeployTestHelpers.ScaffoldK8sDeployProject(
-                workspace.WorkspaceRoot.FullName,
+            await auto.ScaffoldK8sDeployProjectAsync(
+                counter,
                 ProjectName,
+                Path.Combine(workspace.WorkspaceRoot.FullName, ProjectName),
                 appHostHostingPackages: ["Aspire.Hosting.Kubernetes"],
                 apiClientPackages: [],
                 appHostCode: appHostCode,
-                apiProgramCode: apiProgramCode);
-
-            // Navigate into the project directory
-            await auto.TypeAsync($"cd {ProjectName}");
-            await auto.EnterAsync();
-            await auto.WaitForSuccessPromptAsync(counter);
-
-            // Verify scaffold
-            await auto.TypeAsync($"ls -la {ProjectName}.AppHost/");
-            await auto.EnterAsync();
-            await auto.WaitForSuccessPromptAsync(counter);
+                apiProgramCode: apiProgramCode,
+                output: output);
 
             // =====================================================================
             // Phase 3: Unset ASPIRE_PLAYGROUND and run aspire deploy interactively
