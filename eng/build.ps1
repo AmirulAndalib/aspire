@@ -11,6 +11,7 @@ Param(
   [switch]$mauirestore,
   [switch]$bundle,
   [string]$runtimeVersion,
+  [string]$projects,
 
   [Parameter(ValueFromRemainingArguments=$true)][String[]]$properties
 )
@@ -50,6 +51,9 @@ function Get-Help() {
   Write-Host "  -buildExtension         Build the VS Code extension."
   Write-Host "  -bundle                 Build the self-contained bundle (CLI + Runtime + Dashboard + DCP)."
   Write-Host "  -runtimeVersion <ver>   .NET runtime version for bundle (default: from eng/Versions.props RuntimeVersion)."
+  Write-Host ""
+  Write-Host "Advanced settings:"
+  Write-Host "  -projects <value>       Semi-colon delimited list of sln/proj's to build. Globbing is supported (*.sln)."
   Write-Host ""
 
   Write-Host "Command-line arguments not listed above are passed through to MSBuild."
@@ -108,6 +112,7 @@ foreach ($argument in $PSBoundParameters.Keys)
     "mauirestore"            { $arguments += " -restoreMaui" }
     "bundle"                 { } # Handled after main build
     "runtimeVersion"         { } # Handled after main build
+    "projects"               { $arguments += " -projects " + $($PSBoundParameters[$argument]) }
     default                  { $arguments += " /p:$argument=$($PSBoundParameters[$argument])" }
   }
 }
