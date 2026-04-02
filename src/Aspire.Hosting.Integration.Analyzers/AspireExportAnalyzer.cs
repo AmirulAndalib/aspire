@@ -196,9 +196,15 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
                 exportId));
         }
 
+        // Compute the effective export ID: either from the explicit attribute or auto-derived from method name (camelCase)
+        // Normalize empty/invalid exportId to null so the fallback applies
+        var derivedExportId = GetDerivedExportId(method, containingTypeExportAttribute);
+        var normalizedExportId = isExportIdFormatValid ? exportId : null;
+        var effectiveExportId = normalizedExportId ?? derivedExportId;
+
         // Rule 2b (ASPIREEXPORT011): Warn when explicit id matches the convention-derived name
         if (isExportIdFormatValid &&
-            string.Equals(exportId, GetDerivedExportId(method, containingTypeExportAttribute), StringComparison.Ordinal))
+            string.Equals(exportId, derivedExportId, StringComparison.Ordinal))
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 Diagnostics.s_redundantExportId,
@@ -206,11 +212,6 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
                 exportId,
                 method.Name));
         }
-
-        // Compute the effective export ID: either from the explicit attribute or auto-derived from method name (camelCase)
-        // Normalize empty/invalid exportId to null so the fallback applies
-        var normalizedExportId = isExportIdFormatValid ? exportId : null;
-        var effectiveExportId = normalizedExportId ?? GetDerivedExportId(method, containingTypeExportAttribute);
 
         // Rule 3: Validate return type is ATS-compatible
         if (!IsAtsCompatibleType(method.ReturnType, wellKnownTypes, aspireExportAttribute, currentAssemblyExportedTypes))
