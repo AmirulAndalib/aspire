@@ -274,26 +274,35 @@ internal sealed class AppHostCliBackchannel(ILogger<AppHostCliBackchannel> logge
             logger.LogDebug("Connected to AppHost backchannel at {SocketPath} (retryCount={RetryCount})", socketPath, retryCount);
 
             var stream = new NetworkStream(socket, true);
-            var rpc = new JsonRpc(new HeaderDelimitedMessageHandler(stream, stream, BackchannelJsonSerializerContext.CreateRpcMessageFormatter()));
-            rpc.StartListening();
-
-            var capabilities = await rpc.InvokeWithCancellationAsync<string[]>(
-                "GetCapabilitiesAsync",
-                [],
-                cancellationToken);
-
-            if (!capabilities.Any(s => s == BaselineCapability))
+            JsonRpc? rpc = null;
+            try
             {
-                throw new AppHostIncompatibleException(
-                    string.Format(CultureInfo.CurrentCulture, ErrorStrings.AppHostIncompatibleWithCli, BaselineCapability),
-                    BaselineCapability
-                    );
+                rpc = new JsonRpc(new HeaderDelimitedMessageHandler(stream, stream, BackchannelJsonSerializerContext.CreateRpcMessageFormatter()));
+                rpc.StartListening();
+
+                var capabilities = await rpc.InvokeWithCancellationAsync<string[]>(
+                    "GetCapabilitiesAsync",
+                    [],
+                    cancellationToken);
+
+                if (!capabilities.Any(s => s == BaselineCapability))
+                {
+                    throw new AppHostIncompatibleException(
+                        string.Format(CultureInfo.CurrentCulture, ErrorStrings.AppHostIncompatibleWithCli, BaselineCapability),
+                        BaselineCapability
+                        );
+                }
+
+                // Set up auto-reconnect if enabled
+                if (autoReconnect)
+                {
+                    rpc.Disconnected += OnDisconnected;
+                }
             }
-
-            // Set up auto-reconnect if enabled
-            if (autoReconnect)
+            catch
             {
-                rpc.Disconnected += OnDisconnected;
+                rpc?.Dispose();
+                throw;
             }
 
             lock (_lock)
@@ -381,6 +390,11 @@ internal sealed class AppHostCliBackchannel(ILogger<AppHostCliBackchannel> logge
                 retryCount++;
                 // Socket not ready yet, wait and retry
                 await Task.Delay(500, _cancellationToken).ConfigureAwait(false);
+            }
+            catch (SocketException)
+            {
+                // Timeout exceeded — fall through to warning
+                break;
             }
         }
 

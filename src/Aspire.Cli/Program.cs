@@ -220,7 +220,8 @@ public class Program
                 // Default writing debug level logs to file.
                 builder.AddFilter<FileLoggerProvider>(null, LogLevel.Debug);
 
-                // These categories are very verbose at Debug; only capture them at Info unless an explicit log level is requested.
+                // These categories are very verbose at Debug; suppress their Debug output by
+                // raising the minimum to Information unless an explicit log level is requested.
                 builder.AddFilter<FileLoggerProvider>("Microsoft.Extensions.Http.DefaultHttpClientFactory", LogLevel.Information);
                 builder.AddFilter<FileLoggerProvider>("Aspire.Cli.Certificates.NativeCertificateToolRunner", LogLevel.Information);
             }

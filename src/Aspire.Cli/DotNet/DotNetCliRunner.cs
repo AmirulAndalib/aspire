@@ -153,8 +153,9 @@ internal sealed class DotNetCliRunner(
         {
             try
             {
-                logger.LogTrace("Attempting to connect to AppHost backchannel at {SocketPath} (attempt {Attempt})", socketPath, connectionAttempts);
-                await backchannel.ConnectAsync(socketPath, connectionAttempts++, cancellationToken).ConfigureAwait(false);
+                var attempt = connectionAttempts++;
+                logger.LogTrace("Attempting to connect to AppHost backchannel at {SocketPath} (attempt {Attempt})", socketPath, attempt);
+                await backchannel.ConnectAsync(socketPath, attempt, cancellationToken).ConfigureAwait(false);
                 backchannelCompletionSource.SetResult(backchannel);
                 // Note: We intentionally do not call Environment.Exit when the backchannel disconnects.
                 // The CLI should complete normally and return the appropriate exit code based on the
