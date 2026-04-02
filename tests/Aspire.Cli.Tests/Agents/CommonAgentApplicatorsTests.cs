@@ -80,7 +80,7 @@ public class CommonAgentApplicatorsTests
     public void SkillDefinition_IsApplicableToLanguage_WithRestrictions_MatchesCorrectly()
     {
         // DotnetInspect is restricted to CSharp
-        Assert.True(SkillDefinition.DotnetInspect.IsApplicableToLanguage(null)); // no language detected => offered
+        Assert.False(SkillDefinition.DotnetInspect.IsApplicableToLanguage(null)); // no language detected => excluded
         Assert.True(SkillDefinition.DotnetInspect.IsApplicableToLanguage(new LanguageId(KnownLanguageId.CSharp)));
         Assert.False(SkillDefinition.DotnetInspect.IsApplicableToLanguage(new LanguageId(KnownLanguageId.TypeScript)));
         Assert.False(SkillDefinition.DotnetInspect.IsApplicableToLanguage(new LanguageId(KnownLanguageId.Python)));

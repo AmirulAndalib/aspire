@@ -35,7 +35,7 @@ internal sealed class SkillDefinition
 
     /// <summary>
     /// The dotnet-inspect skill for querying .NET API surfaces.
-    /// Only offered when the workspace contains a .NET AppHost or when no language is detected.
+    /// Only offered when the workspace contains a .NET AppHost.
     /// </summary>
     public static readonly SkillDefinition DotnetInspect = new(
         CommonAgentApplicators.DotnetInspectSkillName,
@@ -107,16 +107,15 @@ internal sealed class SkillDefinition
     /// <summary>
     /// Gets the set of language identifiers (from <see cref="KnownLanguageId"/>) this skill applies to.
     /// An empty list means the skill is language-agnostic and always offered.
-    /// When non-empty, the skill is only offered when the detected language matches one of the entries,
-    /// or when no language is detected.
+    /// When non-empty, the skill is only offered when the detected language matches one of the entries.
     /// </summary>
     public IReadOnlyList<string> ApplicableLanguages { get; }
 
     /// <summary>
     /// Returns whether this skill is applicable for the given detected language.
     /// A skill with no <see cref="ApplicableLanguages"/> restrictions is always applicable.
-    /// A skill with restrictions is applicable when no language is detected (<paramref name="detectedLanguage"/> is <c>null</c>)
-    /// or when the detected language matches one of the entries.
+    /// A skill with restrictions is only applicable when the detected language matches one of the entries.
+    /// When no language is detected (<paramref name="detectedLanguage"/> is <c>null</c>), language-restricted skills are excluded.
     /// </summary>
     public bool IsApplicableToLanguage(LanguageId? detectedLanguage)
     {
@@ -127,7 +126,7 @@ internal sealed class SkillDefinition
 
         if (detectedLanguage is null)
         {
-            return true;
+            return false;
         }
 
         return ApplicableLanguages.Contains(detectedLanguage.Value.Value);
