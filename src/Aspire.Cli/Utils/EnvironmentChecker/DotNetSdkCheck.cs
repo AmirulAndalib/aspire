@@ -101,7 +101,7 @@ internal sealed class DotNetSdkCheck(
 
             // No apphost configured in settings — fall back to the same recursive
             // detection that DetectLanguageAsync uses.
-            var detectedLanguage = await languageDiscovery.DetectLanguageAsync(executionContext.WorkingDirectory, cancellationToken);
+            var detectedLanguage = await languageDiscovery.DetectLanguageRecursiveAsync(executionContext.WorkingDirectory, cancellationToken);
             return detectedLanguage is not null &&
                    detectedLanguage.Value.Value.Equals(KnownLanguageId.CSharp, StringComparison.OrdinalIgnoreCase);
         }

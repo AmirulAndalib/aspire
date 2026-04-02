@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Cli.Configuration;
+using Aspire.Cli.Utils;
 
 namespace Aspire.Cli.Projects;
 
@@ -90,6 +91,27 @@ internal sealed class DefaultLanguageDiscovery(IFeatures features) : ILanguageDi
 
     /// <inheritdoc />
     public Task<LanguageId?> DetectLanguageAsync(DirectoryInfo directory, CancellationToken cancellationToken = default)
+    {
+        foreach (var language in s_allLanguages.Where(IsLanguageEnabled))
+        {
+            // Flat scan — only checks the immediate directory using
+            // Directory.EnumerateFiles so glob patterns like *.csproj work.
+            var match = FileSystemHelper.FindFirstFile(
+                directory.FullName,
+                recurseLimit: 0,
+                language.DetectionPatterns);
+
+            if (match is not null)
+            {
+                return Task.FromResult<LanguageId?>(language.LanguageId);
+            }
+        }
+
+        return Task.FromResult<LanguageId?>(null);
+    }
+
+    /// <inheritdoc />
+    public Task<LanguageId?> DetectLanguageRecursiveAsync(DirectoryInfo directory, CancellationToken cancellationToken = default)
     {
         foreach (var language in s_allLanguages.Where(IsLanguageEnabled))
         {

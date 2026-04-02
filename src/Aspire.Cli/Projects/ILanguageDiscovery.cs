@@ -124,13 +124,24 @@ internal interface ILanguageDiscovery
     Task<string?> GetPackageForLanguageAsync(LanguageId languageId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Detects the language used in a directory by checking for known file patterns.
-    /// This is a fallback detection mechanism when .aspire/settings.json doesn't exist.
+    /// Detects the language used in a directory by checking for known file patterns
+    /// in the immediate directory only. Does not recurse into subdirectories.
     /// </summary>
     /// <param name="directory">The directory to check.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The detected language ID, or null if no language was detected.</returns>
     Task<LanguageId?> DetectLanguageAsync(DirectoryInfo directory, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Detects the language used in a directory by recursively scanning for known
+    /// file patterns up to <see cref="LanguageInfo.DetectionRecurseLimit"/> levels
+    /// deep. Use this when a broader search is needed (e.g. <c>aspire doctor</c>),
+    /// but be aware it is more expensive than <see cref="DetectLanguageAsync"/>.
+    /// </summary>
+    /// <param name="directory">The root directory to scan.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The detected language ID, or null if no language was detected.</returns>
+    Task<LanguageId?> DetectLanguageRecursiveAsync(DirectoryInfo directory, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets language information by its identifier.

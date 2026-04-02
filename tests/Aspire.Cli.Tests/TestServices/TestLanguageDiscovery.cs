@@ -41,6 +41,25 @@ internal sealed class TestLanguageDiscovery : ILanguageDiscovery
 
     public Task<LanguageId?> DetectLanguageAsync(DirectoryInfo directory, CancellationToken cancellationToken = default)
     {
+        // Flat scan — immediate directory only, using EnumerateFiles for glob support
+        foreach (var language in _allLanguages)
+        {
+            var match = Aspire.Cli.Utils.FileSystemHelper.FindFirstFile(
+                directory.FullName,
+                recurseLimit: 0,
+                language.DetectionPatterns);
+
+            if (match is not null)
+            {
+                return Task.FromResult<LanguageId?>(language.LanguageId);
+            }
+        }
+
+        return Task.FromResult<LanguageId?>(null);
+    }
+
+    public Task<LanguageId?> DetectLanguageRecursiveAsync(DirectoryInfo directory, CancellationToken cancellationToken = default)
+    {
         foreach (var language in _allLanguages)
         {
             if (language.FindInDirectory(directory.FullName) is not null)
