@@ -34,7 +34,7 @@ internal sealed class SkillDefinition
 
     /// <summary>
     /// The dotnet-inspect skill for querying .NET API surfaces.
-    /// Only applicable when the workspace contains a .NET AppHost.
+    /// Only offered when the workspace contains a .NET AppHost or when no language is detected.
     /// </summary>
     public static readonly SkillDefinition DotnetInspect = new(
         CommonAgentApplicators.DotnetInspectSkillName,
@@ -105,7 +105,8 @@ internal sealed class SkillDefinition
 
     /// <summary>
     /// Gets whether this skill is only applicable to .NET AppHost projects.
-    /// When <c>true</c>, the skill is excluded from the selection list unless the workspace contains a .NET AppHost.
+    /// When <c>true</c>, the skill is excluded from the selection list when a non-.NET language is detected.
+    /// If no language is detected, the skill is still offered.
     /// </summary>
     public bool IsDotNetOnly { get; }
 
