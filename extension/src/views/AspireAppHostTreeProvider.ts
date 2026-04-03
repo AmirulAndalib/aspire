@@ -194,6 +194,7 @@ export function getResourceContextValue(resource: ResourceJson): string {
 export function getResourceIcon(resource: ResourceJson): vscode.ThemeIcon {
     const state = resource.state;
     const health = resource.healthStatus;
+    const hasNonZeroExitCode = resource.exitCode !== null && resource.exitCode !== undefined && resource.exitCode !== 0;
     switch (state) {
         case ResourceState.Running:
         case ResourceState.Active:
@@ -210,7 +211,7 @@ export function getResourceIcon(resource: ResourceJson): vscode.ThemeIcon {
         case ResourceState.Finished:
         case ResourceState.Exited:
         case ResourceState.Stopped:
-            if (resource.stateStyle === StateStyle.Error || (resource.exitCode !== null && resource.exitCode !== 0)) {
+            if (resource.stateStyle === StateStyle.Error || hasNonZeroExitCode) {
                 return new vscode.ThemeIcon('error', new vscode.ThemeColor('list.errorForeground'));
             }
             return new vscode.ThemeIcon('pass', new vscode.ThemeColor('charts.green'));

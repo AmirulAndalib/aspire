@@ -200,6 +200,8 @@ export class AspireCodeLensProvider implements vscode.CodeLensProvider {
 }
 
 export function getCodeLensStateLabel(state: string, stateStyle: string, exitCode?: number | null): string {
+    const hasNonZeroExitCode = exitCode !== null && exitCode !== undefined && exitCode !== 0;
+
     switch (state) {
         case ResourceState.Running:
         case ResourceState.Active:
@@ -226,9 +228,9 @@ export function getCodeLensStateLabel(state: string, stateStyle: string, exitCod
         case ResourceState.Exited:
         case ResourceState.Stopped:
             if (stateStyle === StateStyle.Error) {
-                return exitCode !== null && exitCode !== undefined && exitCode !== 0 ? codeLensResourceStoppedErrorWithExitCode(exitCode) : codeLensResourceStoppedError;
+                return hasNonZeroExitCode ? codeLensResourceStoppedErrorWithExitCode(exitCode) : codeLensResourceStoppedError;
             }
-            return exitCode !== null && exitCode !== undefined && exitCode !== 0 ? codeLensResourceStoppedWithExitCode(exitCode) : codeLensResourceStopped;
+            return hasNonZeroExitCode ? codeLensResourceStoppedWithExitCode(exitCode) : codeLensResourceStopped;
         default:
             return state || codeLensResourceStopped;
     }
