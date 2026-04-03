@@ -226,9 +226,9 @@ export function getCodeLensStateLabel(state: string, stateStyle: string, exitCod
         case ResourceState.Exited:
         case ResourceState.Stopped:
             if (stateStyle === StateStyle.Error) {
-                return exitCode != null && exitCode !== 0 ? codeLensResourceStoppedErrorWithExitCode(exitCode) : codeLensResourceStoppedError;
+                return exitCode !== null && exitCode !== undefined && exitCode !== 0 ? codeLensResourceStoppedErrorWithExitCode(exitCode) : codeLensResourceStoppedError;
             }
-            return exitCode != null && exitCode !== 0 ? codeLensResourceStoppedWithExitCode(exitCode) : codeLensResourceStopped;
+            return exitCode !== null && exitCode !== undefined && exitCode !== 0 ? codeLensResourceStoppedWithExitCode(exitCode) : codeLensResourceStopped;
         default:
             return state || codeLensResourceStopped;
     }

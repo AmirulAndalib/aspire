@@ -210,7 +210,7 @@ export function getResourceIcon(resource: ResourceJson): vscode.ThemeIcon {
         case ResourceState.Finished:
         case ResourceState.Exited:
         case ResourceState.Stopped:
-            if (resource.stateStyle === StateStyle.Error || (resource.exitCode != null && resource.exitCode !== 0)) {
+            if (resource.stateStyle === StateStyle.Error || (resource.exitCode !== null && resource.exitCode !== 0)) {
                 return new vscode.ThemeIcon('error', new vscode.ThemeColor('list.errorForeground'));
             }
             return new vscode.ThemeIcon('pass', new vscode.ThemeColor('charts.green'));
@@ -273,7 +273,7 @@ export function buildResourceDescription(resource: ResourceJson): string {
         const passed = Object.values(reports).filter(r => r.status === 'Healthy').length;
         parts.push(resourceDescriptionHealth(passed, total));
     }
-    if (exitCode != null && exitCode !== 0) {
+    if (exitCode !== null && exitCode !== undefined && exitCode !== 0) {
         parts.push(resourceDescriptionExitCode(exitCode));
     }
     return parts.join(' · ');

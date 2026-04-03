@@ -90,7 +90,7 @@ function classifyState(state: string, stateStyle: string, healthStatus: string, 
         case ResourceState.Finished:
         case ResourceState.Exited:
         case ResourceState.Stopped:
-            if (stateStyle === StateStyle.Error || (exitCode != null && exitCode !== 0)) {
+            if (stateStyle === StateStyle.Error || (exitCode !== null && exitCode !== undefined && exitCode !== 0)) {
                 return 'error';
             }
             return 'completed';
