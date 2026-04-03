@@ -2730,9 +2730,10 @@ public static class ResourceBuilderExtensions
                     };
                     await commandOptions.PrepareRequest(requestContext).ConfigureAwait(false);
                 }
+                HttpResponseMessage? response = null;
                 try
                 {
-                    var response = await httpClient.SendAsync(request, context.CancellationToken).ConfigureAwait(false);
+                    response = await httpClient.SendAsync(request, context.CancellationToken).ConfigureAwait(false);
                     if (commandOptions.GetCommandResult is not null)
                     {
                         var resultContext = new HttpCommandResultContext
@@ -2752,6 +2753,10 @@ public static class ResourceBuilderExtensions
                 catch (Exception ex)
                 {
                     return CommandResults.Failure(ex);
+                }
+                finally
+                {
+                    response?.Dispose();
                 }
             },
             commandOptions);
