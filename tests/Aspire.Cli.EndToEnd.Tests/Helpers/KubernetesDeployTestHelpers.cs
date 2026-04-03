@@ -22,6 +22,7 @@ internal static class KubernetesDeployTestHelpers
 
     /// <summary>
     /// Installs KinD and Helm binaries to ~/.local/bin and adds to PATH.
+    /// Retries downloads up to 3 times to handle transient GitHub CDN failures.
     /// </summary>
     internal static async Task InstallKindAndHelmAsync(
         this Hex1bTerminalAutomator auto,
@@ -31,17 +32,19 @@ internal static class KubernetesDeployTestHelpers
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
-        await auto.TypeAsync($"curl -sSLo ~/.local/bin/kind \"https://github.com/kubernetes-sigs/kind/releases/download/{KindVersion}/kind-linux-amd64\"");
+        // Download KinD with retry — GitHub CDN can transiently return HTML instead of binary
+        await auto.TypeAsync($"for i in 1 2 3; do curl -sSLo ~/.local/bin/kind \"https://github.com/kubernetes-sigs/kind/releases/download/{KindVersion}/kind-linux-amd64\" && file ~/.local/bin/kind | grep -q ELF && break; echo \"Retry $i: KinD download failed, retrying in 5s...\"; sleep 5; done");
         await auto.EnterAsync();
-        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(60));
+        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(90));
 
         await auto.TypeAsync("chmod +x ~/.local/bin/kind");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
-        await auto.TypeAsync($"curl -sSL https://get.helm.sh/helm-{HelmVersion}-linux-amd64.tar.gz | tar xz -C /tmp");
+        // Download Helm with retry
+        await auto.TypeAsync($"for i in 1 2 3; do curl -sSL https://get.helm.sh/helm-{HelmVersion}-linux-amd64.tar.gz | tar xz -C /tmp && test -f /tmp/linux-amd64/helm && break; echo \"Retry $i: Helm download failed, retrying in 5s...\"; sleep 5; done");
         await auto.EnterAsync();
-        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(60));
+        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(90));
 
         await auto.TypeAsync("mv /tmp/linux-amd64/helm ~/.local/bin/helm && rm -rf /tmp/linux-amd64");
         await auto.EnterAsync();
@@ -51,6 +54,7 @@ internal static class KubernetesDeployTestHelpers
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
+        // Verify both binaries are functional
         await auto.TypeAsync("kind version && helm version --short");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
