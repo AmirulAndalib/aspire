@@ -29,7 +29,7 @@ public static class JavaScriptHostingExtensions
 {
     private const string BrowserCapability = "browser";
     private const string DefaultNodeVersion = "22";
-    private const string DefaultYarpImage = JavaScriptContainerImageTags.YarpRegistry + "/" + JavaScriptContainerImageTags.YarpImage + ":" + JavaScriptContainerImageTags.YarpTag;
+    private const string DefaultYarpImage = Yarp.YarpContainerImageTags.Registry + "/" + Yarp.YarpContainerImageTags.Image + ":" + Yarp.YarpContainerImageTags.Tag;
 
     // This is the order of config files that Vite will look for by default
     // See https://github.com/vitejs/vite/blob/main/packages/vite/src/node/constants.ts#L97
@@ -550,6 +550,11 @@ public static class JavaScriptHostingExtensions
         ArgumentException.ThrowIfNullOrEmpty(entryPoint);
         ArgumentException.ThrowIfNullOrEmpty(outputPath);
 
+        if (!builder.ApplicationBuilder.ExecutionContext.IsPublishMode)
+        {
+            return builder;
+        }
+
         var annotation = new JavaScriptPublishModeAnnotation(JavaScriptPublishMode.NodeServer)
         {
             EntryPoint = entryPoint,
@@ -606,6 +611,11 @@ public static class JavaScriptHostingExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentException.ThrowIfNullOrEmpty(startScriptName);
+
+        if (!builder.ApplicationBuilder.ExecutionContext.IsPublishMode)
+        {
+            return builder;
+        }
 
         var annotation = new JavaScriptPublishModeAnnotation(JavaScriptPublishMode.NpmScript)
         {
@@ -788,14 +798,16 @@ public static class JavaScriptHostingExtensions
                                     prodDepsStage.Copy("package*.json", "./");
                                 }
 
-                                // Install production-only dependencies
+                                // Install production-only dependencies using the same base install
+                                // command as the build stage (e.g. 'ci' for npm, 'install --frozen-lockfile'
+                                // for pnpm) plus the production-only flag (e.g. '--omit=dev').
                                 var installAnnotation = c.Resource.TryGetLastAnnotation<JavaScriptInstallCommandAnnotation>(out var installCmd) ? installCmd : null;
                                 if (string.IsNullOrEmpty(installAnnotation?.ProductionInstallArgs))
                                 {
                                     throw new InvalidOperationException($"Package manager '{packageManager.ExecutableName}' does not have ProductionInstallArgs configured, which is required for PublishAsNpmScript.");
                                 }
 
-                                var prodInstallCmd = $"{packageManager.ExecutableName} {installAnnotation.ProductionInstallArgs}";
+                                var prodInstallCmd = $"{packageManager.ExecutableName} {string.Join(' ', installAnnotation.Args)} {installAnnotation.ProductionInstallArgs}";
                                 if (!string.IsNullOrEmpty(packageManager.CacheMount))
                                 {
                                     prodDepsStage.Run($"--mount=type=cache,target={packageManager.CacheMount} {prodInstallCmd}");
@@ -827,7 +839,6 @@ public static class JavaScriptHostingExtensions
                                     .From(runtimeImage, "runtime")
                                     .WorkDir("/app")
                                     .Env("NODE_ENV", "production")
-                                    .Env("HOSTNAME", "0.0.0.0")
                                     .CopyFrom("build", "/app/public", "./public")
                                     .CopyFrom("build", "/app/.next/standalone", "./")
                                     .CopyFrom("build", "/app/.next/static", "./.next/static")
@@ -1102,14 +1113,19 @@ public static class JavaScriptHostingExtensions
                 c.Args.Add(targetEndpoint.Property(EndpointProperty.TargetPort));
             })
             .WithHttpEndpoint(env: "PORT")
-            .WithAnnotation(new JavaScriptPublishModeAnnotation(JavaScriptPublishMode.NextStandalone))
-            .ClearContainerFilesSources()
-            .WithEnvironment("HOSTNAME", "0.0.0.0")
             .WithOtlpExporter();
 
-        if (resourceBuilder.Resource.TryGetLastAnnotation<DockerfileBuildAnnotation>(out var dockerfileBuildAnnotation))
+        if (builder.ExecutionContext.IsPublishMode)
         {
-            dockerfileBuildAnnotation.HasEntrypoint = true;
+            resourceBuilder
+                .WithAnnotation(new JavaScriptPublishModeAnnotation(JavaScriptPublishMode.NextStandalone))
+                .ClearContainerFilesSources()
+                .WithEnvironment("HOSTNAME", "0.0.0.0");
+
+            if (resourceBuilder.Resource.TryGetLastAnnotation<DockerfileBuildAnnotation>(out var dockerfileBuildAnnotation))
+            {
+                dockerfileBuildAnnotation.HasEntrypoint = true;
+            }
         }
 
         // Add a publish prereq step that validates the Next.js config has standalone output enabled.
@@ -1206,7 +1222,7 @@ public static class JavaScriptHostingExtensions
             })
             .WithAnnotation(new JavaScriptInstallCommandAnnotation([installCommand, .. installArgs ?? []])
             {
-                ProductionInstallArgs = "install --omit=dev"
+                ProductionInstallArgs = "--omit=dev"
             })
             .WithRequiredCommand("npm", "https://docs.npmjs.com/downloading-and-installing-node-js-and-npm");
 
@@ -1269,7 +1285,7 @@ public static class JavaScriptHostingExtensions
             })
             .WithAnnotation(new JavaScriptInstallCommandAnnotation(["install", .. installArgs])
             {
-                ProductionInstallArgs = "install --production"
+                ProductionInstallArgs = "--production"
             })
             .WithRequiredCommand("bun", "https://bun.sh/docs/installation");
 
@@ -1347,7 +1363,7 @@ public static class JavaScriptHostingExtensions
             .WithAnnotation(packageManager)
             .WithAnnotation(new JavaScriptInstallCommandAnnotation(["install", .. installArgs])
             {
-                ProductionInstallArgs = "install --production"
+                ProductionInstallArgs = "--production"
             })
             .WithRequiredCommand("yarn", "https://yarnpkg.com/getting-started/install");
 
@@ -1411,7 +1427,7 @@ public static class JavaScriptHostingExtensions
             })
             .WithAnnotation(new JavaScriptInstallCommandAnnotation(["install", .. installArgs])
             {
-                ProductionInstallArgs = "install --prod"
+                ProductionInstallArgs = "--prod"
             })
             .WithRequiredCommand("pnpm", "https://pnpm.io/installation");
 
