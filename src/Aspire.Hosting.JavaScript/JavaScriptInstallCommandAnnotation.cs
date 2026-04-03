@@ -18,4 +18,11 @@ public sealed class JavaScriptInstallCommandAnnotation(string[] args) : IResourc
     /// Gets the command-line arguments supplied to the JavaScript package manager.
     /// </summary>
     public string[] Args { get; } = args;
+
+    /// <summary>
+    /// Gets or sets the arguments for installing production-only dependencies (excluding devDependencies).
+    /// Each package manager sets its own flags (e.g. npm uses <c>install --omit=dev</c>,
+    /// yarn uses <c>install --production</c>, pnpm uses <c>install --prod</c>).
+    /// </summary>
+    public string? ProductionInstallArgs { get; init; }
 }
