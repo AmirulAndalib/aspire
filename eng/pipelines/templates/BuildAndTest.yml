@@ -228,7 +228,7 @@ steps:
             exit $LASTEXITCODE
           }
 
-          & $toolExecutable help
+          & $toolExecutable --help
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
