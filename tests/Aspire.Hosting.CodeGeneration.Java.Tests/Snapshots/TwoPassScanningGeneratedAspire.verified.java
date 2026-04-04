@@ -1,4 +1,4 @@
-﻿// ===== AddDockerfileOptions.java =====
+// ===== AddDockerfileOptions.java =====
 // AddDockerfileOptions.java - GENERATED CODE - DO NOT EDIT
 
 package aspire;
@@ -1079,6 +1079,7 @@ public class AspireRegistrations {
         AspireClient.registerHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.DistributedApplicationModel", (h, c) -> new DistributedApplicationModel(h, c));
         AspireClient.registerHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.EndpointReferenceExpression", (h, c) -> new EndpointReferenceExpression(h, c));
         AspireClient.registerHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.EnvironmentCallbackContext", (h, c) -> new EnvironmentCallbackContext(h, c));
+        AspireClient.registerHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.IExpressionValue", (h, c) -> new IExpressionValue(h, c));
         AspireClient.registerHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.InitializeResourceEvent", (h, c) -> new InitializeResourceEvent(h, c));
         AspireClient.registerHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.ReferenceExpressionBuilder", (h, c) -> new ReferenceExpressionBuilder(h, c));
         AspireClient.registerHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.UpdateCommandStateContext", (h, c) -> new UpdateCommandStateContext(h, c));
@@ -1394,6 +1395,58 @@ public class CSharpAppResource extends ResourceBuilderBase {
         return this;
     }
 
+    public CSharpAppResource withEnvironment(String name, String value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public CSharpAppResource withEnvironment(String name, ReferenceExpression value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public CSharpAppResource withEnvironment(String name, EndpointReference value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public CSharpAppResource withEnvironment(String name, ParameterResource value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public CSharpAppResource withEnvironment(String name, IResourceWithConnectionString value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public CSharpAppResource withEnvironment(String name, ResourceBuilderBase value) {
+        return withEnvironment(name, new IResourceWithConnectionString(value.getHandle(), value.getClient()));
+    }
+
+    public CSharpAppResource withEnvironment(String name, IExpressionValue value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public CSharpAppResource withEnvironment(String name, HandleWrapperBase value) {
+        return withEnvironment(name, new IExpressionValue(value.getHandle(), value.getClient()));
+    }
+
+    /** Sets an environment variable */
+    public CSharpAppResource withEnvironment(String name, AspireUnion value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
+        return this;
+    }
+
+    /** Sets an environment variable from a reference expression */
+    public CSharpAppResource withEnvironmentExpression(String name, ReferenceExpression value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
+        return this;
+    }
+
     /** Sets environment variables via callback */
     public CSharpAppResource withEnvironmentCallback(AspireAction1<EnvironmentCallbackContext> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -1417,36 +1470,6 @@ public class CSharpAppResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
-        return this;
-    }
-
-    public CSharpAppResource withEnvironment(String name, String value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public CSharpAppResource withEnvironment(String name, ReferenceExpression value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public CSharpAppResource withEnvironment(String name, EndpointReference value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public CSharpAppResource withEnvironment(String name, ParameterResource value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public CSharpAppResource withEnvironment(String name, IResourceWithConnectionString value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    /** Sets an environment variable on the resource */
-    public CSharpAppResource withEnvironment(String name, AspireUnion value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
         return this;
     }
 
@@ -2417,6 +2440,27 @@ public class CSharpAppResource extends ResourceBuilderBase {
 
     public CSharpAppResource withDependency(ResourceBuilderBase dependency) {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    public CSharpAppResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public CSharpAppResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public CSharpAppResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public CSharpAppResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
     }
 
     /** Sets the endpoints */
@@ -3605,6 +3649,27 @@ public class ConnectionStringResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public ConnectionStringResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ConnectionStringResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ConnectionStringResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ConnectionStringResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public ConnectionStringResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -4280,6 +4345,27 @@ public class ContainerRegistryResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public ContainerRegistryResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ContainerRegistryResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ContainerRegistryResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ContainerRegistryResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public ContainerRegistryResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -4720,6 +4806,58 @@ public class ContainerResource extends ResourceBuilderBase {
         return this;
     }
 
+    public ContainerResource withEnvironment(String name, String value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ContainerResource withEnvironment(String name, ReferenceExpression value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ContainerResource withEnvironment(String name, EndpointReference value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ContainerResource withEnvironment(String name, ParameterResource value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ContainerResource withEnvironment(String name, IResourceWithConnectionString value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ContainerResource withEnvironment(String name, ResourceBuilderBase value) {
+        return withEnvironment(name, new IResourceWithConnectionString(value.getHandle(), value.getClient()));
+    }
+
+    public ContainerResource withEnvironment(String name, IExpressionValue value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ContainerResource withEnvironment(String name, HandleWrapperBase value) {
+        return withEnvironment(name, new IExpressionValue(value.getHandle(), value.getClient()));
+    }
+
+    /** Sets an environment variable */
+    public ContainerResource withEnvironment(String name, AspireUnion value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
+        return this;
+    }
+
+    /** Sets an environment variable from a reference expression */
+    public ContainerResource withEnvironmentExpression(String name, ReferenceExpression value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
+        return this;
+    }
+
     /** Sets environment variables via callback */
     public ContainerResource withEnvironmentCallback(AspireAction1<EnvironmentCallbackContext> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -4743,36 +4881,6 @@ public class ContainerResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
-        return this;
-    }
-
-    public ContainerResource withEnvironment(String name, String value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ContainerResource withEnvironment(String name, ReferenceExpression value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ContainerResource withEnvironment(String name, EndpointReference value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ContainerResource withEnvironment(String name, ParameterResource value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ContainerResource withEnvironment(String name, IResourceWithConnectionString value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    /** Sets an environment variable on the resource */
-    public ContainerResource withEnvironment(String name, AspireUnion value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
         return this;
     }
 
@@ -5757,6 +5865,27 @@ public class ContainerResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public ContainerResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ContainerResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ContainerResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ContainerResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public ContainerResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -6380,6 +6509,58 @@ public class DotnetToolResource extends ResourceBuilderBase {
         return this;
     }
 
+    public DotnetToolResource withEnvironment(String name, String value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public DotnetToolResource withEnvironment(String name, ReferenceExpression value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public DotnetToolResource withEnvironment(String name, EndpointReference value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public DotnetToolResource withEnvironment(String name, ParameterResource value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public DotnetToolResource withEnvironment(String name, IResourceWithConnectionString value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public DotnetToolResource withEnvironment(String name, ResourceBuilderBase value) {
+        return withEnvironment(name, new IResourceWithConnectionString(value.getHandle(), value.getClient()));
+    }
+
+    public DotnetToolResource withEnvironment(String name, IExpressionValue value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public DotnetToolResource withEnvironment(String name, HandleWrapperBase value) {
+        return withEnvironment(name, new IExpressionValue(value.getHandle(), value.getClient()));
+    }
+
+    /** Sets an environment variable */
+    public DotnetToolResource withEnvironment(String name, AspireUnion value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
+        return this;
+    }
+
+    /** Sets an environment variable from a reference expression */
+    public DotnetToolResource withEnvironmentExpression(String name, ReferenceExpression value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
+        return this;
+    }
+
     /** Sets environment variables via callback */
     public DotnetToolResource withEnvironmentCallback(AspireAction1<EnvironmentCallbackContext> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -6403,36 +6584,6 @@ public class DotnetToolResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
-        return this;
-    }
-
-    public DotnetToolResource withEnvironment(String name, String value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public DotnetToolResource withEnvironment(String name, ReferenceExpression value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public DotnetToolResource withEnvironment(String name, EndpointReference value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public DotnetToolResource withEnvironment(String name, ParameterResource value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public DotnetToolResource withEnvironment(String name, IResourceWithConnectionString value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    /** Sets an environment variable on the resource */
-    public DotnetToolResource withEnvironment(String name, AspireUnion value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
         return this;
     }
 
@@ -7391,6 +7542,27 @@ public class DotnetToolResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public DotnetToolResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public DotnetToolResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public DotnetToolResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public DotnetToolResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public DotnetToolResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -7979,6 +8151,58 @@ public class ExecutableResource extends ResourceBuilderBase {
         return this;
     }
 
+    public ExecutableResource withEnvironment(String name, String value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ExecutableResource withEnvironment(String name, ReferenceExpression value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ExecutableResource withEnvironment(String name, EndpointReference value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ExecutableResource withEnvironment(String name, ParameterResource value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ExecutableResource withEnvironment(String name, IResourceWithConnectionString value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ExecutableResource withEnvironment(String name, ResourceBuilderBase value) {
+        return withEnvironment(name, new IResourceWithConnectionString(value.getHandle(), value.getClient()));
+    }
+
+    public ExecutableResource withEnvironment(String name, IExpressionValue value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ExecutableResource withEnvironment(String name, HandleWrapperBase value) {
+        return withEnvironment(name, new IExpressionValue(value.getHandle(), value.getClient()));
+    }
+
+    /** Sets an environment variable */
+    public ExecutableResource withEnvironment(String name, AspireUnion value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
+        return this;
+    }
+
+    /** Sets an environment variable from a reference expression */
+    public ExecutableResource withEnvironmentExpression(String name, ReferenceExpression value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
+        return this;
+    }
+
     /** Sets environment variables via callback */
     public ExecutableResource withEnvironmentCallback(AspireAction1<EnvironmentCallbackContext> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -8002,36 +8226,6 @@ public class ExecutableResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
-        return this;
-    }
-
-    public ExecutableResource withEnvironment(String name, String value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ExecutableResource withEnvironment(String name, ReferenceExpression value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ExecutableResource withEnvironment(String name, EndpointReference value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ExecutableResource withEnvironment(String name, ParameterResource value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ExecutableResource withEnvironment(String name, IResourceWithConnectionString value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    /** Sets an environment variable on the resource */
-    public ExecutableResource withEnvironment(String name, AspireUnion value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
         return this;
     }
 
@@ -8990,6 +9184,27 @@ public class ExecutableResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public ExecutableResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ExecutableResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ExecutableResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ExecutableResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public ExecutableResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -9794,6 +10009,27 @@ public class ExternalServiceResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public ExternalServiceResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ExternalServiceResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ExternalServiceResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ExternalServiceResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public ExternalServiceResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -10544,6 +10780,22 @@ import java.util.function.*;
 /** Wrapper for Aspire.Hosting/Aspire.Hosting.Eventing.IDistributedApplicationResourceEvent. */
 public class IDistributedApplicationResourceEvent extends HandleWrapperBase {
     IDistributedApplicationResourceEvent(Handle handle, AspireClient client) {
+        super(handle, client);
+    }
+
+}
+
+// ===== IExpressionValue.java =====
+// IExpressionValue.java - GENERATED CODE - DO NOT EDIT
+
+package aspire;
+
+import java.util.*;
+import java.util.function.*;
+
+/** Wrapper for Aspire.Hosting/Aspire.Hosting.ApplicationModel.IExpressionValue. */
+public class IExpressionValue extends HandleWrapperBase {
+    IExpressionValue(Handle handle, AspireClient client) {
         super(handle, client);
     }
 
@@ -11833,6 +12085,27 @@ public class ParameterResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public ParameterResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ParameterResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ParameterResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ParameterResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public ParameterResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -12604,6 +12877,58 @@ public class ProjectResource extends ResourceBuilderBase {
         return this;
     }
 
+    public ProjectResource withEnvironment(String name, String value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ProjectResource withEnvironment(String name, ReferenceExpression value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ProjectResource withEnvironment(String name, EndpointReference value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ProjectResource withEnvironment(String name, ParameterResource value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ProjectResource withEnvironment(String name, IResourceWithConnectionString value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ProjectResource withEnvironment(String name, ResourceBuilderBase value) {
+        return withEnvironment(name, new IResourceWithConnectionString(value.getHandle(), value.getClient()));
+    }
+
+    public ProjectResource withEnvironment(String name, IExpressionValue value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public ProjectResource withEnvironment(String name, HandleWrapperBase value) {
+        return withEnvironment(name, new IExpressionValue(value.getHandle(), value.getClient()));
+    }
+
+    /** Sets an environment variable */
+    public ProjectResource withEnvironment(String name, AspireUnion value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
+        return this;
+    }
+
+    /** Sets an environment variable from a reference expression */
+    public ProjectResource withEnvironmentExpression(String name, ReferenceExpression value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
+        return this;
+    }
+
     /** Sets environment variables via callback */
     public ProjectResource withEnvironmentCallback(AspireAction1<EnvironmentCallbackContext> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -12627,36 +12952,6 @@ public class ProjectResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
-        return this;
-    }
-
-    public ProjectResource withEnvironment(String name, String value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ProjectResource withEnvironment(String name, ReferenceExpression value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ProjectResource withEnvironment(String name, EndpointReference value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ProjectResource withEnvironment(String name, ParameterResource value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public ProjectResource withEnvironment(String name, IResourceWithConnectionString value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    /** Sets an environment variable on the resource */
-    public ProjectResource withEnvironment(String name, AspireUnion value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
         return this;
     }
 
@@ -13627,6 +13922,27 @@ public class ProjectResource extends ResourceBuilderBase {
 
     public ProjectResource withDependency(ResourceBuilderBase dependency) {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    public ProjectResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ProjectResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ProjectResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ProjectResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
     }
 
     /** Sets the endpoints */
@@ -14929,6 +15245,58 @@ public class TestDatabaseResource extends ResourceBuilderBase {
         return this;
     }
 
+    public TestDatabaseResource withEnvironment(String name, String value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestDatabaseResource withEnvironment(String name, ReferenceExpression value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestDatabaseResource withEnvironment(String name, EndpointReference value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestDatabaseResource withEnvironment(String name, ParameterResource value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestDatabaseResource withEnvironment(String name, IResourceWithConnectionString value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestDatabaseResource withEnvironment(String name, ResourceBuilderBase value) {
+        return withEnvironment(name, new IResourceWithConnectionString(value.getHandle(), value.getClient()));
+    }
+
+    public TestDatabaseResource withEnvironment(String name, IExpressionValue value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestDatabaseResource withEnvironment(String name, HandleWrapperBase value) {
+        return withEnvironment(name, new IExpressionValue(value.getHandle(), value.getClient()));
+    }
+
+    /** Sets an environment variable */
+    public TestDatabaseResource withEnvironment(String name, AspireUnion value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
+        return this;
+    }
+
+    /** Sets an environment variable from a reference expression */
+    public TestDatabaseResource withEnvironmentExpression(String name, ReferenceExpression value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
+        return this;
+    }
+
     /** Sets environment variables via callback */
     public TestDatabaseResource withEnvironmentCallback(AspireAction1<EnvironmentCallbackContext> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -14952,36 +15320,6 @@ public class TestDatabaseResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
-        return this;
-    }
-
-    public TestDatabaseResource withEnvironment(String name, String value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestDatabaseResource withEnvironment(String name, ReferenceExpression value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestDatabaseResource withEnvironment(String name, EndpointReference value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestDatabaseResource withEnvironment(String name, ParameterResource value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestDatabaseResource withEnvironment(String name, IResourceWithConnectionString value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    /** Sets an environment variable on the resource */
-    public TestDatabaseResource withEnvironment(String name, AspireUnion value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
         return this;
     }
 
@@ -15966,6 +16304,27 @@ public class TestDatabaseResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public TestDatabaseResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestDatabaseResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestDatabaseResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public TestDatabaseResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public TestDatabaseResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -16566,6 +16925,58 @@ public class TestRedisResource extends ResourceBuilderBase {
         return this;
     }
 
+    public TestRedisResource withEnvironment(String name, String value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestRedisResource withEnvironment(String name, ReferenceExpression value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestRedisResource withEnvironment(String name, EndpointReference value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestRedisResource withEnvironment(String name, ParameterResource value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestRedisResource withEnvironment(String name, IResourceWithConnectionString value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestRedisResource withEnvironment(String name, ResourceBuilderBase value) {
+        return withEnvironment(name, new IResourceWithConnectionString(value.getHandle(), value.getClient()));
+    }
+
+    public TestRedisResource withEnvironment(String name, IExpressionValue value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestRedisResource withEnvironment(String name, HandleWrapperBase value) {
+        return withEnvironment(name, new IExpressionValue(value.getHandle(), value.getClient()));
+    }
+
+    /** Sets an environment variable */
+    public TestRedisResource withEnvironment(String name, AspireUnion value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
+        return this;
+    }
+
+    /** Sets an environment variable from a reference expression */
+    public TestRedisResource withEnvironmentExpression(String name, ReferenceExpression value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
+        return this;
+    }
+
     /** Sets environment variables via callback */
     public TestRedisResource withEnvironmentCallback(AspireAction1<EnvironmentCallbackContext> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -16589,36 +17000,6 @@ public class TestRedisResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
-        return this;
-    }
-
-    public TestRedisResource withEnvironment(String name, String value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestRedisResource withEnvironment(String name, ReferenceExpression value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestRedisResource withEnvironment(String name, EndpointReference value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestRedisResource withEnvironment(String name, ParameterResource value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestRedisResource withEnvironment(String name, IResourceWithConnectionString value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    /** Sets an environment variable on the resource */
-    public TestRedisResource withEnvironment(String name, AspireUnion value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
         return this;
     }
 
@@ -17729,6 +18110,27 @@ public class TestRedisResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public TestRedisResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestRedisResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestRedisResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public TestRedisResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public TestRedisResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -18348,6 +18750,58 @@ public class TestVaultResource extends ResourceBuilderBase {
         return this;
     }
 
+    public TestVaultResource withEnvironment(String name, String value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestVaultResource withEnvironment(String name, ReferenceExpression value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestVaultResource withEnvironment(String name, EndpointReference value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestVaultResource withEnvironment(String name, ParameterResource value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestVaultResource withEnvironment(String name, IResourceWithConnectionString value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestVaultResource withEnvironment(String name, ResourceBuilderBase value) {
+        return withEnvironment(name, new IResourceWithConnectionString(value.getHandle(), value.getClient()));
+    }
+
+    public TestVaultResource withEnvironment(String name, IExpressionValue value) {
+        return withEnvironment(name, AspireUnion.of(value));
+    }
+
+    public TestVaultResource withEnvironment(String name, HandleWrapperBase value) {
+        return withEnvironment(name, new IExpressionValue(value.getHandle(), value.getClient()));
+    }
+
+    /** Sets an environment variable */
+    public TestVaultResource withEnvironment(String name, AspireUnion value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
+        return this;
+    }
+
+    /** Sets an environment variable from a reference expression */
+    public TestVaultResource withEnvironmentExpression(String name, ReferenceExpression value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
+        return this;
+    }
+
     /** Sets environment variables via callback */
     public TestVaultResource withEnvironmentCallback(AspireAction1<EnvironmentCallbackContext> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -18371,36 +18825,6 @@ public class TestVaultResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
-        return this;
-    }
-
-    public TestVaultResource withEnvironment(String name, String value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestVaultResource withEnvironment(String name, ReferenceExpression value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestVaultResource withEnvironment(String name, EndpointReference value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestVaultResource withEnvironment(String name, ParameterResource value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    public TestVaultResource withEnvironment(String name, IResourceWithConnectionString value) {
-        return withEnvironment(name, AspireUnion.of(value));
-    }
-
-    /** Sets an environment variable on the resource */
-    public TestVaultResource withEnvironment(String name, AspireUnion value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
         return this;
     }
 
@@ -19385,6 +19809,27 @@ public class TestVaultResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public TestVaultResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestVaultResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestVaultResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public TestVaultResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public TestVaultResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -20300,6 +20745,7 @@ public final class WithVolumeOptions {
 .modules/IDistributedApplicationEvent.java
 .modules/IDistributedApplicationEventing.java
 .modules/IDistributedApplicationResourceEvent.java
+.modules/IExpressionValue.java
 .modules/IHostEnvironment.java
 .modules/ILogger.java
 .modules/ILoggerFactory.java
