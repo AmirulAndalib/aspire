@@ -196,11 +196,32 @@ steps:
             exit $LASTEXITCODE
           }
 
+          # For RID-specific native AOT tools the SDK may not place a shim directly at
+          # the tool-path root.  Search for the executable in the tool-path tree.
           $toolExecutable = Join-Path $toolPath 'aspire.exe'
           if (-not (Test-Path $toolExecutable)) {
-            Write-Error "The installed Aspire CLI executable was not found at $toolExecutable."
-            exit 1
+            # Try without extension (unix-style, or shim without .exe)
+            $altPath = Join-Path $toolPath 'aspire'
+            if (Test-Path $altPath) {
+              $toolExecutable = $altPath
+            } else {
+              # Search recursively for the native executable
+              $found = Get-ChildItem -Path $toolPath -Recurse -Filter 'aspire.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+              if (-not $found) {
+                $found = Get-ChildItem -Path $toolPath -Recurse -Filter 'aspire' -ErrorAction SilentlyContinue |
+                  Where-Object { -not $_.PSIsContainer } | Select-Object -First 1
+              }
+              if ($found) {
+                $toolExecutable = $found.FullName
+              } else {
+                Write-Host "##[warning]Tool path contents:"
+                Get-ChildItem -Path $toolPath -Recurse | Select-Object FullName | Format-Table -AutoSize
+                Write-Error "The installed Aspire CLI executable was not found under $toolPath."
+                exit 1
+              }
+            }
           }
+          Write-Host "Using tool executable: $toolExecutable"
 
           & $toolExecutable --version
           if ($LASTEXITCODE -ne 0) {
