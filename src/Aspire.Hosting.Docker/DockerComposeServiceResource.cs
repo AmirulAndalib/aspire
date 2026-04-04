@@ -107,6 +107,8 @@ public class DockerComposeServiceResource : Resource, IResourceWithParent<Docker
     /// </summary>
     internal Dictionary<string, EndpointMapping> EndpointMappings { get; } = [];
 
+    internal bool IsFullyProcessed { get; set; }
+
     /// <inheritdoc/>
     public DockerComposeEnvironmentResource Parent => _composeEnvironmentResource;
 

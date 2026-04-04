@@ -9,29 +9,54 @@ namespace Aspire.Hosting.Docker;
 
 internal sealed class DockerComposeEnvironmentContext(DockerComposeEnvironmentResource environment, ILogger logger)
 {
-    public async Task<DockerComposeServiceResource> CreateDockerComposeServiceResourceAsync(IResource resource, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
+    /// <summary>
+    /// Registers a resource in the mapping with endpoint resolution only — no environment
+    /// variable or argument processing. Used during step factory creation so that child
+    /// step expansion can find service resources in the mapping.
+    /// </summary>
+    public DockerComposeServiceResource EnsureResourceRegistered(IResource resource)
     {
         if (environment.ResourceMapping.TryGetValue(resource, out var existingResource))
         {
             return existingResource;
         }
 
-        logger.LogInformation("Creating Docker Compose resource for {ResourceName}", resource.Name);
-
         var serviceResource = new DockerComposeServiceResource(resource.Name, resource, environment);
         environment.ResourceMapping[resource] = serviceResource;
 
-        // Process endpoints
         ProcessEndpoints(serviceResource);
 
-        // Process volumes
+        return serviceResource;
+    }
+
+    public async Task<DockerComposeServiceResource> CreateDockerComposeServiceResourceAsync(IResource resource, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
+    {
+        DockerComposeServiceResource serviceResource;
+
+        if (environment.ResourceMapping.TryGetValue(resource, out var existingResource))
+        {
+            if (existingResource.IsFullyProcessed)
+            {
+                return existingResource;
+            }
+
+            // Upgrade from lightweight registration to full processing
+            serviceResource = existingResource;
+        }
+        else
+        {
+            serviceResource = new DockerComposeServiceResource(resource.Name, resource, environment);
+            environment.ResourceMapping[resource] = serviceResource;
+
+            ProcessEndpoints(serviceResource);
+        }
+
+        logger.LogInformation("Creating Docker Compose resource for {ResourceName}", resource.Name);
+
         ProcessVolumes(serviceResource);
-
-        // Process environment variables
         await ProcessEnvironmentVariablesAsync(serviceResource, executionContext, cancellationToken).ConfigureAwait(false);
-
-        // Process command line arguments
         await ProcessArgumentsAsync(serviceResource, executionContext, cancellationToken).ConfigureAwait(false);
+        serviceResource.IsFullyProcessed = true;
 
         return serviceResource;
     }
