@@ -3,6 +3,7 @@
 
 using Aspire.Dashboard.Extensions;
 using Aspire.Dashboard.Model;
+using Aspire.Dashboard.Model.Markdown;
 using Aspire.Dashboard.Utils;
 using Microsoft.AspNetCore.Components;
 using Microsoft.FluentUI.AspNetCore.Components;
@@ -18,10 +19,12 @@ public partial class TextVisualizerDialog : ComponentBase
     private List<SelectViewModel<string>> _options = null!;
     private string? _selectedFormat;
     private bool _isLoading = true;
+    private MarkdownProcessor? _markdownProcessor;
     internal TextVisualizerViewModel TextVisualizerViewModel { get; set; } = default!;
 
     public HashSet<string?> EnabledOptions { get; } = [];
     internal bool? ShowSecretsWarning { get; private set; }
+    internal bool IsMarkdownFormat => TextVisualizerViewModel.FormatKind == DashboardUIHelpers.MarkdownFormat;
 
     /// <summary>
     /// Returns true if the dialog has a fixed format that cannot be changed by the user.
@@ -60,13 +63,19 @@ public partial class TextVisualizerDialog : ComponentBase
         _options = [
             new SelectViewModel<string> { Id = DashboardUIHelpers.PlaintextFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogPlaintextFormat)] },
             new SelectViewModel<string> { Id = DashboardUIHelpers.JsonFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogJsonFormat)] },
-            new SelectViewModel<string> { Id = DashboardUIHelpers.XmlFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogXmlFormat)] }
+            new SelectViewModel<string> { Id = DashboardUIHelpers.XmlFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogXmlFormat)] },
+            new SelectViewModel<string> { Id = DashboardUIHelpers.MarkdownFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogMarkdownFormat)] }
         ];
 
         // If a fixed format is specified, use it directly without auto-detection.
         if (Content.FixedFormat is not null)
         {
             TextVisualizerViewModel = new TextVisualizerViewModel(Content.Text, indentText: true, Content.FixedFormat);
+
+            if (Content.FixedFormat == DashboardUIHelpers.MarkdownFormat)
+            {
+                EnabledOptions.Add(DashboardUIHelpers.MarkdownFormat);
+            }
         }
         else
         {
@@ -102,6 +111,11 @@ public partial class TextVisualizerDialog : ComponentBase
     {
         _selectedFormat = text;
         TextVisualizerViewModel.UpdateFormat(newFormat ?? DashboardUIHelpers.PlaintextFormat);
+    }
+
+    internal MarkdownProcessor GetMarkdownProcessor()
+    {
+        return _markdownProcessor ??= new MarkdownProcessor(ControlsStringsLoc, safeUrlSchemes: MarkdownHelpers.SafeUrlSchemes, extensions: []);
     }
 
     public static async Task OpenDialogAsync(OpenTextVisualizerDialogOptions options)

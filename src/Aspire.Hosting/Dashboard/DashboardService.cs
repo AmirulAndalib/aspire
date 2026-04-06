@@ -385,6 +385,7 @@ internal sealed partial class DashboardService(DashboardServiceData serviceData,
             {
                 ApplicationModel.CommandResultFormat.Text => Aspire.DashboardService.Proto.V1.CommandResultFormat.Text,
                 ApplicationModel.CommandResultFormat.Json => Aspire.DashboardService.Proto.V1.CommandResultFormat.Json,
+                ApplicationModel.CommandResultFormat.Markdown => Aspire.DashboardService.Proto.V1.CommandResultFormat.Markdown,
                 _ => Aspire.DashboardService.Proto.V1.CommandResultFormat.None
             };
 

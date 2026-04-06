@@ -106,6 +106,7 @@ enum CommandResultFormat {
     COMMAND_RESULT_FORMAT_NONE = 0;
     COMMAND_RESULT_FORMAT_TEXT = 1;
     COMMAND_RESULT_FORMAT_JSON = 2;
+    COMMAND_RESULT_FORMAT_MARKDOWN = 3;
 }
 
 ////////////////////////////////////////////

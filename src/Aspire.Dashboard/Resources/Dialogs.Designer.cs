@@ -1069,6 +1069,15 @@ namespace Aspire.Dashboard.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Markdown.
+        /// </summary>
+        public static string TextVisualizerDialogMarkdownFormat {
+            get {
+                return ResourceManager.GetString("TextVisualizerDialogMarkdownFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Unformatted.
         /// </summary>
         public static string TextVisualizerDialogPlaintextFormat {

@@ -263,7 +263,12 @@ public sealed class DashboardCommandExecutor(
 
     private NotificationAction CreateViewResponseNotificationAction(CommandViewModel command, ResourceCommandResponseViewModel response)
     {
-        var fixedFormat = response.Result!.Format == CommandResultFormat.Json ? DashboardUIHelpers.JsonFormat : null;
+        var fixedFormat = response.Result!.Format switch
+        {
+            CommandResultFormat.Json => DashboardUIHelpers.JsonFormat,
+            CommandResultFormat.Markdown => DashboardUIHelpers.MarkdownFormat,
+            _ => null
+        };
 
         return new NotificationAction
         {
@@ -280,7 +285,12 @@ public sealed class DashboardCommandExecutor(
 
     private async Task OpenViewResponseDialogAsync(CommandViewModel command, ResourceCommandResponseViewModel response)
     {
-        var fixedFormat = response.Result!.Format == CommandResultFormat.Json ? DashboardUIHelpers.JsonFormat : null;
+        var fixedFormat = response.Result!.Format switch
+        {
+            CommandResultFormat.Json => DashboardUIHelpers.JsonFormat,
+            CommandResultFormat.Markdown => DashboardUIHelpers.MarkdownFormat,
+            _ => null
+        };
 
         await TextVisualizerDialog.OpenDialogAsync(new OpenTextVisualizerDialogOptions
         {

@@ -85,7 +85,7 @@ internal static class ResourceCommandHelper
 
         if (response.Value is not null)
         {
-            interactionService.DisplayRawText(response.Value.Value, ConsoleOutput.Standard);
+            DisplayCommandResult(interactionService, response.Value);
         }
 
         return response.Success ? ExitCodeConstants.Success : ExitCodeConstants.FailedToExecuteResourceCommand;
@@ -118,10 +118,22 @@ internal static class ResourceCommandHelper
 
         if (response.Value is not null)
         {
-            interactionService.DisplayRawText(response.Value.Value, ConsoleOutput.Standard);
+            DisplayCommandResult(interactionService, response.Value);
         }
 
         return response.Success ? ExitCodeConstants.Success : ExitCodeConstants.FailedToExecuteResourceCommand;
+    }
+
+    private static void DisplayCommandResult(IInteractionService interactionService, ExecuteResourceCommandResult result)
+    {
+        if (string.Equals(result.Format, "markdown", StringComparison.OrdinalIgnoreCase))
+        {
+            interactionService.DisplayMarkdown(result.Value, ConsoleOutput.Standard);
+        }
+        else
+        {
+            interactionService.DisplayRawText(result.Value, ConsoleOutput.Standard);
+        }
     }
 
     private static string GetFriendlyErrorMessage(string? errorMessage)

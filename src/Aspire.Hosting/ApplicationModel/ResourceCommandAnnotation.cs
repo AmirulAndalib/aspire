@@ -128,7 +128,12 @@ public enum CommandResultFormat
     /// <summary>
     /// JSON result.
     /// </summary>
-    Json
+    Json,
+
+    /// <summary>
+    /// Markdown result.
+    /// </summary>
+    Markdown
 }
 
 /// <summary>

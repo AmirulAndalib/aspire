@@ -592,6 +592,11 @@
         <target state="translated">Formatuj kod JSON</target>
         <note />
       </trans-unit>
+      <trans-unit id="TextVisualizerDialogMarkdownFormat">
+        <source>Markdown</source>
+        <target state="new">Markdown</target>
+        <note />
+      </trans-unit>
       <trans-unit id="TextVisualizerDialogPlaintextFormat">
         <source>Unformatted</source>
         <target state="translated">Niesformatowano</target>

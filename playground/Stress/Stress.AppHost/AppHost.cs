@@ -140,7 +140,12 @@ builder.AddProject<Projects.Stress_TelemetryService>("stress-telemetryservice")
                    issuedAt = DateTime.UtcNow
                };
                var json = JsonSerializer.Serialize(token, new JsonSerializerOptions { WriteIndented = true });
-               return Task.FromResult(CommandResults.Success("Generated token.", new CommandResultData { Value = json, Format = CommandResultFormat.Json }));
+               var resultData = new CommandResultData
+               {
+                   Value = json,
+                   Format = CommandResultFormat.Json
+               };
+               return Task.FromResult(CommandResults.Success("Generated token.", resultData));
            },
            commandOptions: new() { IconName = "Key", Description = "Generate a temporary access token" })
        .WithCommand(
@@ -149,7 +154,7 @@ builder.AddProject<Projects.Stress_TelemetryService>("stress-telemetryservice")
            executeCommand: (c) =>
            {
                var connectionString = $"Server=localhost,1433;Database=StressDb;User Id=sa;Password={Guid.NewGuid():N};TrustServerCertificate=true";
-               return Task.FromResult(CommandResults.Success("Retrieved connection string.", connectionString));
+               return Task.FromResult(CommandResults.Success("Retrieved connection string.", new CommandResultData { Value = connectionString, DisplayImmediately = true }));
            },
            commandOptions: new() { IconName = "LinkMultiple", Description = "Get the connection string for this resource" })
        .WithCommand(
@@ -169,7 +174,33 @@ builder.AddProject<Projects.Stress_TelemetryService>("stress-telemetryservice")
            {
                return Task.FromResult(CommandResults.Failure("Health check failed", "Connection refused: ECONNREFUSED 127.0.0.1:5432\nRetries exhausted after 3 attempts", CommandResultFormat.Text));
            },
-           commandOptions: new() { IconName = "HeartBroken", Description = "Check resource health (always fails with details)" });
+           commandOptions: new() { IconName = "HeartBroken", Description = "Check resource health (always fails with details)" })
+       .WithCommand(
+           name: "migrate-database",
+           displayName: "Migrate Database",
+           executeCommand: (c) =>
+           {
+               var markdown = """
+                   # ⚙️ Database Migration Summary
+
+                   | Table      | Result                     |
+                   |------------|----------------------------|
+                   | Customers  | ✅ 1,200 rows              |
+                   | Products   | ✅ 850 rows                |
+                   | Orders     | ✅ 3,400 rows              |
+                   | OrderItems | ✅ 8,750 rows              |
+                   | Categories | ✅ 45 rows                 |
+                   | Reviews    | ❌ FK constraint violation |
+                   | Inventory  | ✅ 850 rows                |
+                   | Shipping   | ✅ 3,400 rows              |
+                   | Payments   | ❌ Timeout after 30s       |
+                   | Coupons    | ✅ 120 rows                |
+
+                   **Summary:** 8 of 10 tables migrated successfully. 2 tables failed.
+                   """;
+               return Task.FromResult(CommandResults.Success("Database migrated.", new CommandResultData { Value = markdown, Format = CommandResultFormat.Markdown }));
+           },
+           commandOptions: new() { IconName = "CloudDatabase", Description = "Migrate the database with sample store data" });
 
 #if !SKIP_DASHBOARD_REFERENCE
 // This project is only added in playground projects to support development/debugging

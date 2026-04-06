@@ -213,6 +213,7 @@ partial class ResourceCommandResponse
                 {
                     CommandResultFormat.Text => Dashboard.Model.CommandResultFormat.Text,
                     CommandResultFormat.Json => Dashboard.Model.CommandResultFormat.Json,
+                    CommandResultFormat.Markdown => Dashboard.Model.CommandResultFormat.Markdown,
                     _ => Dashboard.Model.CommandResultFormat.Text
                 },
                 DisplayImmediately = Result.DisplayImmediately
