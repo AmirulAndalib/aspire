@@ -82,7 +82,7 @@ public class ResourceCommandHelperTests
             ExecuteResourceCommandResult = new ExecuteResourceCommandResponse
             {
                 Success = false,
-                ErrorMessage = "Validation failed",
+                Message = "Validation failed",
                 Value = new ExecuteResourceCommandResult
                 {
                     Value = "{\"errors\": [\"invalid host\"]}",

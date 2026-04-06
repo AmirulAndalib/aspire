@@ -166,7 +166,7 @@ public sealed class DashboardCommandExecutor(
             toastParameters.Intent = ToastIntent.Success;
             toastParameters.Icon = GetIntentIcon(ToastIntent.Success);
 
-            if (response.Value is not null)
+            if (response.Result is not null)
             {
                 toastParameters.PrimaryAction = loc[nameof(Dashboard.Resources.Resources.ResourceCommandViewResponse)];
                 toastParameters.OnPrimaryAction = EventCallback.Factory.Create<ToastResult>(this, () => OpenViewResponseDialogAsync(command, response));
@@ -182,13 +182,13 @@ public sealed class DashboardCommandExecutor(
                 options.AllowDismiss = true;
                 options.Timestamp = DateTime.Now;
 
-                if (response.Value is not null)
+                if (response.Result is not null)
                 {
                     options.PrimaryAction = CreateViewResponseAction(command, response);
                 }
             }).ConfigureAwait(false);
 
-            if (response.Value?.DisplayImmediately == true)
+            if (response.Result?.DisplayImmediately == true)
             {
                 await OpenViewResponseDialogAsync(command, response).ConfigureAwait(false);
             }
@@ -214,7 +214,7 @@ public sealed class DashboardCommandExecutor(
             toastParameters.OnPrimaryAction = EventCallback.Factory.Create<ToastResult>(this, () => navigationManager.NavigateTo(DashboardUrls.ConsoleLogsUrl(resource: getResourceName(resource))));
             toastParameters.Content.Details = response.Message;
 
-            if (response.Value is not null)
+            if (response.Result is not null)
             {
                 toastParameters.SecondaryAction = loc[nameof(Dashboard.Resources.Resources.ResourceCommandViewResponse)];
                 toastParameters.OnSecondaryAction = EventCallback.Factory.Create<ToastResult>(this, () => OpenViewResponseDialogAsync(command, response));
@@ -230,13 +230,13 @@ public sealed class DashboardCommandExecutor(
                 options.AllowDismiss = true;
                 options.Timestamp = DateTime.Now;
 
-                if (response.Value is not null)
+                if (response.Result is not null)
                 {
                     options.PrimaryAction = CreateViewResponseAction(command, response);
                 }
             }).ConfigureAwait(false);
 
-            if (response.Value?.DisplayImmediately == true)
+            if (response.Result?.DisplayImmediately == true)
             {
                 await OpenViewResponseDialogAsync(command, response).ConfigureAwait(false);
             }
@@ -280,7 +280,7 @@ public sealed class DashboardCommandExecutor(
 
     private ActionButton<Message> CreateViewResponseAction(CommandViewModel command, ResourceCommandResponseViewModel response)
     {
-        var fixedFormat = response.Value!.Format == CommandResultFormat.Json ? DashboardUIHelpers.JsonFormat : null;
+        var fixedFormat = response.Result!.Format == CommandResultFormat.Json ? DashboardUIHelpers.JsonFormat : null;
 
         return new ActionButton<Message>
         {
@@ -291,7 +291,7 @@ public sealed class DashboardCommandExecutor(
                 {
                     DialogService = dialogService,
                     ValueDescription = command.GetDisplayName(),
-                    Value = response.Value.Value,
+                    Value = response.Result.Value,
                     FixedFormat = fixedFormat
                 }).ConfigureAwait(false);
             }
@@ -300,13 +300,13 @@ public sealed class DashboardCommandExecutor(
 
     private async Task OpenViewResponseDialogAsync(CommandViewModel command, ResourceCommandResponseViewModel response)
     {
-        var fixedFormat = response.Value!.Format == CommandResultFormat.Json ? DashboardUIHelpers.JsonFormat : null;
+        var fixedFormat = response.Result!.Format == CommandResultFormat.Json ? DashboardUIHelpers.JsonFormat : null;
 
         await TextVisualizerDialog.OpenDialogAsync(new OpenTextVisualizerDialogOptions
         {
             DialogService = dialogService,
             ValueDescription = command.GetDisplayName(),
-            Value = response.Value.Value,
+            Value = response.Result.Value,
             FixedFormat = fixedFormat
         }).ConfigureAwait(false);
     }

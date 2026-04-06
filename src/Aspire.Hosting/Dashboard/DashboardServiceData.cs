@@ -103,7 +103,7 @@ internal sealed class DashboardServiceData : IDisposable
             {
                 return (ExecuteCommandResultType.Canceled, result.Message, null);
             }
-            return (result.Success ? ExecuteCommandResultType.Success : ExecuteCommandResultType.Failure, result.Message, result.Value);
+            return (result.Success ? ExecuteCommandResultType.Success : ExecuteCommandResultType.Failure, result.Message, result.Data);
         }
         catch
         {

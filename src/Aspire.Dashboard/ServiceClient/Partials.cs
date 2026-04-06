@@ -206,16 +206,16 @@ partial class ResourceCommandResponse
             ErrorMessage = resolvedMessage,
             Message = resolvedMessage,
             Kind = (Dashboard.Model.ResourceCommandResponseKind)Kind,
-            Value = value_ is not null ? new ResourceCommandResultViewModel
+            Result = Result is not null ? new ResourceCommandResultViewModel
             {
-                Value = value_.Value,
-                Format = value_.Format switch
+                Value = Result.Value,
+                Format = Result.Format switch
                 {
                     CommandResultFormat.Text => Dashboard.Model.CommandResultFormat.Text,
                     CommandResultFormat.Json => Dashboard.Model.CommandResultFormat.Json,
                     _ => Dashboard.Model.CommandResultFormat.Text
                 },
-                DisplayImmediately = value_.DisplayImmediately
+                DisplayImmediately = Result.DisplayImmediately
             } : null
         };
     }

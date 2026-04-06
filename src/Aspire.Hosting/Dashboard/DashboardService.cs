@@ -388,7 +388,7 @@ internal sealed partial class DashboardService(DashboardServiceData serviceData,
                 _ => Aspire.DashboardService.Proto.V1.CommandResultFormat.None
             };
 
-            response.Value = new ResourceCommandResult
+            response.Result = new ResourceCommandResult
             {
                 Value = value.Value,
                 Format = MapFormat(value.Format),

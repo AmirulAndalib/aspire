@@ -69,7 +69,7 @@ public class ExecuteResourceCommandToolTests
             ExecuteResourceCommandResult = new ExecuteResourceCommandResponse
             {
                 Success = false,
-                ErrorMessage = "Resource not found"
+                Message = "Resource not found"
             }
         };
         monitor.AddConnection("hash1", "socket.hash1", connection);

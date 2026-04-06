@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Threading.Channels;
@@ -384,9 +384,9 @@ public class ResourceCommandServiceTests(ITestOutputHelper testOutputHelper)
         var result = await app.ResourceCommands.ExecuteCommandAsync(custom.Resource, "generate-token");
 
         Assert.True(result.Success);
-        Assert.NotNull(result.Value);
-        Assert.Equal("{\"token\": \"abc123\"}", result.Value.Value);
-        Assert.Equal(CommandResultFormat.Json, result.Value.Format);
+        Assert.NotNull(result.Data);
+        Assert.Equal("{\"token\": \"abc123\"}", result.Data.Value);
+        Assert.Equal(CommandResultFormat.Json, result.Data.Format);
     }
 
     [Fact]
@@ -405,7 +405,7 @@ public class ResourceCommandServiceTests(ITestOutputHelper testOutputHelper)
         var result = await app.ResourceCommands.ExecuteCommandAsync(custom.Resource, "mycommand");
 
         Assert.True(result.Success);
-        Assert.Null(result.Value);
+        Assert.Null(result.Data);
     }
 
     [Fact]
@@ -433,9 +433,9 @@ public class ResourceCommandServiceTests(ITestOutputHelper testOutputHelper)
         var result = await app.ResourceCommands.ExecuteCommandAsync(custom.Resource, "generate-token");
 
         Assert.True(result.Success);
-        Assert.NotNull(result.Value);
-        Assert.StartsWith("token-", result.Value.Value);
-        Assert.Equal(CommandResultFormat.Text, result.Value.Format);
+        Assert.NotNull(result.Data);
+        Assert.StartsWith("token-", result.Data.Value);
+        Assert.Equal(CommandResultFormat.Text, result.Data.Format);
     }
 
     [Fact]
@@ -444,9 +444,9 @@ public class ResourceCommandServiceTests(ITestOutputHelper testOutputHelper)
         var result = CommandResults.Success("Success.", "{\"key\": \"value\"}", CommandResultFormat.Json);
 
         Assert.True(result.Success);
-        Assert.NotNull(result.Value);
-        Assert.Equal("{\"key\": \"value\"}", result.Value.Value);
-        Assert.Equal(CommandResultFormat.Json, result.Value.Format);
+        Assert.NotNull(result.Data);
+        Assert.Equal("{\"key\": \"value\"}", result.Data.Value);
+        Assert.Equal(CommandResultFormat.Json, result.Data.Format);
     }
 
     [Fact]
@@ -455,9 +455,9 @@ public class ResourceCommandServiceTests(ITestOutputHelper testOutputHelper)
         var result = CommandResults.Success("Success.", "hello world");
 
         Assert.True(result.Success);
-        Assert.NotNull(result.Value);
-        Assert.Equal("hello world", result.Value.Value);
-        Assert.Equal(CommandResultFormat.Text, result.Value.Format);
+        Assert.NotNull(result.Data);
+        Assert.Equal("hello world", result.Data.Value);
+        Assert.Equal(CommandResultFormat.Text, result.Data.Format);
     }
 
     private sealed class CustomResource(string name) : Resource(name), IResourceWithEndpoints, IResourceWithWaitSupport

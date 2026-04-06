@@ -147,14 +147,14 @@ public static class CommandResults
     /// <param name="message">The message associated with the result.</param>
     /// <param name="result">The result data.</param>
     /// <param name="resultFormat">The format of the result data. Defaults to <see cref="CommandResultFormat.Text"/>.</param>
-    public static ExecuteCommandResult Success(string message, string result, CommandResultFormat resultFormat = CommandResultFormat.Text) => new() { Success = true, Message = message, Value = new CommandResultData { Value = result, Format = resultFormat } };
+    public static ExecuteCommandResult Success(string message, string result, CommandResultFormat resultFormat = CommandResultFormat.Text) => new() { Success = true, Message = message, Data = new CommandResultData { Value = result, Format = resultFormat } };
 
     /// <summary>
     /// Produces a success result with a message and a value.
     /// </summary>
     /// <param name="message">The message associated with the result.</param>
     /// <param name="value">The value produced by the command.</param>
-    public static ExecuteCommandResult Success(string message, CommandResultData value) => new() { Success = true, Message = message, Value = value };
+    public static ExecuteCommandResult Success(string message, CommandResultData value) => new() { Success = true, Message = message, Data = value };
 
     /// <summary>
     /// Produces an unsuccessful result with an error message.
@@ -168,14 +168,14 @@ public static class CommandResults
     /// <param name="errorMessage">The error message.</param>
     /// <param name="result">The result data.</param>
     /// <param name="resultFormat">The format of the result data. Defaults to <see cref="CommandResultFormat.Text"/>.</param>
-    public static ExecuteCommandResult Failure(string errorMessage, string result, CommandResultFormat resultFormat = CommandResultFormat.Text) => new() { Success = false, Message = errorMessage, Value = new CommandResultData { Value = result, Format = resultFormat } };
+    public static ExecuteCommandResult Failure(string errorMessage, string result, CommandResultFormat resultFormat = CommandResultFormat.Text) => new() { Success = false, Message = errorMessage, Data = new CommandResultData { Value = result, Format = resultFormat } };
 
     /// <summary>
     /// Produces an unsuccessful result with an error message and a value.
     /// </summary>
     /// <param name="errorMessage">The error message.</param>
     /// <param name="value">The value produced by the command.</param>
-    public static ExecuteCommandResult Failure(string errorMessage, CommandResultData value) => new() { Success = false, Message = errorMessage, Value = value };
+    public static ExecuteCommandResult Failure(string errorMessage, CommandResultData value) => new() { Success = false, Message = errorMessage, Data = value };
 
     /// <summary>
     /// Produces a canceled result.
@@ -229,7 +229,7 @@ public sealed class ExecuteCommandResult
     /// <summary>
     /// An optional value produced by the command.
     /// </summary>
-    public CommandResultData? Value { get; init; }
+    public CommandResultData? Data { get; init; }
 }
 
 /// <summary>

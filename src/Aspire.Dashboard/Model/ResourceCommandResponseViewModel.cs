@@ -8,7 +8,7 @@ public class ResourceCommandResponseViewModel
     public required ResourceCommandResponseKind Kind { get; init; }
     public string? ErrorMessage { get; init; }
     public string? Message { get; init; }
-    public ResourceCommandResultViewModel? Value { get; init; }
+    public ResourceCommandResultViewModel? Result { get; init; }
 }
 
 /// <summary>

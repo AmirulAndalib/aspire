@@ -93,7 +93,7 @@ message ResourceCommandResponse {
     ResourceCommandResponseKind kind = 1;
     optional string error_message = 2 [deprecated = true];
     optional string message = 3;
-    optional ResourceCommandResult value = 4;
+    optional ResourceCommandResult result = 4;
 }
 
 message ResourceCommandResult {

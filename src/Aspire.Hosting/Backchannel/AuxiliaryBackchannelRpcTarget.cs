@@ -226,7 +226,7 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
             ErrorMessage = resolvedMessage,
 #pragma warning restore CS0618 // Type or member is obsolete
             Message = resolvedMessage,
-            Value = result.Value is { } v ? new ExecuteResourceCommandResult
+            Value = result.Data is { } v ? new ExecuteResourceCommandResult
             {
                 Value = v.Value,
                 Format = v.Format.ToString().ToLowerInvariant(),
