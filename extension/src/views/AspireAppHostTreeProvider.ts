@@ -32,6 +32,7 @@ import {
     ViewMode,
     shortenPath,
 } from './AppHostDataRepository';
+import { isNotNullOrUndefined } from '../utils/typeGuards';
 
 type TreeElement = AppHostItem | PidItem | EndpointUrlItem | ResourcesGroupItem | ResourceItem | WorkspaceResourcesItem | HealthChecksGroupItem | HealthCheckItem;
 
@@ -194,7 +195,7 @@ export function getResourceContextValue(resource: ResourceJson): string {
 export function getResourceIcon(resource: ResourceJson): vscode.ThemeIcon {
     const state = resource.state;
     const health = resource.healthStatus;
-    const hasNonZeroExitCode = resource.exitCode !== null && resource.exitCode !== undefined && resource.exitCode !== 0;
+    const hasNonZeroExitCode = isNotNullOrUndefined(resource.exitCode) && resource.exitCode !== 0;
     switch (state) {
         case ResourceState.Running:
         case ResourceState.Active:
@@ -226,7 +227,7 @@ export function getResourceIcon(resource: ResourceJson): vscode.ThemeIcon {
         case ResourceState.NotStarted:
             return new vscode.ThemeIcon('record', new vscode.ThemeColor('descriptionForeground'));
         default:
-            if (state === null || state === undefined) {
+            if (!isNotNullOrUndefined(state)) {
                 return new vscode.ThemeIcon('record', new vscode.ThemeColor('descriptionForeground'));
             }
             return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('aspire.brandPurple'));
@@ -274,7 +275,7 @@ export function buildResourceDescription(resource: ResourceJson): string {
         const passed = Object.values(reports).filter(r => r.status === 'Healthy').length;
         parts.push(resourceDescriptionHealth(passed, total));
     }
-    if (exitCode !== null && exitCode !== undefined && exitCode !== 0) {
+    if (isNotNullOrUndefined(exitCode) && exitCode !== 0) {
         parts.push(resourceDescriptionExitCode(exitCode));
     }
     return parts.join(' · ');

@@ -27,6 +27,7 @@ import {
     codeLensViewLogs,
     codeLensCommand,
 } from '../loc/strings';
+import { isNotNullOrUndefined } from '../utils/typeGuards';
 
 export class AspireCodeLensProvider implements vscode.CodeLensProvider {
     private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
@@ -200,7 +201,7 @@ export class AspireCodeLensProvider implements vscode.CodeLensProvider {
 }
 
 export function getCodeLensStateLabel(state: string, stateStyle: string, exitCode?: number | null): string {
-    const nonZeroExitCode = exitCode !== null && exitCode !== undefined && exitCode !== 0 ? exitCode : undefined;
+    const nonZeroExitCode = isNotNullOrUndefined(exitCode) && exitCode !== 0 ? exitCode : undefined;
 
     switch (state) {
         case ResourceState.Running:

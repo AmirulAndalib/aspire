@@ -6,6 +6,7 @@ import './parsers/jsTsAppHostParser';
 import { AspireAppHostTreeProvider } from '../views/AspireAppHostTreeProvider';
 import { findResourceState, findWorkspaceResourceState } from './resourceStateUtils';
 import { ResourceState, StateStyle, HealthStatus } from './resourceConstants';
+import { isNotNullOrUndefined } from '../utils/typeGuards';
 
 type GutterCategory = 'running' | 'warning' | 'error' | 'starting' | 'stopped' | 'completed';
 
@@ -90,7 +91,7 @@ function classifyState(state: string, stateStyle: string, healthStatus: string, 
         case ResourceState.Finished:
         case ResourceState.Exited:
         case ResourceState.Stopped:
-            if (stateStyle === StateStyle.Error || (exitCode !== null && exitCode !== undefined && exitCode !== 0)) {
+            if (stateStyle === StateStyle.Error || (isNotNullOrUndefined(exitCode) && exitCode !== 0)) {
                 return 'error';
             }
             return 'completed';
