@@ -21,6 +21,26 @@ internal static class CommonAgentApplicators
     internal const string AspireSkillResourceRoot = "skills.aspire";
 
     /// <summary>
+    /// The name of the Aspire init TypeScript skill.
+    /// </summary>
+    internal const string AspireInitTypeScriptSkillName = "aspire-init-typescript";
+
+    /// <summary>
+    /// The embedded resource root for the Aspire init TypeScript skill.
+    /// </summary>
+    internal const string AspireInitTypeScriptSkillResourceRoot = "skills.aspire-init-typescript";
+
+    /// <summary>
+    /// The name of the Aspire init C# skill.
+    /// </summary>
+    internal const string AspireInitCSharpSkillName = "aspire-init-csharp";
+
+    /// <summary>
+    /// The embedded resource root for the Aspire init C# skill.
+    /// </summary>
+    internal const string AspireInitCSharpSkillResourceRoot = "skills.aspire-init-csharp";
+
+    /// <summary>
     /// The name of the dotnet-inspect skill.
     /// </summary>
     internal const string DotnetInspectSkillName = "dotnet-inspect";

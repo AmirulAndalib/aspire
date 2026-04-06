@@ -46,6 +46,32 @@ internal sealed class SkillDefinition
         isDefault: false,
         applicableLanguages: [KnownLanguageId.CSharp]);
 
+    /// <summary>
+    /// One-time skill for completing Aspire initialization in a TypeScript AppHost workspace.
+    /// Installed by <c>aspire init</c> when the user selects TypeScript.
+    /// </summary>
+    public static readonly SkillDefinition AspireInitTypeScript = new(
+        CommonAgentApplicators.AspireInitTypeScriptSkillName,
+        AgentCommandStrings.SkillDescription_AspireInitTypeScript,
+        skillContent: null,
+        embeddedResourceRoot: CommonAgentApplicators.AspireInitTypeScriptSkillResourceRoot,
+        installExcludedRelativePaths: [],
+        isDefault: false,
+        applicableLanguages: [KnownLanguageId.TypeScript]);
+
+    /// <summary>
+    /// One-time skill for completing Aspire initialization in a C# AppHost workspace.
+    /// Installed by <c>aspire init</c> when the user selects C#.
+    /// </summary>
+    public static readonly SkillDefinition AspireInitCSharp = new(
+        CommonAgentApplicators.AspireInitCSharpSkillName,
+        AgentCommandStrings.SkillDescription_AspireInitCSharp,
+        skillContent: null,
+        embeddedResourceRoot: CommonAgentApplicators.AspireInitCSharpSkillResourceRoot,
+        installExcludedRelativePaths: [],
+        isDefault: false,
+        applicableLanguages: [KnownLanguageId.CSharp]);
+
     private SkillDefinition(string name, string description, string? skillContent, string? embeddedResourceRoot, IReadOnlyList<string> installExcludedRelativePaths, bool isDefault, IReadOnlyList<string>? applicableLanguages = null)
     {
         Name = name;
@@ -150,5 +176,5 @@ internal sealed class SkillDefinition
     /// <summary>
     /// Gets all available skill definitions.
     /// </summary>
-    public static IReadOnlyList<SkillDefinition> All { get; } = [Aspire, PlaywrightCli, DotnetInspect];
+    public static IReadOnlyList<SkillDefinition> All { get; } = [Aspire, PlaywrightCli, DotnetInspect, AspireInitTypeScript, AspireInitCSharp];
 }

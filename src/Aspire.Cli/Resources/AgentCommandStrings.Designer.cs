@@ -259,6 +259,24 @@ namespace Aspire.Cli.Resources {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to One-time setup: wire up TypeScript AppHost with discovered projects.
+        /// </summary>
+        internal static string SkillDescription_AspireInitTypeScript {
+            get {
+                return ResourceManager.GetString("SkillDescription_AspireInitTypeScript", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to One-time setup: wire up C# AppHost with discovered projects.
+        /// </summary>
+        internal static string SkillDescription_AspireInitCSharp {
+            get {
+                return ResourceManager.GetString("SkillDescription_AspireInitCSharp", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Standard (.agents/skills/).
         /// </summary>
         internal static string SkillLocation_StandardName {
