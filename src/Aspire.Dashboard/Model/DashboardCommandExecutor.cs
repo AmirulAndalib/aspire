@@ -16,7 +16,6 @@ public sealed class DashboardCommandExecutor(
     IDashboardClient dashboardClient,
     DashboardDialogService dialogService,
     IToastService toastService,
-    IMessageService messageService,
     IStringLocalizer<Dashboard.Resources.Resources> loc,
     NavigationManager navigationManager,
     DashboardTelemetryService telemetryService,
@@ -100,17 +99,13 @@ public sealed class DashboardCommandExecutor(
         var messageBarStartingTitle = string.Format(CultureInfo.InvariantCulture, loc[nameof(Dashboard.Resources.Resources.ResourceCommandStarting)], command.GetDisplayName());
         var toastStartingTitle = $"{getResourceName(resource)} {messageBarStartingTitle}";
 
-        // Add a message bar to the notification center section for rendering via FluentMessageBarProvider.
-        var progressMessage = await messageService.ShowMessageBarAsync(options =>
+        // Add a notification to the notification center for the in-progress command.
+        var progressNotificationId = notificationService.AddNotification(new NotificationEntry
         {
-            options.Title = messageBarStartingTitle;
-            options.Intent = MessageIntent.Info;
-            options.Section = DashboardUIHelpers.NotificationSection;
-            options.AllowDismiss = true;
-            options.Timestamp = DateTime.Now;
-        }).ConfigureAwait(false);
-
-        notificationService.IncrementUnreadCount();
+            Title = messageBarStartingTitle,
+            Intent = MessageIntent.Info,
+            Timestamp = DateTime.Now
+        });
 
         // When a resource command starts a toast is immediately shown.
         // The toast is open for a certain amount of time and then automatically closed.
@@ -171,21 +166,14 @@ public sealed class DashboardCommandExecutor(
                 toastParameters.OnPrimaryAction = EventCallback.Factory.Create<ToastResult>(this, () => OpenViewResponseDialogAsync(command, response));
             }
 
-            progressMessage.Close();
-            await messageService.ShowMessageBarAsync(options =>
+            notificationService.ReplaceNotification(progressNotificationId, new NotificationEntry
             {
-                options.Title = successTitle;
-                options.Body = response.Message;
-                options.Intent = MessageIntent.Success;
-                options.Section = DashboardUIHelpers.NotificationSection;
-                options.AllowDismiss = true;
-                options.Timestamp = DateTime.Now;
-
-                if (response.Result is not null)
-                {
-                    options.PrimaryAction = CreateViewResponseAction(command, response);
-                }
-            }).ConfigureAwait(false);
+                Title = successTitle,
+                Body = response.Message,
+                Intent = MessageIntent.Success,
+                Timestamp = DateTime.Now,
+                PrimaryAction = response.Result is not null ? CreateViewResponseNotificationAction(command, response) : null
+            });
 
             if (response.Result?.DisplayImmediately == true)
             {
@@ -200,7 +188,7 @@ public sealed class DashboardCommandExecutor(
                 toastService.CloseToast(toastParameters.Id);
             }
 
-            progressMessage.Close();
+            notificationService.RemoveNotification(progressNotificationId);
             closeToastCts.Dispose();
             return;
         }
@@ -220,21 +208,14 @@ public sealed class DashboardCommandExecutor(
                 toastParameters.OnSecondaryAction = EventCallback.Factory.Create<ToastResult>(this, () => OpenViewResponseDialogAsync(command, response));
             }
 
-            progressMessage.Close();
-            await messageService.ShowMessageBarAsync(options =>
+            notificationService.ReplaceNotification(progressNotificationId, new NotificationEntry
             {
-                options.Title = failedTitle;
-                options.Body = response.Message;
-                options.Intent = MessageIntent.Error;
-                options.Section = DashboardUIHelpers.NotificationSection;
-                options.AllowDismiss = true;
-                options.Timestamp = DateTime.Now;
-
-                if (response.Result is not null)
-                {
-                    options.PrimaryAction = CreateViewResponseAction(command, response);
-                }
-            }).ConfigureAwait(false);
+                Title = failedTitle,
+                Body = response.Message,
+                Intent = MessageIntent.Error,
+                Timestamp = DateTime.Now,
+                PrimaryAction = response.Result is not null ? CreateViewResponseNotificationAction(command, response) : null
+            });
 
             if (response.Result?.DisplayImmediately == true)
             {
@@ -280,23 +261,20 @@ public sealed class DashboardCommandExecutor(
         };
     }
 
-    private ActionButton<Message> CreateViewResponseAction(CommandViewModel command, ResourceCommandResponseViewModel response)
+    private NotificationAction CreateViewResponseNotificationAction(CommandViewModel command, ResourceCommandResponseViewModel response)
     {
         var fixedFormat = response.Result!.Format == CommandResultFormat.Json ? DashboardUIHelpers.JsonFormat : null;
 
-        return new ActionButton<Message>
+        return new NotificationAction
         {
             Text = loc[nameof(Dashboard.Resources.Resources.ResourceCommandViewResponse)],
-            OnClick = async _ =>
+            OnClick = () => TextVisualizerDialog.OpenDialogAsync(new OpenTextVisualizerDialogOptions
             {
-                await TextVisualizerDialog.OpenDialogAsync(new OpenTextVisualizerDialogOptions
-                {
-                    DialogService = dialogService,
-                    ValueDescription = command.GetDisplayName(),
-                    Value = response.Result.Value,
-                    FixedFormat = fixedFormat
-                }).ConfigureAwait(false);
-            }
+                DialogService = dialogService,
+                ValueDescription = command.GetDisplayName(),
+                Value = response.Result.Value,
+                FixedFormat = fixedFormat
+            })
         };
     }
 

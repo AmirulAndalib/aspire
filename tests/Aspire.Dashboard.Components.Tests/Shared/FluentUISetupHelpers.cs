@@ -148,7 +148,7 @@ internal static class FluentUISetupHelpers
         context.Services.AddSingleton<ThemeManager>(themeManager ?? new ThemeManager(new TestThemeResolver()));
         context.Services.AddSingleton<GlobalState>();
         context.Services.AddSingleton<DimensionManager>();
-        context.Services.AddScoped<INotificationService, NotificationService>();
+        context.Services.AddSingleton<INotificationService, NotificationService>();
         context.Services.AddScoped<DashboardDialogService>();
         context.Services.AddScoped<ResourceMenuBuilder>();
         context.Services.AddScoped<StructuredLogMenuBuilder>();

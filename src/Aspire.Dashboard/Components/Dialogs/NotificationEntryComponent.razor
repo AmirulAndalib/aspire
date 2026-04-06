@@ -1,0 +1,38 @@
+﻿@using Aspire.Dashboard.Model
+
+<div class="notification-entry @IntentClass">
+    @* Header *@
+    <div class="notification-entry-icon">
+        <FluentIcon Value="@Icon" Color="@IconColor" />
+    </div>
+    <div class="notification-entry-message">
+        @Entry.Title
+    </div>
+    <div class="notification-entry-close">
+        <FluentIcon Value="@(new Icons.Regular.Size16.Dismiss())"
+                    Color="@Color.Neutral"
+                    Class="notification-entry-close"
+                    OnClick="@HandleDismiss" />
+    </div>
+
+    @* Detailed content *@
+    <div class="notification-entry-content">
+        @if (!string.IsNullOrEmpty(Entry.Body))
+        {
+            @Entry.Body
+        }
+        @if (Entry.PrimaryAction is { } primaryAction)
+        {
+            <FluentButton Appearance="Appearance.Neutral"
+                          OnClick="@HandlePrimaryAction"
+                          Class="notification-entry-action">
+                @primaryAction.Text
+            </FluentButton>
+        }
+    </div>
+
+    @* Timestamp *@
+    <div class="notification-entry-time">
+        @Entry.Timestamp.ToString("T")
+    </div>
+</div>

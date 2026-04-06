@@ -4,7 +4,7 @@
 
 <FluentDialogBody>
     <div class="notifications-container">
-        @if (!_hasNotifications)
+        @if (_notifications.Count == 0)
         {
             <div class="notification-center-empty">
                 <FluentIcon Value="@(new Icons.Regular.Size24.Alert())" Color="Color.Neutral" />
@@ -14,12 +14,15 @@
         else
         {
             <div class="notifications-dismiss">
-                <FluentAnchor Appearance="Appearance.Hypertext" Href="#" OnClick="@DismissAll">
+                <FluentButton Appearance="Appearance.Lightweight" OnClick="@DismissAll">
                     @Loc[nameof(Dialogs.NotificationCenterDismissAll)]
-                </FluentAnchor>
+                </FluentButton>
             </div>
             <div class="notifications-scroll">
-                <FluentMessageBarProvider Section="@DashboardUIHelpers.NotificationSection" MaxMessageCount="-1" Type="@MessageType.Notification" />
+                @foreach (var notification in _notifications)
+                {
+                    <NotificationEntryComponent Entry="@notification.Entry" OnDismiss="@(() => Dismiss(notification.Id))" />
+                }
             </div>
         }
     </div>

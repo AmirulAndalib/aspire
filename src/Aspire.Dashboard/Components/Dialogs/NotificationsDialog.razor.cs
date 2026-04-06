@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Dashboard.Model;
-using Aspire.Dashboard.Utils;
 using Microsoft.AspNetCore.Components;
 using Microsoft.FluentUI.AspNetCore.Components;
 
@@ -10,10 +9,7 @@ namespace Aspire.Dashboard.Components.Dialogs;
 
 public partial class NotificationsDialog : IDialogContentComponent, IDisposable
 {
-    private bool _hasNotifications;
-
-    [Inject]
-    public required IMessageService MessageService { get; init; }
+    private IReadOnlyList<NotificationMessage> _notifications = [];
 
     [Inject]
     public required INotificationService NotificationService { get; init; }
@@ -23,8 +19,8 @@ public partial class NotificationsDialog : IDialogContentComponent, IDisposable
 
     protected override void OnInitialized()
     {
-        _hasNotifications = MessageService.Count(DashboardUIHelpers.NotificationSection) > 0;
-        MessageService.OnMessageItemsUpdated += HandleNotificationsChanged;
+        _notifications = NotificationService.GetNotifications();
+        NotificationService.OnChange += HandleNotificationsChanged;
         NotificationService.ResetUnreadCount();
     }
 
@@ -32,18 +28,23 @@ public partial class NotificationsDialog : IDialogContentComponent, IDisposable
     {
         InvokeAsync(() =>
         {
-            _hasNotifications = MessageService.Count(DashboardUIHelpers.NotificationSection) > 0;
+            _notifications = NotificationService.GetNotifications();
             StateHasChanged();
         });
     }
 
     private void DismissAll()
     {
-        MessageService.Clear(DashboardUIHelpers.NotificationSection);
+        NotificationService.ClearAll();
+    }
+
+    private void Dismiss(string id)
+    {
+        NotificationService.RemoveNotification(id);
     }
 
     public void Dispose()
     {
-        MessageService.OnMessageItemsUpdated -= HandleNotificationsChanged;
+        NotificationService.OnChange -= HandleNotificationsChanged;
     }
 }

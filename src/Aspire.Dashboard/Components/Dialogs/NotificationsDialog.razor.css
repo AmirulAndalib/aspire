@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    gap: 16px;
+    gap: 8px;
 }
 
 .notification-center-empty {
@@ -26,22 +26,6 @@
     min-height: 0;
 }
 
-.notifications-container ::deep .fluent-messagebar-notification {
-    grid-template-rows: unset;
-}
-
-.notifications-container ::deep .fluent-messagebar-notification-message {
-    white-space: unset;
-}
-
-.notifications-container ::deep .fluent-messagebar-notification-content {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    font-size: 12px;
-}
-
-.notifications-container ::deep .fluent-messagebar-notification-time {
-    color: var(--foreground-subtext-rest);
+.notifications-scroll ::deep > :last-child {
+    border-bottom: calc(var(--stroke-width) * 1px) solid var(--neutral-stroke-divider-rest);
 }

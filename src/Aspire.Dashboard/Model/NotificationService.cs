@@ -9,6 +9,7 @@ namespace Aspire.Dashboard.Model;
 internal sealed class NotificationService : INotificationService
 {
     private readonly object _lock = new();
+    private readonly List<(string Id, NotificationEntry Entry)> _notifications = [];
     private int _unreadCount;
 
     public int UnreadCount
@@ -24,11 +25,68 @@ internal sealed class NotificationService : INotificationService
 
     public event Action? OnChange;
 
-    public void IncrementUnreadCount()
+    public IReadOnlyList<NotificationMessage> GetNotifications()
     {
         lock (_lock)
         {
+            // Return a snapshot, most recent first.
+            var result = new NotificationMessage[_notifications.Count];
+            for (var i = 0; i < _notifications.Count; i++)
+            {
+                var item = _notifications[_notifications.Count - 1 - i];
+                result[i] = new NotificationMessage { Id = item.Id, Entry = item.Entry };
+            }
+
+            return result;
+        }
+    }
+
+    public string AddNotification(NotificationEntry notification)
+    {
+        var id = Guid.NewGuid().ToString("N");
+        lock (_lock)
+        {
+            _notifications.Add((id, notification));
             _unreadCount++;
+        }
+
+        OnChange?.Invoke();
+        return id;
+    }
+
+    public void ReplaceNotification(string id, NotificationEntry notification)
+    {
+        lock (_lock)
+        {
+            for (var i = 0; i < _notifications.Count; i++)
+            {
+                if (_notifications[i].Id == id)
+                {
+                    _notifications[i] = (id, notification);
+                    break;
+                }
+            }
+        }
+
+        OnChange?.Invoke();
+    }
+
+    public void RemoveNotification(string id)
+    {
+        lock (_lock)
+        {
+            _notifications.RemoveAll(n => n.Id == id);
+        }
+
+        OnChange?.Invoke();
+    }
+
+    public void ClearAll()
+    {
+        lock (_lock)
+        {
+            _notifications.Clear();
+            _unreadCount = 0;
         }
 
         OnChange?.Invoke();
