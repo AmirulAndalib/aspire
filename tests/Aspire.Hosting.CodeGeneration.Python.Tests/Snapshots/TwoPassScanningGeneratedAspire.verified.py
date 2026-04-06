@@ -1691,7 +1691,7 @@ class ExecuteCommandResult(typing.TypedDict, total=False):
     Canceled: bool
     ErrorMessage: str
     Message: str
-    Value: CommandResultData
+    Data: CommandResultData
 
 class ResourceEventDto(typing.TypedDict, total=False):
     ResourceName: str

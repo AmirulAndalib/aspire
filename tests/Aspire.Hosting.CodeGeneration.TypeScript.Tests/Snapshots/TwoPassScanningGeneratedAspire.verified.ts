@@ -407,7 +407,7 @@ export interface ExecuteCommandResult {
     canceled?: boolean;
     errorMessage?: string;
     message?: string;
-    value?: CommandResultData;
+    data?: CommandResultData;
 }
 
 /** DTO interface for ResourceEventDto */

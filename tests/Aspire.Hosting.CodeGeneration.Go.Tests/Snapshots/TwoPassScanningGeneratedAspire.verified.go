@@ -244,7 +244,7 @@ type ExecuteCommandResult struct {
 	Canceled bool `json:"Canceled,omitempty"`
 	ErrorMessage string `json:"ErrorMessage,omitempty"`
 	Message string `json:"Message,omitempty"`
-	Value *CommandResultData `json:"Value,omitempty"`
+	Data *CommandResultData `json:"Data,omitempty"`
 }
 
 // ToMap converts the DTO to a map for JSON serialization.
@@ -254,7 +254,7 @@ func (d *ExecuteCommandResult) ToMap() map[string]any {
 		"Canceled": SerializeValue(d.Canceled),
 		"ErrorMessage": SerializeValue(d.ErrorMessage),
 		"Message": SerializeValue(d.Message),
-		"Value": SerializeValue(d.Value),
+		"Data": SerializeValue(d.Data),
 	}
 }
 

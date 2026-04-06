@@ -514,8 +514,8 @@ pub struct ExecuteCommandResult {
     pub error_message: String,
     #[serde(rename = "Message")]
     pub message: String,
-    #[serde(rename = "Value")]
-    pub value: CommandResultData,
+    #[serde(rename = "Data")]
+    pub data: CommandResultData,
 }
 
 impl ExecuteCommandResult {
@@ -525,7 +525,7 @@ impl ExecuteCommandResult {
         map.insert("Canceled".to_string(), serde_json::to_value(&self.canceled).unwrap_or(Value::Null));
         map.insert("ErrorMessage".to_string(), serde_json::to_value(&self.error_message).unwrap_or(Value::Null));
         map.insert("Message".to_string(), serde_json::to_value(&self.message).unwrap_or(Value::Null));
-        map.insert("Value".to_string(), serde_json::to_value(&self.value).unwrap_or(Value::Null));
+        map.insert("Data".to_string(), serde_json::to_value(&self.data).unwrap_or(Value::Null));
         map
     }
 }

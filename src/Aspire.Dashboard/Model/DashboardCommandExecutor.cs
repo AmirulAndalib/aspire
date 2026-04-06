@@ -137,14 +137,13 @@ public sealed class DashboardCommandExecutor(
         };
 
         ResourceCommandResponseViewModel response;
-        CancellationTokenSource closeToastCts;
+        var closeToastCts = new CancellationTokenSource();
         try
         {
             toastService.OnClose += closeCallback;
             // Show a toast immediately to indicate the command is starting.
             toastService.ShowCommunicationToast(toastParameters);
 
-            closeToastCts = new CancellationTokenSource();
             closeToastCts.Token.Register(() =>
             {
                 toastService.CloseToast(toastParameters.Id);
@@ -202,6 +201,7 @@ public sealed class DashboardCommandExecutor(
             }
 
             progressMessage.Close();
+            closeToastCts.Dispose();
             return;
         }
         else
@@ -256,6 +256,8 @@ public sealed class DashboardCommandExecutor(
 
             // Show toast to display result.
             toastService.ShowCommunicationToast(toastParameters);
+
+            closeToastCts.Dispose();
         }
     }
 

@@ -9489,7 +9489,7 @@ public class ExecuteCommandResult {
     private boolean canceled;
     private String errorMessage;
     private String message;
-    private CommandResultData value;
+    private CommandResultData data;
 
     public boolean getSuccess() { return success; }
     public void setSuccess(boolean value) { this.success = value; }
@@ -9499,8 +9499,8 @@ public class ExecuteCommandResult {
     public void setErrorMessage(String value) { this.errorMessage = value; }
     public String getMessage() { return message; }
     public void setMessage(String value) { this.message = value; }
-    public CommandResultData getValue() { return value; }
-    public void setValue(CommandResultData value) { this.value = value; }
+    public CommandResultData getData() { return data; }
+    public void setData(CommandResultData value) { this.data = value; }
 
     public Map<String, Object> toMap() {
         Map<String, Object> map = new HashMap<>();
@@ -9508,7 +9508,7 @@ public class ExecuteCommandResult {
         map.put("Canceled", AspireClient.serializeValue(canceled));
         map.put("ErrorMessage", AspireClient.serializeValue(errorMessage));
         map.put("Message", AspireClient.serializeValue(message));
-        map.put("Value", AspireClient.serializeValue(value));
+        map.put("Data", AspireClient.serializeValue(data));
         return map;
     }
 }
