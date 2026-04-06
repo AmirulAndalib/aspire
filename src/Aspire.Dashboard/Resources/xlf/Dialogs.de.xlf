@@ -457,6 +457,16 @@
         <target state="translated">Ablaufverfolgungen</target>
         <note />
       </trans-unit>
+      <trans-unit id="NotificationCenterDismissAll">
+        <source>Dismiss all</source>
+        <target state="new">Dismiss all</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="NotificationCenterEmpty">
+        <source>No notifications</source>
+        <target state="new">No notifications</target>
+        <note />
+      </trans-unit>
       <trans-unit id="OpenInTextVisualizer">
         <source>Open in text visualizer</source>
         <target state="translated">In Textschnellansicht öffnen</target>

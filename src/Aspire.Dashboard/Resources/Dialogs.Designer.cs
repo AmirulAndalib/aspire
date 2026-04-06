@@ -1157,5 +1157,23 @@ namespace Aspire.Dashboard.Resources {
                 return ResourceManager.GetString("SettingsDialogTimeFormatTwentyFourHour", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Dismiss all.
+        /// </summary>
+        public static string NotificationCenterDismissAll {
+            get {
+                return ResourceManager.GetString("NotificationCenterDismissAll", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No notifications.
+        /// </summary>
+        public static string NotificationCenterEmpty {
+            get {
+                return ResourceManager.GetString("NotificationCenterEmpty", resourceCulture);
+            }
+        }
     }
 }

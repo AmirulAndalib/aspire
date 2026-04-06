@@ -492,4 +492,10 @@
   <data name="SettingsDialogTimeFormatTwentyFourHour" xml:space="preserve">
     <value>24-hour</value>
   </data>
+  <data name="NotificationCenterDismissAll" xml:space="preserve">
+    <value>Dismiss all</value>
+  </data>
+  <data name="NotificationCenterEmpty" xml:space="preserve">
+    <value>No notifications</value>
+  </data>
 </root>

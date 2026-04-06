@@ -18,7 +18,8 @@ public sealed class DashboardCommandExecutor(
     IToastService toastService,
     IStringLocalizer<Dashboard.Resources.Resources> loc,
     NavigationManager navigationManager,
-    DashboardTelemetryService telemetryService)
+    DashboardTelemetryService telemetryService,
+    INotificationService notificationService)
 {
     private readonly HashSet<(string ResourceName, string CommandName)> _executingCommands = [];
     private readonly object _lock = new object();
@@ -97,6 +98,16 @@ public sealed class DashboardCommandExecutor(
 
         var messageResourceName = getResourceName(resource);
 
+        // Add a progress notification to the notification center.
+        var notification = new NotificationItem
+        {
+            Title = string.Format(CultureInfo.InvariantCulture, loc[nameof(Dashboard.Resources.Resources.ResourceCommandStarting)], messageResourceName, command.GetDisplayName()),
+            Intent = NotificationIntent.Progress,
+            ResourceName = resource.Name,
+            CommandName = command.Name
+        };
+        notificationService.AddNotification(notification);
+
         // When a resource command starts a toast is immediately shown.
         // The toast is open for a certain amount of time and then automatically closed.
         // When the resource command is finished the status is displayed in a toast.
@@ -143,20 +154,27 @@ public sealed class DashboardCommandExecutor(
             toastService.OnClose -= closeCallback;
         }
 
-        // Update toast with the result;
+        // Update toast and notification with the result.
         if (response.Kind == ResourceCommandResponseKind.Succeeded)
         {
             toastParameters.Title = string.Format(CultureInfo.InvariantCulture, loc[nameof(Dashboard.Resources.Resources.ResourceCommandSuccess)], messageResourceName, command.GetDisplayName());
             toastParameters.Intent = ToastIntent.Success;
             toastParameters.Icon = GetIntentIcon(ToastIntent.Success);
+
+            notification.Title = toastParameters.Title;
+            notification.Intent = NotificationIntent.Success;
+            notification.Timestamp = DateTime.UtcNow;
+            notificationService.UpdateNotification(notification.Id);
         }
         else if (response.Kind == ResourceCommandResponseKind.Cancelled)
         {
-            // For cancelled commands, just close the existing toast and don't show any success or error message
+            // For cancelled commands, just close the existing toast and don't show any success or error message.
             if (!toastClosed)
             {
                 toastService.CloseToast(toastParameters.Id);
             }
+
+            notificationService.RemoveNotification(notification.Id);
             return;
         }
         else
@@ -167,6 +185,12 @@ public sealed class DashboardCommandExecutor(
             toastParameters.Content.Details = response.ErrorMessage;
             toastParameters.PrimaryAction = loc[nameof(Dashboard.Resources.Resources.ResourceCommandToastViewLogs)];
             toastParameters.OnPrimaryAction = EventCallback.Factory.Create<ToastResult>(this, () => navigationManager.NavigateTo(DashboardUrls.ConsoleLogsUrl(resource: getResourceName(resource))));
+
+            notification.Title = toastParameters.Title;
+            notification.Message = response.ErrorMessage;
+            notification.Intent = NotificationIntent.Error;
+            notification.Timestamp = DateTime.UtcNow;
+            notificationService.UpdateNotification(notification.Id);
         }
 
         if (response.Result is not null)
