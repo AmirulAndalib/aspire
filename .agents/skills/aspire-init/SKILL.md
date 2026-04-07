@@ -42,6 +42,27 @@ Sometimes a small code change unlocks significantly better Aspire integration. W
 
 If you're unsure whether something is a service, whether two services depend on each other, whether a port is significant, or whether a Docker Compose service should be modeled — ask. Don't guess at architectural intent.
 
+### Optimize for local dev, not deployment
+
+This skill is about getting a great **local development experience**. Don't worry about production deployment manifests, cloud provisioning, or publish configuration — that's a separate concern for later.
+
+This means:
+
+- Prefer `ContainerLifetime.Persistent` for databases and caches so data survives AppHost restarts
+- Use `WithDataVolume()` to persist data across container recreations
+- Dev-friendly URLs with `*.dev.localhost` are encouraged
+- Don't add production health check probes, scaling config, or cloud resource definitions
+- If services reference external third-party APIs/services (e.g., a hardcoded Stripe URL, an external database host, a SaaS webhook endpoint), consider modeling those as parameters or connection strings in the AppHost so they're visible and configurable from one place:
+
+```csharp
+// Instead of the service hardcoding "https://api.stripe.com"
+var stripeUrl = builder.AddParameter("stripe-url", secret: false);
+var api = builder.AddProject<Projects.Api>("api")
+    .WithEnvironment("STRIPE_API_URL", stripeUrl);
+```
+
+This makes the external dependency visible in the dashboard and lets developers easily swap endpoints (e.g., to a Stripe test endpoint) without digging through service code. Present this as an option to the user — don't silently refactor their external service calls.
+
 ## Prerequisites
 
 Before running this skill, `aspire init` must have already:
