@@ -26,7 +26,7 @@ public partial class NotificationsDialog : IDialogContentComponent, IDisposable
 
     private void HandleNotificationsChanged()
     {
-        InvokeAsync(() =>
+        _ = InvokeAsync(() =>
         {
             _notifications = NotificationService.GetNotifications();
             StateHasChanged();

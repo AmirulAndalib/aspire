@@ -33,7 +33,7 @@ public partial class NotificationsHeaderButton : ComponentBase, IDisposable
 
     private void HandleNotificationsChanged()
     {
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

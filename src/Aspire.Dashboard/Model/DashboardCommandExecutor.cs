@@ -263,23 +263,10 @@ public sealed class DashboardCommandExecutor(
 
     private NotificationAction CreateViewResponseNotificationAction(CommandViewModel command, ResourceCommandResponseViewModel response)
     {
-        var fixedFormat = response.Result!.Format switch
-        {
-            CommandResultFormat.Json => DashboardUIHelpers.JsonFormat,
-            CommandResultFormat.Markdown => DashboardUIHelpers.MarkdownFormat,
-            _ => null
-        };
-
         return new NotificationAction
         {
             Text = loc[nameof(Dashboard.Resources.Resources.ResourceCommandViewResponse)],
-            OnClick = () => TextVisualizerDialog.OpenDialogAsync(new OpenTextVisualizerDialogOptions
-            {
-                DialogService = dialogService,
-                ValueDescription = command.GetDisplayName(),
-                Value = response.Result.Value,
-                FixedFormat = fixedFormat
-            })
+            OnClick = () => OpenViewResponseDialogAsync(command, response)
         };
     }
 
