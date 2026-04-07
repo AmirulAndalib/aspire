@@ -281,7 +281,6 @@ internal sealed class InitCommand : BaseCommand
         var configPath = Path.Combine(directory.FullName, AspireConfigFile.FileName);
 
         JsonObject settings;
-        var isUpdate = false;
 
         if (File.Exists(configPath))
         {
@@ -290,7 +289,6 @@ internal sealed class InitCommand : BaseCommand
             settings = string.IsNullOrWhiteSpace(existingContent)
                 ? new JsonObject()
                 : JsonNode.Parse(existingContent)?.AsObject() ?? new JsonObject();
-            isUpdate = true;
         }
         else
         {
@@ -353,8 +351,7 @@ internal sealed class InitCommand : BaseCommand
         var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
         File.WriteAllText(configPath, settings.ToJsonString(jsonOptions));
 
-        var verb = isUpdate ? "Updated" : "Created";
-        InteractionService.DisplayMessage(KnownEmojis.CheckMark, $"{verb} {AspireConfigFile.FileName}");
+        InteractionService.DisplayMessage(KnownEmojis.CheckMark, $"Created {AspireConfigFile.FileName}");
     }
 
 }
