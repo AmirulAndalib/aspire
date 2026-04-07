@@ -42,6 +42,20 @@ Sometimes a small code change unlocks significantly better Aspire integration. W
 
 If you're unsure whether something is a service, whether two services depend on each other, whether a port is significant, or whether a Docker Compose service should be modeled — ask. Don't guess at architectural intent.
 
+### Always use latest Aspire APIs — verify before you write
+
+**Do not assume APIs exist.** Aspire evolves fast and community toolkit packages may or may not be available. Before writing any AppHost code:
+
+1. Run `aspire docs search "<resource type>"` to find the correct builder method
+2. Run `aspire docs get "<slug>"` to read the full API surface
+3. If an API doesn't exist (e.g., there's no `AddGolangApp`), fall back to `AddDockerfile()` or `AddContainer()` and note it to the user
+4. For TypeScript, check `.modules/aspire.ts` after `aspire restore` to see what's actually available
+
+Common pitfalls:
+- **Don't invent APIs** — if `aspire docs search` doesn't return it, it probably doesn't exist
+- **CommunityToolkit packages** may not be installed by default — verify with `aspire docs search` before referencing them
+- **API shapes differ between C# and TypeScript** — always check the correct language docs
+
 ### Optimize for local dev, not deployment
 
 This skill is about getting a great **local development experience**. Don't worry about production deployment manifests, cloud provisioning, or publish configuration — that's a separate concern for later.
@@ -385,23 +399,154 @@ Be careful with code placement — look at existing structure (top-level stateme
 
 ### Step 7: Wire up OpenTelemetry for non-.NET services
 
-For non-.NET services included in the AppHost, configure OpenTelemetry so the Aspire dashboard shows their traces, metrics, and logs. This is the equivalent of what ServiceDefaults does for .NET.
+For non-.NET services included in the AppHost, OpenTelemetry makes their traces, metrics, and logs visible in the Aspire dashboard. This is the equivalent of what ServiceDefaults does for .NET. Aspire automatically injects `OTEL_EXPORTER_OTLP_ENDPOINT` into all managed resources — the services just need to read it.
 
-**Node.js/TypeScript services:**
+**Present this to the user as an option, not a mandatory step.** Some users may want to add OTel later, and that's fine — their services will still run, they just won't appear in the dashboard's trace/metrics views.
+
+**For each non-.NET service, ask:**
+> "Would you like me to add OpenTelemetry instrumentation to `<service>`? This lets the Aspire dashboard show its traces, metrics, and logs. I'll need to add a few packages and an instrumentation setup file."
+
+If they say yes, follow the per-language guide below.
+
+#### Node.js/TypeScript services
 
 ```bash
 npm install @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node @opentelemetry/exporter-otlp-grpc
 ```
 
-Add an instrumentation file that reads `OTEL_EXPORTER_OTLP_ENDPOINT` (injected by Aspire automatically).
+Create an instrumentation file (e.g., `instrumentation.ts` or `instrumentation.js`):
 
-**Python services**: suggest `opentelemetry-distro` and `opentelemetry-exporter-otlp`.
+```typescript
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-otlp-grpc';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-otlp-grpc';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 
-**Other languages**: point the user to OpenTelemetry docs for their language. The OTLP endpoint is injected via environment variables by Aspire.
+const sdk = new NodeSDK({
+  traceExporter: new OTLPTraceExporter(),
+  metricReader: new PeriodicExportingMetricReader({
+    exporter: new OTLPMetricExporter(),
+  }),
+  instrumentations: [getNodeAutoInstrumentations()],
+  serviceName: process.env.OTEL_SERVICE_NAME,
+});
 
-**Important**: Ask the user before modifying any service code. OTel setup may conflict with existing instrumentation. Present it as a recommendation, not an automatic change.
+sdk.start();
+```
 
-### Step 8: Validate
+Then ensure the service loads it early — either via `--require`/`--import` in the start script or by importing it as the first line of the entry point.
+
+#### Python services
+
+```bash
+pip install opentelemetry-distro opentelemetry-exporter-otlp
+opentelemetry-bootstrap -a install  # auto-detect and install framework instrumentations
+```
+
+Add to the service's startup (e.g., top of `main.py` or as a separate `instrumentation.py`):
+
+```python
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry import trace, metrics
+import os
+
+resource = Resource.create({"service.name": os.environ.get("OTEL_SERVICE_NAME", "unknown")})
+
+# Traces
+trace.set_tracer_provider(TracerProvider(resource=resource))
+trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+
+# Metrics
+metrics.set_meter_provider(MeterProvider(
+    resource=resource,
+    metric_readers=[PeriodicExportingMetricReader(OTLPMetricExporter())],
+))
+```
+
+Or more simply, run with the auto-instrumentation wrapper:
+
+```bash
+opentelemetry-instrument uvicorn main:app --host 0.0.0.0
+```
+
+#### Go services
+
+```bash
+go get go.opentelemetry.io/otel
+go get go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
+go get go.opentelemetry.io/otel/sdk/trace
+go get go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
+```
+
+Add initialization in `main()`:
+
+```go
+import (
+    "go.opentelemetry.io/otel"
+    "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+    sdktrace "go.opentelemetry.io/otel/sdk/trace"
+)
+
+func initTracer() func() {
+    exporter, _ := otlptracegrpc.New(context.Background())
+    tp := sdktrace.NewTracerProvider(sdktrace.WithBatcher(exporter))
+    otel.SetTracerProvider(tp)
+    return func() { tp.Shutdown(context.Background()) }
+}
+```
+
+Wrap HTTP handlers with `otelhttp.NewHandler()` for automatic HTTP span creation.
+
+#### Java services
+
+Point the user to the [OpenTelemetry Java Agent](https://opentelemetry.io/docs/zero-code/java/agent/) — it's the easiest approach:
+
+```bash
+java -javaagent:opentelemetry-javaagent.jar -jar myapp.jar
+```
+
+The agent auto-instruments common frameworks. Aspire injects `OTEL_EXPORTER_OTLP_ENDPOINT` automatically.
+
+### Step 8: Offer dev experience enhancements
+
+Before validating, present the user with optional quality-of-life improvements. These aren't required for `aspire start` to work, but they make the local dev experience significantly nicer.
+
+**Suggest each of these individually — don't apply without asking:**
+
+1. **Friendly URLs with `dev.localhost`**: Give services memorable URLs instead of random ports:
+   > "Would you like friendly local URLs like `frontend.dev.localhost` and `api.dev.localhost` instead of `localhost:<random-port>`? These resolve to 127.0.0.1 automatically on most systems — no `/etc/hosts` changes needed."
+
+   ```csharp
+   // C#
+   var frontend = builder.AddNpmApp("frontend", "../frontend")
+       .WithHttpEndpoint(env: "PORT")
+       .WithUrlForEndpoint("http", url => url.Host = "frontend.dev.localhost");
+   ```
+
+   ```typescript
+   // TypeScript
+   const frontend = builder.addNpmApp("frontend", "../frontend")
+       .withHttpEndpoint({ env: "PORT" })
+       .withUrlForEndpoint("http", url => { url.host = "frontend.dev.localhost"; });
+   ```
+
+2. **Custom URL labels in the dashboard**: Rename endpoint URLs in the Aspire dashboard for clarity:
+   ```csharp
+   .WithUrlForEndpoint("http", url => url.DisplayText = "Web UI")
+   ```
+
+3. **OpenTelemetry** (if not done in Step 7): "Would you like to add observability to your non-.NET services so they appear in the Aspire dashboard's traces and metrics views?"
+
+Present these as a batch: "I have a few optional dev experience improvements I can make. Want to hear about them?"
+
+### Step 9: Validate
 
 ```bash
 aspire start
@@ -421,7 +566,7 @@ If it fails, diagnose and iterate. Common issues:
 - **Both**: missing environment variables, port conflicts
 - **Certificate errors**: if HTTPS fails, run `aspire certs trust` and retry
 
-### Step 9: Update solution file (C# full project mode only)
+### Step 10: Update solution file (C# full project mode only)
 
 If a `.sln`/`.slnx` exists, verify all new projects are included:
 
@@ -431,7 +576,7 @@ dotnet sln <solution> list
 
 Ensure both the AppHost and ServiceDefaults projects appear.
 
-### Step 10: Clean up
+### Step 11: Clean up
 
 After successful validation:
 
