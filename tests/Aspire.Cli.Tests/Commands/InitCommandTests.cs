@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Globalization;
+using Aspire.Cli.Agents;
 using Aspire.Cli.Commands;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.NuGet;
@@ -648,6 +649,88 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
         Assert.NotEqual(0, exitCode);
         Assert.NotNull(testInteractionService);
         Assert.Contains(expectedMessage, testInteractionService.DisplayedErrors);
+    }
+
+    [Fact]
+    public async Task InitCommand_WhenAspireInitSkillSelected_PrintsToolSpecificFollowUpCommands()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var interactionService = new TestInteractionService
+        {
+            ConfirmCallback = (_, _) => true
+        };
+
+        var subtleMessages = new List<string>();
+        interactionService.DisplaySubtleMessageCallback = subtleMessages.Add;
+        interactionService.PromptForSelectionsCallback = (_, choices, _, _) =>
+        {
+            var items = choices.Cast<object>().ToList();
+
+            if (items.FirstOrDefault() is SkillLocation)
+            {
+                return [SkillLocation.Standard, SkillLocation.ClaudeCode, SkillLocation.OpenCode];
+            }
+
+            return [SkillDefinition.AspireInit];
+        };
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.InteractionServiceFactory = _ => interactionService;
+        });
+
+        var serviceProvider = services.BuildServiceProvider();
+        var initCommand = serviceProvider.GetRequiredService<InitCommand>();
+
+        var parseResult = initCommand.Parse("init --language typescript");
+        var exitCode = await parseResult.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(ExitCodeConstants.Success, exitCode);
+        Assert.Contains(interactionService.DisplayedMessages, m => m.Message == "Aspire AppHost created! To complete setup, run one of:");
+        Assert.Contains("  copilot -i \"run the aspire-init skill\" --yolo", subtleMessages);
+        Assert.Contains("  claude \"run the aspire-init skill\"", subtleMessages);
+        Assert.Contains("  opencode --prompt \"run the aspire-init skill\"", subtleMessages);
+    }
+
+    [Fact]
+    public async Task InitCommand_WhenAspireInitSkillNotSelected_DoesNotPrintFollowUpCommands()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var interactionService = new TestInteractionService
+        {
+            ConfirmCallback = (_, _) => true
+        };
+
+        var subtleMessages = new List<string>();
+        interactionService.DisplaySubtleMessageCallback = subtleMessages.Add;
+        interactionService.PromptForSelectionsCallback = (_, choices, _, _) =>
+        {
+            var items = choices.Cast<object>().ToList();
+
+            if (items.FirstOrDefault() is SkillLocation)
+            {
+                return [SkillLocation.Standard];
+            }
+
+            return [SkillDefinition.Aspire];
+        };
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.InteractionServiceFactory = _ => interactionService;
+        });
+
+        var serviceProvider = services.BuildServiceProvider();
+        var initCommand = serviceProvider.GetRequiredService<InitCommand>();
+
+        var parseResult = initCommand.Parse("init --language typescript");
+        var exitCode = await parseResult.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(ExitCodeConstants.Success, exitCode);
+        Assert.DoesNotContain(interactionService.DisplayedMessages, m => m.Message.Contains("To complete setup", StringComparison.Ordinal));
+        Assert.DoesNotContain(subtleMessages, m => m.Contains("run the aspire-init skill", StringComparison.Ordinal));
     }
 
     private sealed class TestPackagingServiceWithChannelTracking(Action<string> onChannelUsed) : IPackagingService

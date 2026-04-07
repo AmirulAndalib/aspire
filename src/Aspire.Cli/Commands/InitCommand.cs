@@ -5,6 +5,7 @@ using System.CommandLine;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Aspire.Cli.Agents;
 using Aspire.Cli.Configuration;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.Projects;
@@ -91,13 +92,51 @@ internal sealed class InitCommand : BaseCommand
         var workspaceRoot = solutionFile?.Directory ?? workingDirectory;
         var agentInitResult = await _agentInitCommand.PromptAndChainAsync(_hostEnvironment, InteractionService, ExitCodeConstants.Success, workspaceRoot, cancellationToken);
 
-        // Step 5: Print closing message with one-shot agent command.
-        InteractionService.DisplayEmptyLine();
-        InteractionService.DisplayMessage(KnownEmojis.Sparkles, "Aspire AppHost created! To complete setup, run:");
-        InteractionService.DisplayEmptyLine();
-        InteractionService.DisplaySubtleMessage("  <agent> \"run the aspire-init skill\"");
+        // Step 5: Print follow-up commands only when the user selected the one-time init skill.
+        if (agentInitResult.ExitCode == ExitCodeConstants.Success &&
+            agentInitResult.SelectedSkills.Contains(SkillDefinition.AspireInit))
+        {
+            var commands = GetAspireInitCommands(agentInitResult.SelectedLocations);
+            if (commands.Count > 0)
+            {
+                InteractionService.DisplayEmptyLine();
+                InteractionService.DisplayMessage(
+                    KnownEmojis.Sparkles,
+                    commands.Count == 1
+                        ? "Aspire AppHost created! To complete setup, run:"
+                        : "Aspire AppHost created! To complete setup, run one of:");
+                InteractionService.DisplayEmptyLine();
 
-        return agentInitResult;
+                foreach (var command in commands)
+                {
+                    InteractionService.DisplaySubtleMessage($"  {command}");
+                }
+            }
+        }
+
+        return agentInitResult.ExitCode;
+    }
+
+    private static IReadOnlyList<string> GetAspireInitCommands(IReadOnlyList<SkillLocation> selectedLocations)
+    {
+        var commands = new List<string>();
+
+        if (selectedLocations.Contains(SkillLocation.Standard) || selectedLocations.Contains(SkillLocation.GitHubSkills))
+        {
+            commands.Add("""copilot -i "run the aspire-init skill" --yolo""");
+        }
+
+        if (selectedLocations.Contains(SkillLocation.ClaudeCode))
+        {
+            commands.Add("claude \"run the aspire-init skill\"");
+        }
+
+        if (selectedLocations.Contains(SkillLocation.OpenCode))
+        {
+            commands.Add("opencode --prompt \"run the aspire-init skill\"");
+        }
+
+        return commands;
     }
 
     private async Task<int> DropCSharpSkeletonAsync(DirectoryInfo workingDirectory, FileInfo? solutionFile, CancellationToken cancellationToken)

@@ -387,14 +387,14 @@ internal sealed class NewCommand : BaseCommand, IPackageMetaPrefetchingCommand
         var templateResult = await template.ApplyTemplateAsync(inputs, parseResult, cancellationToken);
 
         var workspaceRoot = new DirectoryInfo(templateResult.OutputPath ?? ExecutionContext.WorkingDirectory.FullName);
-        var exitCode = await _agentInitCommand.PromptAndChainAsync(_hostEnvironment, InteractionService, templateResult.ExitCode, workspaceRoot, cancellationToken);
+        var agentInitResult = await _agentInitCommand.PromptAndChainAsync(_hostEnvironment, InteractionService, templateResult.ExitCode, workspaceRoot, cancellationToken);
 
         if (templateResult.OutputPath is not null && ExtensionHelper.IsExtensionHost(InteractionService, out var extensionInteractionService, out _))
         {
             extensionInteractionService.OpenEditor(templateResult.OutputPath);
         }
 
-        return exitCode;
+        return agentInitResult.ExitCode;
     }
 
     private static bool ShouldResolveCliTemplateVersion(ITemplate template)
