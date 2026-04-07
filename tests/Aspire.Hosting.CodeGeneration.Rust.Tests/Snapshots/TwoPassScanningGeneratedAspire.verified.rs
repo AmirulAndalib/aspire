@@ -323,6 +323,8 @@ pub enum CommandResultFormat {
     Text,
     #[serde(rename = "Json")]
     Json,
+    #[serde(rename = "Markdown")]
+    Markdown,
 }
 
 impl std::fmt::Display for CommandResultFormat {
@@ -330,6 +332,7 @@ impl std::fmt::Display for CommandResultFormat {
         match self {
             Self::Text => write!(f, "Text"),
             Self::Json => write!(f, "Json"),
+            Self::Markdown => write!(f, "Markdown"),
         }
     }
 }

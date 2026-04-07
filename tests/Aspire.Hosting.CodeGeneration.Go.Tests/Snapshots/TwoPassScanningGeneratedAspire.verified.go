@@ -133,6 +133,7 @@ type CommandResultFormat string
 const (
 	CommandResultFormatText CommandResultFormat = "Text"
 	CommandResultFormatJson CommandResultFormat = "Json"
+	CommandResultFormatMarkdown CommandResultFormat = "Markdown"
 )
 
 // UrlDisplayLocation represents UrlDisplayLocation.

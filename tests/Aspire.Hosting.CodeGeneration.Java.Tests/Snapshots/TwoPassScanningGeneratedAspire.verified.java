@@ -2875,7 +2875,8 @@ import java.util.function.*;
 /** CommandResultFormat enum. */
 public enum CommandResultFormat implements WireValueEnum {
     TEXT("Text"),
-    JSON("Json");
+    JSON("Json"),
+    MARKDOWN("Markdown");
 
     private final String value;
 

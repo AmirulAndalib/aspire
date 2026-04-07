@@ -257,6 +257,7 @@ export enum CertificateTrustScope {
 export enum CommandResultFormat {
     Text = "Text",
     Json = "Json",
+    Markdown = "Markdown",
 }
 
 /** Enum type for ContainerLifetime */
