@@ -764,6 +764,15 @@ function Expand-AspireCliArchive {
             Remove-OldCliBackupFiles -TargetExePath $targetExePath
         }
 
+        # Remove .aspire-update.json if present. This file disables self-update for
+        # package-manager installations (WinGet, Homebrew) but install-script users
+        # should retain self-update capability.
+        $aspireUpdateJson = Join-Path $DestinationPath ".aspire-update.json"
+        if (Test-Path $aspireUpdateJson) {
+            Remove-Item -Path $aspireUpdateJson -Force -ErrorAction SilentlyContinue
+            Write-Message "Removed .aspire-update.json (self-update remains enabled for script installs)" -Level Verbose
+        }
+
         Write-Message "Successfully unpacked archive" -Level Verbose
     }
     catch {

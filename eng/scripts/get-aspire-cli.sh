@@ -478,6 +478,11 @@ install_archive() {
         fi
     fi
 
+    # Remove .aspire-update.json if present. This file disables self-update for
+    # package-manager installations (WinGet, Homebrew) but install-script users
+    # should retain self-update capability.
+    rm -f "${destination_path}/.aspire-update.json"
+
     say_verbose "Successfully installed archive"
 }
 

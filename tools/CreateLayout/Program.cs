@@ -54,6 +54,11 @@ public static class Program
             Description = "Enable verbose output"
         };
 
+        var updateInstructionsOption = new Option<string?>("--update-instructions")
+        {
+            Description = "When set, writes .aspire-update.json to the layout root with self-update disabled and these instructions"
+        };
+
         var rootCommand = new RootCommand("CreateLayout - Build Aspire bundle layout for distribution");
         rootCommand.Options.Add(outputOption);
         rootCommand.Options.Add(artifactsOption);
@@ -61,6 +66,7 @@ public static class Program
         rootCommand.Options.Add(bundleVersionOption);
         rootCommand.Options.Add(archiveOption);
         rootCommand.Options.Add(verboseOption);
+        rootCommand.Options.Add(updateInstructionsOption);
 
         rootCommand.SetAction(async (parseResult, cancellationToken) =>
         {
@@ -70,11 +76,17 @@ public static class Program
             var version = parseResult.GetValue(bundleVersionOption)!;
             var createArchive = parseResult.GetValue(archiveOption);
             var verbose = parseResult.GetValue(verboseOption);
+            var updateInstructions = parseResult.GetValue(updateInstructionsOption);
 
             try
             {
                 using var builder = new LayoutBuilder(outputPath, artifactsPath, rid, version, verbose);
                 await builder.BuildAsync().ConfigureAwait(false);
+
+                if (!string.IsNullOrEmpty(updateInstructions))
+                {
+                    builder.WriteAspireUpdateJson(updateInstructions);
+                }
 
                 if (createArchive)
                 {
@@ -363,6 +375,20 @@ internal sealed class LayoutBuilder : IDisposable
         }
 
         return null;
+    }
+
+    public void WriteAspireUpdateJson(string updateInstructions)
+    {
+        var configPath = Path.Combine(_outputPath, ".aspire-update.json");
+        var escapedInstructions = JsonEncodedText.Encode(updateInstructions);
+        var json = $$"""
+            {
+              "selfUpdateDisabled": true,
+              "updateInstructions": "{{escapedInstructions}}"
+            }
+            """;
+        File.WriteAllText(configPath, json);
+        Log($"  Wrote .aspire-update.json with instructions: {updateInstructions}");
     }
 
     private static void CopyDirectory(string source, string destination)

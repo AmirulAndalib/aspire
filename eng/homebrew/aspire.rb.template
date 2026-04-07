@@ -13,5 +13,12 @@ cask "aspire" do
 
   binary "aspire"
 
+  postflight do
+    # Write .aspire-update.json next to the binary to disable self-update.
+    # Users should update via 'brew upgrade --cask aspire' instead.
+    config_file = staged_path.join(".aspire-update.json")
+    config_file.write('{"selfUpdateDisabled":true,"updateInstructions":"brew upgrade --cask aspire"}')
+  end
+
   zap trash: "~/.aspire"
 end

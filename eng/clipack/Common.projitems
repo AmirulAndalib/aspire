@@ -6,6 +6,12 @@
     <ArchiveFormat Condition="$(CliRuntime.StartsWith('win-'))">zip</ArchiveFormat>
     <ArchiveFormat Condition="!$(CliRuntime.StartsWith('win-'))">tar.gz</ArchiveFormat>
 
+    <!-- Update instructions for package-manager installations.
+         Windows archives get WinGet instructions, macOS archives get Homebrew instructions.
+         Linux archives don't include the file since there's no standard package manager. -->
+    <CliUpdateInstructions Condition="$(CliRuntime.StartsWith('win-'))">winget upgrade Microsoft.Aspire</CliUpdateInstructions>
+    <CliUpdateInstructions Condition="$(CliRuntime.StartsWith('osx-'))">brew upgrade --cask aspire</CliUpdateInstructions>
+
     <!-- PublishNativeAot is explicitly set to false in the projects for cases where we don't want to AOT at all.
          For the rest, publish native AOT if running on the target platfrom -->
     <PublishNativeAot Condition="'$(PublishNativeAot)' == '' and $([System.OperatingSystem]::IsWindows()) and $(CliRuntime.StartsWith('win-'))">true</PublishNativeAot>
@@ -35,6 +41,23 @@
       <DirectoriesToRemove Include="$(XlfLanguages)" />
     </ItemGroup>
     <RemoveDir Directories="$(OutputPath)\%(DirectoriesToRemove.Identity)" />
+  </Target>
+
+  <!--
+    Write .aspire-update.json next to the CLI binary when CliUpdateInstructions is set.
+    This disables self-update for package-manager installations (WinGet, Homebrew) while
+    leaving install-script users unaffected (install scripts delete this file after extraction).
+  -->
+  <Target Name="_WriteAspireUpdateJson"
+          AfterTargets="PrepareOutputPathForPublishToDisk"
+          Condition="'$(CliUpdateInstructions)' != ''">
+    <PropertyGroup>
+      <_AspireUpdateJsonContent>{"selfUpdateDisabled":true,"updateInstructions":"$(CliUpdateInstructions)"}</_AspireUpdateJsonContent>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(OutputPath)\.aspire-update.json"
+                     Lines="$(_AspireUpdateJsonContent)"
+                     Overwrite="true" />
+    <Message Importance="high" Text="Wrote .aspire-update.json with instructions: $(CliUpdateInstructions)" />
   </Target>
 
   <Target Name="_PublishProject">

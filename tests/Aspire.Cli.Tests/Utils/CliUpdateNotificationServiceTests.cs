@@ -278,6 +278,64 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
         await service.CheckForCliUpdatesAsync(workspace.WorkspaceRoot, CancellationToken.None).DefaultTimeout();
         service.NotifyIfUpdateAvailable();
     }
+
+    [Fact]
+    public async Task NotifyIfUpdateAvailable_WhenSelfUpdateDisabled_SuppressesNotification()
+    {
+        TaskCompletionSource<string> suggestedVersionTcs = new();
+        var notificationWasDisplayed = false;
+
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, configure =>
+        {
+            configure.NuGetPackageCacheFactory = (sp) =>
+            {
+                var cache = new TestNuGetPackageCache();
+                cache.SetMockCliPackages([
+                    new NuGetPackage { Id = "Aspire.Cli", Version = "9.5.0", Source = "nuget.org" },
+                ]);
+
+                return cache;
+            };
+
+            configure.InteractionServiceFactory = (sp) =>
+            {
+                var interactionService = new TestInteractionService();
+                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion) =>
+                {
+                    notificationWasDisplayed = true;
+                };
+
+                return interactionService;
+            };
+
+            configure.InstallationDetectorFactory = _ => new TestInstallationDetector
+            {
+                InstallationInfo = new InstallationInfo(
+                    IsDotNetTool: false,
+                    SelfUpdateDisabled: true,
+                    UpdateInstructions: "brew upgrade --cask aspire")
+            };
+
+            configure.CliUpdateNotifierFactory = (sp) =>
+            {
+                var logger = sp.GetRequiredService<ILogger<CliUpdateNotifier>>();
+                var nuGetPackageCache = sp.GetRequiredService<INuGetPackageCache>();
+                var interactionService = sp.GetRequiredService<IInteractionService>();
+                var installationDetector = sp.GetRequiredService<IInstallationDetector>();
+
+                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0", logger, nuGetPackageCache, interactionService, installationDetector);
+            };
+        });
+
+        var provider = services.BuildServiceProvider();
+        var notifier = provider.GetRequiredService<ICliUpdateNotifier>();
+
+        await notifier.CheckForCliUpdatesAsync(workspace.WorkspaceRoot, CancellationToken.None).DefaultTimeout();
+        notifier.NotifyIfUpdateAvailable();
+
+        Assert.False(notificationWasDisplayed, "Update notification should be suppressed when self-update is disabled");
+    }
 }
 
 internal sealed class CliUpdateNotifierWithPackageVersionOverride(string currentVersion, ILogger<CliUpdateNotifier> logger, INuGetPackageCache nuGetPackageCache, IInteractionService interactionService, IInstallationDetector installationDetector) : CliUpdateNotifier(logger, nuGetPackageCache, interactionService, installationDetector)
