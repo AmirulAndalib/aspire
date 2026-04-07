@@ -87,7 +87,7 @@ typescript/aspire.hosting.azure.appconfiguration/azureappconfigurationresource/r
 
 ## Hierarchy model
 
-### C#
+### C\#
 
 The CLI exposes the following user-facing hierarchy:
 
