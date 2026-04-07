@@ -165,4 +165,7 @@
   <data name="SelfOptionDescription" xml:space="preserve">
     <value>Update the Aspire CLI itself to the latest version</value>
   </data>
+  <data name="SelfUpdateDisabledMessage" xml:space="preserve">
+    <value>Self-update is disabled for this installation.</value>
+  </data>
 </root>

@@ -116,5 +116,6 @@ namespace Aspire.Cli.Resources {
     internal static string RegeneratingSdkCode => ResourceManager.GetString("RegeneratingSdkCode", resourceCulture);
     internal static string RegeneratedSdkCode => ResourceManager.GetString("RegeneratedSdkCode", resourceCulture);
     internal static string SelfOptionDescription => ResourceManager.GetString("SelfOptionDescription", resourceCulture);
+    internal static string SelfUpdateDisabledMessage => ResourceManager.GetString("SelfUpdateDisabledMessage", resourceCulture);
     }
 }

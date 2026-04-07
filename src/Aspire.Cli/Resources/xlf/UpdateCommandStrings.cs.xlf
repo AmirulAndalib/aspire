@@ -232,6 +232,11 @@
         <target state="new">Update the Aspire CLI itself to the latest version</target>
         <note />
       </trans-unit>
+      <trans-unit id="SelfUpdateDisabledMessage">
+        <source>Self-update is disabled for this installation.</source>
+        <target state="new">Self-update is disabled for this installation.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="UnxpectedCodePath">
         <source>Unexpected code path.</source>
         <target state="translated">Neočekávaná cesta kódu.</target>

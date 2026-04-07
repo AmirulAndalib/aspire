@@ -32,6 +32,7 @@ internal sealed class UpdateCommand : BaseCommand
     private readonly IFeatures _features;
     private readonly IConfigurationService _configurationService;
     private readonly IConfiguration _configuration;
+    private readonly IInstallationDetector _installationDetector;
 
     private static readonly OptionWithLegacy<FileInfo?> s_appHostOption = new("--apphost", "--project", UpdateCommandStrings.ProjectArgumentDescription);
     private static readonly Option<bool> s_selfOption = new("--self")
@@ -53,7 +54,8 @@ internal sealed class UpdateCommand : BaseCommand
         CliExecutionContext executionContext,
         IConfigurationService configurationService,
         AspireCliTelemetry telemetry,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IInstallationDetector installationDetector)
         : base("update", UpdateCommandStrings.Description, features, updateNotifier, executionContext, interactionService, telemetry)
     {
         _projectLocator = projectLocator;
@@ -65,6 +67,7 @@ internal sealed class UpdateCommand : BaseCommand
         _features = features;
         _configurationService = configurationService;
         _configuration = configuration;
+        _installationDetector = installationDetector;
 
         Options.Add(s_appHostOption);
         Options.Add(s_selfOption);
@@ -93,20 +96,6 @@ internal sealed class UpdateCommand : BaseCommand
 
     protected override bool UpdateNotificationsEnabled => false;
 
-    private static bool IsRunningAsDotNetTool()
-    {
-        // When running as a dotnet tool, the process path points to "dotnet" or "dotnet.exe"
-        // When running as a native binary, it points to "aspire" or "aspire.exe"
-        var processPath = Environment.ProcessPath;
-        if (string.IsNullOrEmpty(processPath))
-        {
-            return false;
-        }
-
-        var fileName = Path.GetFileNameWithoutExtension(processPath);
-        return string.Equals(fileName, "dotnet", StringComparison.OrdinalIgnoreCase);
-    }
-
     protected override async Task<int> ExecuteAsync(ParseResult parseResult, CancellationToken cancellationToken)
     {
         var isSelfUpdate = parseResult.GetValue(s_selfOption);
@@ -114,11 +103,24 @@ internal sealed class UpdateCommand : BaseCommand
         // If --self is specified, handle CLI self-update
         if (isSelfUpdate)
         {
+            var installInfo = _installationDetector.GetInstallationInfo();
+
             // When running as a dotnet tool, print the update command instead of executing
-            if (IsRunningAsDotNetTool())
+            if (installInfo.IsDotNetTool)
             {
                 InteractionService.DisplayMessage(KnownEmojis.Information, UpdateCommandStrings.DotNetToolSelfUpdateMessage);
                 InteractionService.DisplayPlainText("  dotnet tool update -g Aspire.Cli");
+                return 0;
+            }
+
+            // When self-update is disabled (e.g., installed via WinGet/Homebrew), show instructions
+            if (installInfo.SelfUpdateDisabled)
+            {
+                InteractionService.DisplayMessage(KnownEmojis.Information, UpdateCommandStrings.SelfUpdateDisabledMessage);
+                if (!string.IsNullOrEmpty(installInfo.UpdateInstructions))
+                {
+                    InteractionService.DisplayPlainText($"  {installInfo.UpdateInstructions}");
+                }
                 return 0;
             }
 
@@ -208,15 +210,35 @@ internal sealed class UpdateCommand : BaseCommand
                 _updateNotifier.IsUpdateAvailable() && 
                 !string.IsNullOrEmpty(channel.CliDownloadBaseUrl))
             {
-                var shouldUpdateCli = await InteractionService.ConfirmAsync(
-                    UpdateCommandStrings.UpdateCliAfterProjectUpdatePrompt,
-                    defaultValue: true,
-                    cancellationToken);
-                
-                if (shouldUpdateCli)
+                var installInfo = _installationDetector.GetInstallationInfo();
+
+                if (installInfo.IsDotNetTool)
                 {
-                    // Use the same channel that was selected for the project update
-                    return await ExecuteSelfUpdateAsync(parseResult, cancellationToken, channel.Name);
+                    // Show dotnet tool update message instead of prompting
+                    InteractionService.DisplayMessage(KnownEmojis.Information, UpdateCommandStrings.DotNetToolSelfUpdateMessage);
+                    InteractionService.DisplayPlainText("  dotnet tool update -g Aspire.Cli");
+                }
+                else if (installInfo.SelfUpdateDisabled)
+                {
+                    // Show package manager instructions instead of prompting
+                    InteractionService.DisplayMessage(KnownEmojis.Information, UpdateCommandStrings.SelfUpdateDisabledMessage);
+                    if (!string.IsNullOrEmpty(installInfo.UpdateInstructions))
+                    {
+                        InteractionService.DisplayPlainText($"  {installInfo.UpdateInstructions}");
+                    }
+                }
+                else
+                {
+                    var shouldUpdateCli = await InteractionService.ConfirmAsync(
+                        UpdateCommandStrings.UpdateCliAfterProjectUpdatePrompt,
+                        defaultValue: true,
+                        cancellationToken);
+                    
+                    if (shouldUpdateCli)
+                    {
+                        // Use the same channel that was selected for the project update
+                        return await ExecuteSelfUpdateAsync(parseResult, cancellationToken, channel.Name);
+                    }
                 }
             }
         }
@@ -239,8 +261,23 @@ internal sealed class UpdateCommand : BaseCommand
             // Check if this is a "no project found" error and prompt for self-update
             if (string.Equals(ex.Message, ErrorStrings.NoProjectFileFound, StringComparisons.CliInputOrOutput))
             {
-                // Only prompt for self-update if not running as dotnet tool and downloader is available
-                if (_cliDownloader is not null)
+                var installInfo = _installationDetector.GetInstallationInfo();
+
+                // Only prompt for self-update if not running as dotnet tool, not disabled, and downloader is available
+                if (installInfo.IsDotNetTool)
+                {
+                    InteractionService.DisplayMessage(KnownEmojis.Information, UpdateCommandStrings.DotNetToolSelfUpdateMessage);
+                    InteractionService.DisplayPlainText("  dotnet tool update -g Aspire.Cli");
+                }
+                else if (installInfo.SelfUpdateDisabled)
+                {
+                    InteractionService.DisplayMessage(KnownEmojis.Information, UpdateCommandStrings.SelfUpdateDisabledMessage);
+                    if (!string.IsNullOrEmpty(installInfo.UpdateInstructions))
+                    {
+                        InteractionService.DisplayPlainText($"  {installInfo.UpdateInstructions}");
+                    }
+                }
+                else if (_cliDownloader is not null)
                 {
                     var shouldUpdateCli = await InteractionService.ConfirmAsync(
                         UpdateCommandStrings.NoAppHostFoundUpdateCliPrompt,

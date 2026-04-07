@@ -365,6 +365,7 @@ public class Program
         builder.Services.AddSingleton<AuxiliaryBackchannelMonitor>();
         builder.Services.AddSingleton<IAuxiliaryBackchannelMonitor>(sp => sp.GetRequiredService<AuxiliaryBackchannelMonitor>());
         builder.Services.AddHostedService(sp => sp.GetRequiredService<AuxiliaryBackchannelMonitor>());
+        builder.Services.AddSingleton<IInstallationDetector, InstallationDetector>();
         builder.Services.AddSingleton<ICliUpdateNotifier, CliUpdateNotifier>();
         builder.Services.AddSingleton<IPackagingService, PackagingService>();
         builder.Services.AddSingleton<IBundleService, BundleService>();

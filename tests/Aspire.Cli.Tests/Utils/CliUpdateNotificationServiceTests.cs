@@ -57,9 +57,10 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
                 var logger = sp.GetRequiredService<ILogger<CliUpdateNotifier>>();
                 var nuGetPackageCache = sp.GetRequiredService<INuGetPackageCache>();
                 var interactionService = sp.GetRequiredService<IInteractionService>();
+                var installationDetector = sp.GetRequiredService<IInstallationDetector>();
 
                 // Use a custom notifier that overrides the current version
-                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0-dev", logger, nuGetPackageCache, interactionService);
+                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0-dev", logger, nuGetPackageCache, interactionService, installationDetector);
             };
         });
 
@@ -112,9 +113,10 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
                 var logger = sp.GetRequiredService<ILogger<CliUpdateNotifier>>();
                 var nuGetPackageCache = sp.GetRequiredService<INuGetPackageCache>();
                 var interactionService = sp.GetRequiredService<IInteractionService>();
+                var installationDetector = sp.GetRequiredService<IInstallationDetector>();
 
                 // Use a custom notifier that overrides the current version
-                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0-dev", logger, nuGetPackageCache, interactionService);
+                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0-dev", logger, nuGetPackageCache, interactionService, installationDetector);
             };
         });
 
@@ -167,9 +169,10 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
                 var logger = sp.GetRequiredService<ILogger<CliUpdateNotifier>>();
                 var nuGetPackageCache = sp.GetRequiredService<INuGetPackageCache>();
                 var interactionService = sp.GetRequiredService<IInteractionService>();
+                var installationDetector = sp.GetRequiredService<IInstallationDetector>();
 
                 // Use a custom notifier that overrides the current version
-                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0", logger, nuGetPackageCache, interactionService);
+                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0", logger, nuGetPackageCache, interactionService, installationDetector);
             };
         });
 
@@ -218,9 +221,10 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
                 var logger = sp.GetRequiredService<ILogger<CliUpdateNotifier>>();
                 var nuGetPackageCache = sp.GetRequiredService<INuGetPackageCache>();
                 var interactionService = sp.GetRequiredService<IInteractionService>();
+                var installationDetector = sp.GetRequiredService<IInstallationDetector>();
 
                 // Use a custom notifier that overrides the current version
-                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0", logger, nuGetPackageCache, interactionService);
+                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0", logger, nuGetPackageCache, interactionService, installationDetector);
             };
         });
 
@@ -276,7 +280,7 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
     }
 }
 
-internal sealed class CliUpdateNotifierWithPackageVersionOverride(string currentVersion, ILogger<CliUpdateNotifier> logger, INuGetPackageCache nuGetPackageCache, IInteractionService interactionService) : CliUpdateNotifier(logger, nuGetPackageCache, interactionService)
+internal sealed class CliUpdateNotifierWithPackageVersionOverride(string currentVersion, ILogger<CliUpdateNotifier> logger, INuGetPackageCache nuGetPackageCache, IInteractionService interactionService, IInstallationDetector installationDetector) : CliUpdateNotifier(logger, nuGetPackageCache, interactionService, installationDetector)
 {
     protected override SemVersion? GetCurrentVersion()
     {

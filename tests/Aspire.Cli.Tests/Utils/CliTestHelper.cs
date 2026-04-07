@@ -112,6 +112,7 @@ internal static class CliTestHelper
         services.AddSingleton(options.ConfigurationServiceFactory);
         services.AddSingleton(options.FeatureFlagsFactory);
         services.AddSingleton(options.CliUpdateNotifierFactory);
+        services.AddSingleton(options.InstallationDetectorFactory);
         services.AddSingleton<IDotNetSdkInstaller>(options.DotNetSdkInstallerFactory);
         services.AddSingleton(options.PackagingServiceFactory);
         services.AddSingleton(options.CliExecutionContextFactory);
@@ -315,8 +316,11 @@ internal sealed class CliServiceCollectionTestOptions
         var logger = NullLoggerFactory.Instance.CreateLogger<CliUpdateNotifier>();
         var nuGetPackageCache = serviceProvider.GetRequiredService<INuGetPackageCache>();
         var interactionService = serviceProvider.GetRequiredService<IInteractionService>();
-        return new CliUpdateNotifier(logger, nuGetPackageCache, interactionService);
+        var installationDetector = serviceProvider.GetRequiredService<IInstallationDetector>();
+        return new CliUpdateNotifier(logger, nuGetPackageCache, interactionService, installationDetector);
     };
+
+    public Func<IServiceProvider, IInstallationDetector> InstallationDetectorFactory { get; set; } = _ => new TestInstallationDetector();
 
     public Func<IServiceProvider, IAddCommandPrompter> AddCommandPrompterFactory { get; set; } = (IServiceProvider serviceProvider) =>
     {
