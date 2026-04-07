@@ -43,9 +43,15 @@ public sealed class DoctorCommandTests(ITestOutputHelper output)
         await auto.WaitForSuccessPromptAsync(counter);
         await auto.TypeAsync("aspire doctor");
         await auto.EnterAsync();
-        await auto.WaitUntilAsync(
-            s => s.ContainsText("dev-certs") && s.ContainsText("partially trusted"),
-            timeout: TimeSpan.FromSeconds(60), description: "doctor to complete with partial trust warning");
+        await auto.WaitUntilAsync(s =>
+        {
+            if (s.ContainsText($"[{counter.Value} ERR:"))
+            {
+                throw new InvalidOperationException("aspire doctor failed with an error");
+            }
+
+            return s.ContainsText("dev-certs") && s.ContainsText("partially trusted");
+        }, timeout: TimeSpan.FromSeconds(60), description: "doctor to complete with partial trust warning");
         await auto.WaitForSuccessPromptAsync(counter);
         await auto.TypeAsync("exit");
         await auto.EnterAsync();
@@ -84,6 +90,11 @@ public sealed class DoctorCommandTests(ITestOutputHelper output)
         await auto.EnterAsync();
         await auto.WaitUntilAsync(s =>
         {
+            if (s.ContainsText($"[{counter.Value} ERR:"))
+            {
+                throw new InvalidOperationException("aspire doctor failed with an error");
+            }
+
             // Wait for doctor to complete
             if (!s.ContainsText("dev-certs"))
             {

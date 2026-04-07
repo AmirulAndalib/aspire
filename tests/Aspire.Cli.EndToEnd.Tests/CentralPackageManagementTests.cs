@@ -184,6 +184,11 @@ public sealed class CentralPackageManagementTests(ITestOutputHelper output)
                 return true;
             }
 
+            if (s.ContainsText($"[{counter.Value} ERR:"))
+            {
+                throw new InvalidOperationException("aspire add failed with an error");
+            }
+
             var successPromptSearcher = new CellPatternSearcher()
                 .FindPattern(counter.Value.ToString())
                 .RightText(" OK] $ ");

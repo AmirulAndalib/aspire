@@ -43,9 +43,15 @@ public sealed class AgentCommandTests(ITestOutputHelper output)
         // Test 1: aspire agent --help
         await auto.TypeAsync("aspire agent --help");
         await auto.EnterAsync();
-        await auto.WaitUntilAsync(
-            s => s.ContainsText("mcp") && s.ContainsText("init"),
-            timeout: TimeSpan.FromSeconds(30), description: "agent help showing mcp and init subcommands");
+        await auto.WaitUntilAsync(s =>
+        {
+            if (s.ContainsText($"[{counter.Value} ERR:"))
+            {
+                throw new InvalidOperationException("aspire agent --help failed with an error");
+            }
+
+            return s.ContainsText("mcp") && s.ContainsText("init");
+        }, timeout: TimeSpan.FromSeconds(30), description: "agent help showing mcp and init subcommands");
         await auto.WaitForSuccessPromptAsync(counter);
 
         // Test 2: aspire agent mcp --help
@@ -63,9 +69,15 @@ public sealed class AgentCommandTests(ITestOutputHelper output)
         // Test 4: aspire mcp --help (now shows tools and call subcommands)
         await auto.TypeAsync("aspire mcp --help");
         await auto.EnterAsync();
-        await auto.WaitUntilAsync(
-            s => s.ContainsText("tools") && s.ContainsText("call"),
-            timeout: TimeSpan.FromSeconds(30), description: "mcp help showing tools and call subcommands");
+        await auto.WaitUntilAsync(s =>
+        {
+            if (s.ContainsText($"[{counter.Value} ERR:"))
+            {
+                throw new InvalidOperationException("aspire mcp --help failed with an error");
+            }
+
+            return s.ContainsText("tools") && s.ContainsText("call");
+        }, timeout: TimeSpan.FromSeconds(30), description: "mcp help showing tools and call subcommands");
         await auto.WaitForSuccessPromptAsync(counter);
 
         // Test 5: aspire mcp tools --help
@@ -183,9 +195,15 @@ public sealed class AgentCommandTests(ITestOutputHelper output)
         File.WriteAllText(configPath, """{"mcpServers":{"aspire":{"command":"aspire","args":["mcp","start"]}}}""");
         await auto.TypeAsync("aspire doctor");
         await auto.EnterAsync();
-        await auto.WaitUntilAsync(
-            s => s.ContainsText("dev-certs") && s.ContainsText("deprecated") && s.ContainsText("aspire agent init"),
-            timeout: TimeSpan.FromSeconds(60), description: "doctor output with deprecated warning and fix suggestion");
+        await auto.WaitUntilAsync(s =>
+        {
+            if (s.ContainsText($"[{counter.Value} ERR:"))
+            {
+                throw new InvalidOperationException("aspire doctor failed with an error");
+            }
+
+            return s.ContainsText("dev-certs") && s.ContainsText("deprecated") && s.ContainsText("aspire agent init");
+        }, timeout: TimeSpan.FromSeconds(60), description: "doctor output with deprecated warning and fix suggestion");
         await auto.WaitForSuccessPromptAsync(counter);
 
         await auto.TypeAsync("exit");
