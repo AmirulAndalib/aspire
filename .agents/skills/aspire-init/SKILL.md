@@ -289,7 +289,25 @@ Analyze the repository to discover all projects and services that could be model
 - `node_modules/`, `.modules/`, `dist/`, `build/`, `bin/`, `obj/`, `.git/`
 - Test projects (directories named `test`/`tests`/`__tests__`, projects referencing xUnit/NUnit/MSTest, or test-only package.json scripts)
 
-### Step 2: Present findings and confirm with the user
+### Step 2: Smoke-test the skeleton
+
+Before investing time in wiring, verify that the Aspire skeleton boots correctly:
+
+```bash
+aspire start
+```
+
+The empty AppHost should start successfully — the dashboard should come up and the process should run without errors. You won't see any resources yet (that's expected), but if `aspire start` fails here, the problem is in the generated `aspire.config.json` or the skeleton AppHost file. Fix the issue before proceeding.
+
+Common failures at this stage:
+
+- **Missing profiles in `aspire.config.json`**: The file must have a `profiles` section with `applicationUrl`. Re-run `aspire init` to regenerate it.
+- **Missing dependencies**: For TypeScript, ensure `@aspect/aspire-hosting` or the `.modules/aspire.js` SDK is available. Run `aspire restore` if needed.
+- **Port conflicts**: If another Aspire app is running, the randomly assigned ports may conflict. Stop other instances first.
+
+Once it boots, stop it (Ctrl+C) and continue.
+
+### Step 3: Present findings and confirm with the user
 
 Show the user what you found. For each discovered project/service, show:
 
@@ -303,9 +321,9 @@ Ask the user:
 1. Which projects to include in the AppHost (pre-select all discovered runnable services)
 2. For C# AppHosts: which .NET projects should receive ServiceDefaults references (pre-select all .NET services)
 
-### Step 3: Create ServiceDefaults (C# only)
+### Step 4: Create ServiceDefaults (C# only)
 
-> **Skip this step for TypeScript AppHosts.** OTel is handled in Step 7.
+> **Skip this step for TypeScript AppHosts.** OTel is handled in Step 8.
 
 If no ServiceDefaults project exists in the repo, create one:
 
@@ -321,7 +339,7 @@ dotnet sln <solution> add <ServiceDefaults.csproj>
 
 If a ServiceDefaults project already exists (look for references to `Microsoft.Extensions.ServiceDiscovery` or `Aspire.ServiceDefaults`), skip creation and use the existing one.
 
-### Step 4: Wire up the AppHost
+### Step 5: Wire up the AppHost
 
 Edit the skeleton AppHost file to add resource definitions for each selected project. Use the appropriate syntax based on language.
 
@@ -448,7 +466,7 @@ Always check `aspire list integrations` and `aspire docs search "<language>"` to
 - Wire up `WithReference()`/`withReference()` and `WaitFor()`/`waitFor()` for services that depend on each other (ask the user if relationships are unclear).
 - Use `WithExternalHttpEndpoints()`/`withExternalHttpEndpoints()` for user-facing frontends.
 
-### Step 5: Configure dependencies
+### Step 6: Configure dependencies
 
 #### TypeScript AppHost
 
@@ -522,7 +540,7 @@ If no `tsconfig.json` exists and `aspire restore` didn't create one, create a mi
 
 **NuGet feeds**: If `aspire.config.json` specifies a non-stable channel (preview, daily), ensure the appropriate NuGet feed is configured. For single-file mode this is automatic; for project mode, ensure a `NuGet.config` is in scope.
 
-### Step 6: Add ServiceDefaults to .NET projects (C# AppHost only)
+### Step 7: Add ServiceDefaults to .NET projects (C# AppHost only)
 
 > **Skip this step for TypeScript AppHosts.**
 
@@ -546,7 +564,7 @@ app.MapDefaultEndpoints();
 
 Be careful with code placement — look at existing structure (top-level statements vs `Startup.cs` vs `Program.Main`). Do not duplicate if already present.
 
-### Step 7: Wire up OpenTelemetry
+### Step 8: Wire up OpenTelemetry
 
 OpenTelemetry makes your services' traces, metrics, and logs visible in the Aspire dashboard. For .NET services, ServiceDefaults handles this automatically. For everything else, the services need a small setup to export telemetry. Aspire automatically injects `OTEL_EXPORTER_OTLP_ENDPOINT` into all managed resources — the services just need to read it.
 
@@ -666,7 +684,7 @@ java -javaagent:opentelemetry-javaagent.jar -jar myapp.jar
 
 The agent auto-instruments common frameworks. Aspire injects `OTEL_EXPORTER_OTLP_ENDPOINT` automatically.
 
-### Step 8: Offer dev experience enhancements
+### Step 9: Offer dev experience enhancements
 
 Before validating, present the user with optional quality-of-life improvements. These aren't required for `aspire start` to work, but they make the local dev experience significantly nicer.
 
@@ -696,11 +714,11 @@ Before validating, present the user with optional quality-of-life improvements. 
    .WithUrlForEndpoint("https", url => url.DisplayText = "Web UI")
    ```
 
-3. **OpenTelemetry** (if not done in Step 7): "Would you like me to add observability to your services so they appear in the Aspire dashboard's traces and metrics views?"
+3. **OpenTelemetry** (if not done in Step 8): "Would you like me to add observability to your services so they appear in the Aspire dashboard's traces and metrics views?"
 
 Present these as a batch: "I have a few optional dev experience improvements I can make. Want to hear about them?"
 
-### Step 9: Validate
+### Step 10: Validate
 
 ```bash
 aspire start
@@ -710,11 +728,11 @@ Once the app is running, use the Aspire CLI to verify everything is wired up cor
 
 1. **Resources are modeled**: `aspire describe` — confirm all expected resources appear with correct types, endpoints, and states.
 2. **Environment flows correctly**: `aspire describe` — check that environment variables (connection strings, ports, secrets from parameters) are injected into each resource as expected. Verify `.env` values that were migrated to parameters are present.
-3. **OTel is flowing** (if configured in Step 7): `aspire otel` — verify that services instrumented with OpenTelemetry are exporting traces and metrics to the Aspire dashboard collector.
+3. **OTel is flowing** (if configured in Step 8): `aspire otel` — verify that services instrumented with OpenTelemetry are exporting traces and metrics to the Aspire dashboard collector.
 4. **No startup errors**: `aspire logs <resource>` — check logs for each resource to ensure clean startup with no crashes, missing config, or connection failures.
 5. **Dashboard is accessible**: Confirm the dashboard URL (including the login token) is printed and can be opened. The full URL looks like `http://localhost:18888/login?t=<token>` — always include the token.
 
-**This skill is not done until `aspire start` runs without errors and all resources are healthy.** If anything fails, diagnose, fix, and run `aspire start` again. Keep iterating until it works — do not move on to Step 10 with a broken app.
+**This skill is not done until `aspire start` runs without errors and all resources are healthy.** If anything fails, diagnose, fix, and run `aspire start` again. Keep iterating until it works — do not move on to Step 11 with a broken app.
 
 Common issues:
 
@@ -724,7 +742,7 @@ Common issues:
 - **Both**: missing environment variables, port conflicts
 - **Certificate errors**: if HTTPS fails, run `aspire certs trust` and retry
 
-### Step 10: Update solution file (C# full project mode only)
+### Step 11: Update solution file (C# full project mode only)
 
 If a `.sln`/`.slnx` exists, verify all new projects are included:
 
@@ -734,7 +752,7 @@ dotnet sln <solution> list
 
 Ensure both the AppHost and ServiceDefaults projects appear.
 
-### Step 11: Clean up
+### Step 12: Clean up
 
 After successful validation:
 
@@ -790,7 +808,7 @@ After adding, run `aspire restore` (TypeScript) or `dotnet restore` (C#) to upda
 
 ## AppHost wiring reference
 
-This section covers the patterns you'll need when writing Step 4 (Wire up the AppHost). Refer back to it as needed.
+This section covers the patterns you'll need when writing Step 5 (Wire up the AppHost). Refer back to it as needed.
 
 ### Service communication: `WithReference` vs `WithEnvironment`
 
