@@ -129,6 +129,32 @@
       and !$(CliRuntime.Contains('musl'))">true</_CanExecuteNativeBinary>
   </PropertyGroup>
 
+  <!-- When SmokeTestNativeBinary is invoked standalone (not as part of PublishToDisk),
+       $(OutputPath) may differ from the path used during the build. The Microsoft.Build.NoTargets
+       SDK publishes into the intermediate output tree, but a standalone msbuild invocation
+       evaluates OutputPath to the bin tree. Search the artifacts directory for the binary. -->
+  <Target Name="_ResolveSmokeTestBinaryPath">
+    <Message Importance="high" Text="Looking for native binary at default path: $(_NativeBinaryPath)" />
+
+    <ItemGroup Condition="!Exists('$(_NativeBinaryPath)')">
+      <_CandidateBinary Condition="!$(CliRuntime.StartsWith('win-'))"
+                        Include="$(RepoRoot)artifacts/**/Aspire.Cli.$(CliRuntime)/**/aspire"
+                        Exclude="$(RepoRoot)artifacts/**/aspire.xml;$(RepoRoot)artifacts/**/aspire.dll;$(RepoRoot)artifacts/**/aspire.pdb" />
+      <_CandidateBinary Condition="$(CliRuntime.StartsWith('win-'))"
+                        Include="$(RepoRoot)artifacts/**/Aspire.Cli.$(CliRuntime)/**/aspire.exe" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="!Exists('$(_NativeBinaryPath)') and '@(_CandidateBinary)' != ''">
+      <_AllCandidates>@(_CandidateBinary->'%(FullPath)', ';')</_AllCandidates>
+      <_NativeBinaryPath>$(_AllCandidates.Split(';')[0])</_NativeBinaryPath>
+    </PropertyGroup>
+
+    <Error Condition="!Exists('$(_NativeBinaryPath)')"
+           Text="Could not find native binary for $(CliRuntime). Default: $(OutputPath)aspire. Search found: @(_CandidateBinary->'%(FullPath)', ', ')" />
+
+    <Message Importance="high" Text="Resolved native binary: $(_NativeBinaryPath)" />
+  </Target>
+
   <Target Name="_RunVersionCheck" Condition="'$(_CanExecuteNativeBinary)' == 'true'">
     <Message Importance="high" Text="Running 'aspire --version' on $(CliRuntime) binary..." />
     <Exec Command="$(_NativeBinaryPath) --version" />
@@ -139,7 +165,7 @@
   </Target>
 
   <Target Name="SmokeTestNativeBinary"
-          DependsOnTargets="_ValidateNativeBinaryFileSignatureOnUnix;_RunVersionCheck;_SkipVersionCheck">
+          DependsOnTargets="_ResolveSmokeTestBinaryPath;_ValidateNativeBinaryFileSignatureOnUnix;_RunVersionCheck;_SkipVersionCheck">
     <Message Importance="high" Text="Smoke test complete for $(CliRuntime)." />
   </Target>
 
