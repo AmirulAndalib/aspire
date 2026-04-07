@@ -208,4 +208,32 @@ public class AzurePrivateEndpointExtensionsTests
         // Each DNS Zone should have one VNet Link
         Assert.All(dnsZones, z => Assert.Single(z.VNetLinks));
     }
+
+    [Fact]
+    public void AzureOpenAIResource_ImplementsIAzurePrivateEndpointTarget()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+
+        var openai = builder.AddAzureOpenAI("openai");
+
+        Assert.IsAssignableFrom<IAzurePrivateEndpointTarget>(openai.Resource);
+
+        var target = (IAzurePrivateEndpointTarget)openai.Resource;
+        Assert.Equal(["account"], target.GetPrivateLinkGroupIds());
+        Assert.Equal("privatelink.openai.azure.com", target.GetPrivateDnsZoneName());
+    }
+
+    [Fact]
+    public void FoundryResource_ImplementsIAzurePrivateEndpointTarget()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+
+        var foundry = builder.AddFoundry("foundry");
+
+        Assert.IsAssignableFrom<IAzurePrivateEndpointTarget>(foundry.Resource);
+
+        var target = (IAzurePrivateEndpointTarget)foundry.Resource;
+        Assert.Equal(["account"], target.GetPrivateLinkGroupIds());
+        Assert.Equal("privatelink.cognitiveservices.azure.com", target.GetPrivateDnsZoneName());
+    }
 }
