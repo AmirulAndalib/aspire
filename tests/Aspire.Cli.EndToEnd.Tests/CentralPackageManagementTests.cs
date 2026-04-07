@@ -184,11 +184,6 @@ public sealed class CentralPackageManagementTests(ITestOutputHelper output)
                 return true;
             }
 
-            if (s.ContainsText($"[{counter.Value} ERR:"))
-            {
-                throw new InvalidOperationException("aspire add failed with an error");
-            }
-
             var successPromptSearcher = new CellPatternSearcher()
                 .FindPattern(counter.Value.ToString())
                 .RightText(" OK] $ ");
@@ -203,7 +198,7 @@ public sealed class CentralPackageManagementTests(ITestOutputHelper output)
             await auto.EnterAsync();
         }
 
-        await auto.WaitForSuccessPromptAsync(counter);
+        await auto.WaitForSuccessPromptFailFastAsync(counter);
 
         // Verify the AppHost project does not end up with a version-pinned Redis PackageReference.
         {

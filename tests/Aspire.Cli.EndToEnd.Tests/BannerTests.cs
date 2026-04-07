@@ -46,16 +46,10 @@ public sealed class BannerTests(ITestOutputHelper output)
         await auto.ClearScreenAsync(counter);
         await auto.TypeAsync("aspire cache clear");
         await auto.EnterAsync();
-        await auto.WaitUntilAsync(s =>
-        {
-            if (s.ContainsText($"[{counter.Value} ERR:"))
-            {
-                throw new InvalidOperationException("aspire cache clear failed with an error");
-            }
-
-            return s.ContainsText(RootCommandStrings.BannerWelcomeText) && s.ContainsText("Telemetry");
-        }, timeout: TimeSpan.FromSeconds(30), description: "waiting for banner and telemetry notice on first run");
-        await auto.WaitForSuccessPromptAsync(counter);
+        await auto.WaitUntilAsync(
+            s => s.ContainsText(RootCommandStrings.BannerWelcomeText) && s.ContainsText("Telemetry"),
+            timeout: TimeSpan.FromSeconds(30), description: "waiting for banner and telemetry notice on first run");
+        await auto.WaitForSuccessPromptFailFastAsync(counter);
         await auto.TypeAsync("exit");
         await auto.EnterAsync();
 
@@ -84,16 +78,10 @@ public sealed class BannerTests(ITestOutputHelper output)
         await auto.ClearScreenAsync(counter);
         await auto.TypeAsync("aspire --banner");
         await auto.EnterAsync();
-        await auto.WaitUntilAsync(s =>
-        {
-            if (s.ContainsText($"[{counter.Value} ERR:"))
-            {
-                throw new InvalidOperationException("aspire --banner failed with an error");
-            }
-
-            return s.ContainsText(RootCommandStrings.BannerWelcomeText) && s.ContainsText("CLI");
-        }, timeout: TimeSpan.FromSeconds(30), description: "waiting for banner with version info");
-        await auto.WaitForSuccessPromptAsync(counter);
+        await auto.WaitUntilAsync(
+            s => s.ContainsText(RootCommandStrings.BannerWelcomeText) && s.ContainsText("CLI"),
+            timeout: TimeSpan.FromSeconds(30), description: "waiting for banner with version info");
+        await auto.WaitForSuccessPromptFailFastAsync(counter);
         await auto.TypeAsync("exit");
         await auto.EnterAsync();
 
@@ -131,11 +119,6 @@ public sealed class BannerTests(ITestOutputHelper output)
         // before we check for the absence of the banner.
         await auto.WaitUntilAsync(s =>
         {
-            if (s.ContainsText($"[{counter.Value} ERR:"))
-            {
-                throw new InvalidOperationException("aspire --nologo --help failed with an error");
-            }
-
             // Verify the banner does NOT appear
             if (s.ContainsText(RootCommandStrings.BannerWelcomeText))
             {
@@ -146,7 +129,7 @@ public sealed class BannerTests(ITestOutputHelper output)
             // Only return true once the help hint is visible at the end of the output
             return s.ContainsText(HelpGroupStrings.HelpHint);
         }, timeout: TimeSpan.FromSeconds(30), description: "waiting for help output to complete");
-        await auto.WaitForSuccessPromptAsync(counter);
+        await auto.WaitForSuccessPromptFailFastAsync(counter);
         await auto.TypeAsync("exit");
         await auto.EnterAsync();
 
