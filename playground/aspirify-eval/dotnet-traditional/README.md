@@ -4,7 +4,7 @@ A traditional .NET LOB app with a Vue frontend. This app is **intentionally not 
 
 ## Architecture
 
-```
+```text
 frontend/          → Vue 3 + Vite (port 5173), proxies /api/* to BoardApi
 src/BoardApi/      → ASP.NET minimal API (port 5220), EF Core + Postgres, Redis caching
 src/AdminDashboard/→ Blazor Server (port 5230), shares DB with BoardApi
@@ -104,4 +104,3 @@ npm run dev
 - **API items**: http://localhost:5220/api/items — should return seeded board items
 - **Admin stats**: http://localhost:5230/admin/stats — should return item/user counts
 - **Cached count**: http://localhost:5220/api/cached-count — tests Redis connectivity
-

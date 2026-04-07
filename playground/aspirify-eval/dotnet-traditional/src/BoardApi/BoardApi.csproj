@@ -8,8 +8,8 @@
     <ProjectReference Include="..\BoardData\BoardData.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="StackExchange.Redis" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0-*" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0-*" />
+    <PackageReference Include="StackExchange.Redis" Version="2.*" />
   </ItemGroup>
 </Project>

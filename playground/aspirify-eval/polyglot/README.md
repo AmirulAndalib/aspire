@@ -4,7 +4,7 @@ A polyglot microservices app with Python, Go, C#, and React. This app is **inten
 
 ## Architecture
 
-```
+```text
 api-weather/    → Python FastAPI (port 8001), weather data with Redis caching
 api-geo/        → Go stdlib HTTP (port 8002), geocoding stub with external API key
 api-events/     → C# minimal API (port 8003), city events endpoint
@@ -106,4 +106,3 @@ npm run dev
 - **Events API**: http://localhost:8003/events — should return all events
 - **Events by city**: http://localhost:8003/events/seattle — should return Seattle events
 - **Health checks**: each service has `/health` returning its name and status
-

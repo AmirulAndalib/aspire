@@ -95,31 +95,28 @@ The `Aspire.Hosting.JavaScript` package provides three resource types. Pick the 
 |--------|-----|---------|
 | Vite app (has `vite.config.*`) | `AddViteApp(name, dir)` | Frontend SPA, Vite + React/Vue/Svelte |
 | App runs via package.json script only | `AddJavaScriptApp(name, dir, { runScriptName })` | CRA app, Next.js, monorepo root scripts |
-| App has a specific Node entry file (`.js`/`.ts`) | `AddNodeApp(name, dir, "path/to/entry.js")` | Express/Fastify API, Socket.IO server |
-| App needs different scripts for dev vs publish | `AddNodeApp(...)` + `.WithRunScript("dev")` + `.WithBuildScript("build")` | TypeScript server compiled to `dist/` |
+| App has a specific Node entry file (`.js`/`.ts`) and uses a dev script like `ts-node-dev` | `AddNodeApp(name, dir, "entry.js")` + `.WithRunScript("start:dev")` | Express/Fastify API, Socket.IO server |
 
 **Key distinctions:**
-- `AddNodeApp` separates the **production entry point** (`dist/index.js`) from the **dev script** (`WithRunScript("start:dev")`), which is critical for `aspire publish` to work correctly.
-- `AddJavaScriptApp` runs the same npm/yarn script in all modes — simpler but no dev/prod distinction.
+- `AddNodeApp` is for apps that run a **specific file** with Node (e.g., an Express server at `src/index.ts`). Use `.WithRunScript("start:dev")` to override the dev-time command (e.g., `ts-node-dev`).
+- `AddJavaScriptApp` runs a **package.json script** — simpler, good when the script handles everything.
 - `AddViteApp` is `AddJavaScriptApp` with Vite-specific defaults (auto-HTTPS config augmentation, `dev` as default script).
 
-**Always add `.WithBuildScript("build")` when the app has a TypeScript compilation or bundling step** — without it, `aspire publish` will fail because there's nothing to produce production assets.
+### JavaScript dev scripts
 
-### Dev vs publish scripts for JavaScript apps
+Use `.WithRunScript()` to control which package.json script runs during development:
 
 ```typescript
-// Express API with TypeScript: runs ts-node-dev in dev, compiled JS in prod
+// Express API with TypeScript: uses ts-node-dev for hot reload in dev
 const api = await builder
-    .addNodeApp("api", "./api", "dist/index.js")   // production entry point
-    .withRunScript("start:dev")                      // dev: runs "npm run start:dev"
-    .withBuildScript("build")                        // publish: runs "npm run build" first
+    .addNodeApp("api", "./api", "src/index.ts")
+    .withRunScript("start:dev")                      // runs "yarn start:dev" (ts-node-dev)
     .withYarn()
     .withHttpEndpoint({ env: "PORT" });
 
-// Vite frontend: vite dev server in dev, built assets in prod
+// Vite frontend: default "dev" script is fine, just add yarn
 const web = await builder
     .addViteApp("web", "./frontend")
-    .withBuildScript("build")                        // publish: runs "npm run build"
     .withYarn();
 ```
 

@@ -5,7 +5,6 @@ using System.CommandLine;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aspire.Cli.Agents;
 using Aspire.Cli.Configuration;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.Projects;
@@ -87,22 +86,17 @@ internal sealed class InitCommand : BaseCommand
             return dropResult;
         }
 
-        // Step 4: Install the appropriate init skill.
-        var initSkill = SkillDefinition.AspireInit;
-        var skillInstalled = await InstallInitSkillAsync(workingDirectory, initSkill, cancellationToken);
-        if (!skillInstalled)
-        {
-            InteractionService.DisplayError("Failed to install init skill.");
-            return ExitCodeConstants.FailedToCreateNewProject;
-        }
-
-        InteractionService.DisplayEmptyLine();
-        InteractionService.DisplayMessage(KnownEmojis.Sparkles, $"Init skill '{initSkill.Name}' installed. Ask your agent to run it to complete setup.");
-        InteractionService.DisplayEmptyLine();
-
-        // Step 5: Chain to aspire agent init for MCP server + evergreen skill configuration.
+        // Step 4: Chain to aspire agent init for MCP server + skill configuration.
+        // This prompt lets users choose which skills to install — including aspire-init.
         var workspaceRoot = solutionFile?.Directory ?? workingDirectory;
-        return await _agentInitCommand.PromptAndChainAsync(_hostEnvironment, InteractionService, ExitCodeConstants.Success, workspaceRoot, cancellationToken);
+        var agentInitResult = await _agentInitCommand.PromptAndChainAsync(_hostEnvironment, InteractionService, ExitCodeConstants.Success, workspaceRoot, cancellationToken);
+
+        // Step 5: Print closing message.
+        InteractionService.DisplayEmptyLine();
+        InteractionService.DisplayMessage(KnownEmojis.Sparkles, "Aspire skeleton created! Open your agent and ask it to complete setup.");
+        InteractionService.DisplaySubtleMessage("The aspire-init skill will guide your agent through wiring up projects, dependencies, and validation.");
+
+        return agentInitResult;
     }
 
     private async Task<int> DropCSharpSkeletonAsync(DirectoryInfo workingDirectory, FileInfo? solutionFile, CancellationToken cancellationToken)
@@ -205,10 +199,64 @@ internal sealed class InitCommand : BaseCommand
     {
         _ = cancellationToken;
 
-        // Determine the apphost filename based on language
-        var (appHostFileName, languageConfigValue) = languageId switch
+        // Determine the apphost filename and skeleton content based on language
+        var (appHostFileName, languageConfigValue, appHostContent) = languageId switch
         {
-            KnownLanguageId.TypeScript => ("apphost.ts", "typescript/nodejs"),
+            KnownLanguageId.TypeScript => ("apphost.ts", "typescript/nodejs", """
+                import { createBuilder } from './.modules/aspire.js';
+
+                const builder = await createBuilder();
+
+                // The aspire-init skill will wire up your projects here.
+
+                await builder.build().run();
+                """),
+            KnownLanguageId.Python => ("apphost.py", "python", """
+                import aspire
+
+                builder = aspire.create_builder()
+
+                # The aspire-init skill will wire up your projects here.
+
+                builder.build().run()
+                """),
+            KnownLanguageId.Go => ("apphost.go", "go", """
+                package main
+
+                import "aspire"
+
+                func main() {
+                	builder := aspire.CreateBuilder()
+
+                	// The aspire-init skill will wire up your projects here.
+
+                	builder.Build().Run()
+                }
+                """),
+            KnownLanguageId.Java => ("AppHost.java", "java", """
+                import com.microsoft.aspire.*;
+
+                public class AppHost {
+                    public static void main(String[] args) {
+                        var builder = Aspire.createBuilder(args);
+
+                        // The aspire-init skill will wire up your projects here.
+
+                        builder.build().run();
+                    }
+                }
+                """),
+            KnownLanguageId.Rust => ("apphost.rs", "rust", """
+                use aspire::*;
+
+                fn main() {
+                    let builder = create_builder();
+
+                    // The aspire-init skill will wire up your projects here.
+
+                    builder.build().run();
+                }
+                """),
             _ => throw new NotSupportedException($"Polyglot skeleton not yet supported for language: {languageId}")
         };
 
@@ -219,16 +267,6 @@ internal sealed class InitCommand : BaseCommand
             return Task.FromResult(ExitCodeConstants.Success);
         }
 
-        // Drop bare apphost.ts
-        var appHostContent = """
-            import { createBuilder } from './.modules/aspire.js';
-
-            const builder = await createBuilder();
-
-            // The aspire-init-typescript skill will wire up your projects here.
-
-            await builder.build().run();
-            """;
         File.WriteAllText(appHostPath, appHostContent);
         InteractionService.DisplayMessage(KnownEmojis.CheckMark, $"Created {appHostFileName}");
 
@@ -275,6 +313,43 @@ internal sealed class InitCommand : BaseCommand
             appHost["language"] = language;
         }
 
+        // Write default profiles with random ports for dashboard/OTLP/resource service.
+        // Matches the profile structure used by `aspire new` templates (see Templates/*/aspire.config.json).
+        // Normally scaffolding + codegen creates these, but our thin init skips scaffolding.
+        if (settings["profiles"] is null)
+        {
+            // Port ranges match CliTemplateFactory.GenerateRandomPorts()
+            var httpPort = Random.Shared.Next(15000, 15300);
+            var httpsPort = Random.Shared.Next(17000, 17300);
+            var otlpHttpPort = Random.Shared.Next(19000, 19300);
+            var otlpHttpsPort = Random.Shared.Next(21000, 21300);
+            var resourceHttpPort = Random.Shared.Next(20000, 20300);
+            var resourceHttpsPort = Random.Shared.Next(22000, 22300);
+
+            settings["profiles"] = new JsonObject
+            {
+                ["https"] = new JsonObject
+                {
+                    ["applicationUrl"] = $"https://localhost:{httpsPort};http://localhost:{httpPort}",
+                    ["environmentVariables"] = new JsonObject
+                    {
+                        ["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"] = $"https://localhost:{otlpHttpsPort}",
+                        ["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"] = $"https://localhost:{resourceHttpsPort}"
+                    }
+                },
+                ["http"] = new JsonObject
+                {
+                    ["applicationUrl"] = $"http://localhost:{httpPort}",
+                    ["environmentVariables"] = new JsonObject
+                    {
+                        ["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"] = $"http://localhost:{otlpHttpPort}",
+                        ["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"] = $"http://localhost:{resourceHttpPort}",
+                        ["ASPIRE_ALLOW_UNSECURED_TRANSPORT"] = "true"
+                    }
+                }
+            };
+        }
+
         var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
         File.WriteAllText(configPath, settings.ToJsonString(jsonOptions));
 
@@ -282,34 +357,4 @@ internal sealed class InitCommand : BaseCommand
         InteractionService.DisplayMessage(KnownEmojis.CheckMark, $"{verb} {AspireConfigFile.FileName}");
     }
 
-    private async Task<bool> InstallInitSkillAsync(DirectoryInfo workspaceRoot, SkillDefinition skill, CancellationToken cancellationToken)
-    {
-        // Install the init skill to the standard .agents/skills/ location (workspace level only).
-        var relativeSkillPath = Path.Combine(SkillLocation.Standard.RelativeSkillDirectory, skill.Name);
-        var fullSkillDir = Path.Combine(workspaceRoot.FullName, relativeSkillPath);
-
-        try
-        {
-            var skillFiles = await EmbeddedSkillResourceLoader.LoadTextFilesAsync(skill.EmbeddedResourceRoot!, cancellationToken);
-
-            foreach (var skillFile in skillFiles)
-            {
-                var fullPath = Path.Combine(fullSkillDir, skillFile.RelativePath);
-                var fileDir = Path.GetDirectoryName(fullPath);
-                if (!string.IsNullOrEmpty(fileDir) && !Directory.Exists(fileDir))
-                {
-                    Directory.CreateDirectory(fileDir);
-                }
-
-                await File.WriteAllTextAsync(fullPath, skillFile.Content, cancellationToken);
-            }
-
-            return true;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
-        {
-            InteractionService.DisplayError($"Failed to install skill '{skill.Name}': {ex.Message}");
-            return false;
-        }
-    }
 }
