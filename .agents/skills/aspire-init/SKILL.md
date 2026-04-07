@@ -80,7 +80,7 @@ Before writing any builder call:
 
 1. Run `aspire docs search "<technology>"` (e.g., `aspire docs search "golang"`, `aspire docs search "python"`)
 2. Run `aspire docs get "<slug>"` to read the full API surface and installation instructions
-3. Run `aspire list integrations` to see all available packages (first-party and community toolkit)
+3. Run `aspire list integrations` to see all available packages (requires Aspire MCP — if unavailable, rely on docs search)
 4. Install with `aspire add <integration-name>` (e.g., `aspire add communitytoolkit-golang`)
 5. For TypeScript, run `aspire restore` then check `.modules/aspire.ts` to see what's available
 
@@ -696,6 +696,7 @@ aspire docs get "redis-integration"
 aspire docs get "go-integration"
 
 # List ALL available integrations (first-party and community toolkit)
+# Note: requires the Aspire MCP server to be connected. If this fails, use aspire docs search instead.
 aspire list integrations
 ```
 
