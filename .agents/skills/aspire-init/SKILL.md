@@ -14,7 +14,8 @@ This is a **one-time setup skill**. It completes the Aspire initialization that 
 The default stance is **adapt the AppHost to fit the app, not the other way around**. The user's services already work — the goal is to model them in Aspire without breaking anything.
 
 - Prefer `WithEnvironment()` to match existing env var names over asking users to rename vars in their code
-- Use `WithHttpsEndpoint(port: <existing-port>)` to match hardcoded ports rather than changing the service
+- Prefer Aspire-managed ports (`WithHttpsEndpoint(env: "PORT")`, `WithHttpEndpoint(env: "PORT")`, or no explicit port when supported) over fixed ports
+- Only preserve a specific port when the user confirms it is actually significant (for example: external callbacks, OAuth redirect URIs, browser extensions, webhooks, or a repo-documented hard requirement)
 - Map existing `docker-compose.yml` config 1:1 before optimizing
 - Don't restructure project directories, rename files, or change build scripts
 
@@ -25,8 +26,8 @@ Sometimes a small code change unlocks significantly better Aspire integration. W
 - **Connection strings**: A service reads `DATABASE_URL` but Aspire injects `ConnectionStrings__mydb`. You can use `WithEnvironment("DATABASE_URL", db.Resource.ConnectionStringExpression)` (zero code change) or suggest the service reads from config so `WithReference(db)` just works (enables service discovery, health checks, auto-retry).
   → Ask: *"Your API reads DATABASE_URL. I can map that with WithEnvironment (no code change) or you could switch to reading ConnectionStrings:mydb which unlocks WithReference and automatic service discovery. Which do you prefer?"*
 
-- **Port binding**: A service hardcodes `PORT=3000`. You can match it with `WithHttpsEndpoint(port: 3000)` (zero change) or suggest reading from env so Aspire can assign ports dynamically and avoid conflicts.
-  → Ask: *"Your frontend hardcodes port 3000. I can match that, but if you read PORT from env instead, Aspire can assign ports dynamically and avoid conflicts when running multiple services. Want me to make that change?"*
+- **Port binding**: A service hardcodes `PORT=3000`. You can preserve that with `WithHttpsEndpoint(port: 3000)` (zero code change) or switch the service to read `PORT` from env so Aspire can manage ports dynamically and avoid conflicts.
+  → Ask: *"Your frontend is currently fixed to port 3000. Unless that exact port is important for something external, I recommend switching it to read PORT from env so Aspire can manage the port and avoid conflicts. If you need 3000 to stay stable, I can preserve it. Which do you want?"*
 
 - **OTel setup**: Service has its own tracing config pointing to Jaeger. You can leave it (Aspire won't show its traces) or suggest switching the exporter to read `OTEL_EXPORTER_OTLP_ENDPOINT` (which Aspire injects).
   → Ask: *"Your API exports traces to Jaeger directly. I can leave that, or switch it to use the OTEL_EXPORTER_OTLP_ENDPOINT env var so traces show up in the Aspire dashboard. The Jaeger endpoint would still work in non-Aspire environments. Want me to update it?"*
@@ -40,7 +41,7 @@ Sometimes a small code change unlocks significantly better Aspire integration. W
 
 ### When in doubt, ask
 
-If you're unsure whether something is a service, whether two services depend on each other, whether a port is significant, or whether a Docker Compose service should be modeled — ask. Don't guess at architectural intent.
+If you're unsure whether something is a service, whether two services depend on each other, whether a port is truly significant, or whether a Docker Compose service should be modeled — ask. Don't guess at architectural intent.
 
 ### Always use latest Aspire APIs — verify before you write
 
@@ -130,6 +131,8 @@ Not all frameworks read ports from env vars the same way:
 | Vite | `--port` CLI arg or `server.port` in config | `.withHttpEndpoint({ env: "PORT" })` — Aspire's Vite integration handles this automatically |
 | Next.js | `PORT` env or `--port` | `.withHttpEndpoint({ env: "PORT" })` |
 | CRA | `PORT` env | `.withHttpEndpoint({ env: "PORT" })` |
+
+When the framework supports reading the port from an env var or Aspire already handles it, **prefer that over pinning a fixed port**. Managed ports make repeated local runs more reliable and work better when multiple services or multiple Aspire apps are running.
 
 **Suppress auto-browser-open:** Many dev servers (Vite, CRA, Next.js) auto-open a browser on start. Add `.withEnvironment("BROWSER", "none")` to prevent this in Aspire-managed apps. Vite also respects `server.open: false` in its config.
 
@@ -899,6 +902,16 @@ var api = builder.AddCSharpApp("api", "../src/Api")
 
 **Prefer HTTPS by default.** Use `WithHttpsEndpoint()` for all services and fall back to `WithHttpEndpoint()` only if HTTPS doesn't work for that resource.
 
+**Prefer Aspire-managed ports by default.** For most local development scenarios, let Aspire assign the port and inject it into the service. This avoids port collisions, makes multiple AppHosts easier to run side-by-side, and keeps cross-service wiring flexible.
+
+**Ask before pinning a fixed port.** If the repo already uses a hardcoded port, do **not** silently preserve it just because it exists. Ask whether that port is actually required. Good reasons to keep a fixed port include:
+
+- OAuth/callback URLs or external webhooks that expect a stable local address
+- Browser extensions or desktop/mobile clients that are already hardcoded to a specific port
+- Repo docs, scripts, or test tooling that explicitly depend on that exact port
+
+If none of those apply, steer the user toward managed ports.
+
 **`WithHttpsEndpoint()`** — expose an HTTPS endpoint. For services that serve traffic:
 
 ```csharp
@@ -906,7 +919,7 @@ var api = builder.AddCSharpApp("api", "../src/Api")
 var api = builder.AddCSharpApp("api", "../src/Api")
     .WithHttpsEndpoint();
 
-// Use a specific port
+// Use a specific port only when the user confirms it is required
 var api = builder.AddCSharpApp("api", "../src/Api")
     .WithHttpsEndpoint(port: 5001);
 
@@ -961,6 +974,10 @@ var frontend = builder.AddViteApp("frontend", "../frontend")
 - `.WithHttpsEndpoint(env: "PORT")` (C#)
 
 Aspire assigns a port and injects it as the specified environment variable. The service should read it and listen on that port.
+
+**Recommended ask when a repo already hardcodes ports:**
+
+> "I found this service pinned to port 3000 today. Unless that exact port is needed for an external callback or another hard requirement, I recommend switching it to read PORT from env and letting Aspire manage the port. That avoids collisions and makes the AppHost more portable. Should I keep 3000 or make it Aspire-managed?"
 
 ### Cross-service environment variable wiring
 
@@ -1120,4 +1137,3 @@ var db = builder.AddPostgres("pg")
 const db = await builder.addPostgres("pg")
     .withDataVolume("pg-data");
 ```
-
