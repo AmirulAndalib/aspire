@@ -103,7 +103,7 @@ This means:
 ```csharp
 // Instead of the service hardcoding "https://api.stripe.com"
 var stripeUrl = builder.AddParameter("stripe-url", secret: false);
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithEnvironment("STRIPE_API_URL", stripeUrl);
 ```
 
@@ -126,16 +126,21 @@ Many projects use `.env` files for configuration. These should be migrated into 
 var db = builder.AddPostgres("pg").AddDatabase("mydb");
 var stripeKey = builder.AddParameter("stripe-key", secret: true);
 
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithReference(db)                              // replaces DATABASE_URL
     .WithEnvironment("STRIPE_KEY", stripeKey)       // secret, stored securely
     .WithEnvironment("DEBUG", "true");              // plain config
 ```
 
-**The goal is to eliminate `.env` files entirely** so all configuration flows through the AppHost. This means:
+**The goal is to make `.env` files unnecessary** so all configuration flows through the AppHost. This means:
 - No more "did you copy the .env.example?" onboarding friction
 - Secrets are stored securely (not in plaintext files that get accidentally committed)
 - All service config is visible in one place (the dashboard)
+
+**Important: Never delete `.env` files automatically.** After migrating all values into the AppHost, explicitly ask the user:
+> "I've migrated all the values from your `.env` file into the AppHost. The `.env` file is no longer needed for running via Aspire, but it still works for non-Aspire workflows. Would you like me to remove it, or keep it around?"
+
+Some teams still need `.env` files for CI, Docker Compose, or developers who haven't switched to Aspire yet. Respect that.
 
 Present this as a recommendation. Walk through the `.env` contents with the user and classify each variable together. Some values may be intentionally local-only and the user may prefer to keep them — that's fine.
 
@@ -158,7 +163,7 @@ Read `aspire.config.json` at the repository root. Key fields:
 For C# AppHosts, there are two sub-modes:
 
 - **Single-file mode**: `appHost.path` points directly to an `apphost.cs` file using the `#:sdk` directive. No `.csproj` needed.
-- **Full project mode**: `appHost.path` points to a directory containing a `.csproj` and `apphost.cs`. This was created because a `.sln`/`.slnx` was found.
+- **Full project mode**: `appHost.path` points to a directory containing a `.csproj` and `apphost.cs`. This was created because a `.sln`/`.slnx` was found — full project mode is required so the AppHost can be opened in Visual Studio alongside the rest of the solution.
 
 Check which mode you're in by looking at what exists at the `appHost.path` location.
 
@@ -172,10 +177,11 @@ Analyze the repository to discover all projects and services that could be model
 
 **What to look for:**
 
-- **.NET projects**: `*.csproj` and `*.fsproj` files. For each, run:
+- **.NET projects**: `*.csproj` files. For each, run:
   - `dotnet msbuild <project> -getProperty:OutputType` — `Exe`/`WinExe` = runnable service, `Library` = skip
   - `dotnet msbuild <project> -getProperty:TargetFramework` — must be `net8.0` or newer
   - `dotnet msbuild <project> -getProperty:IsAspireHost` — skip if `true`
+- **Solution files**: `*.sln` or `*.slnx` — if found, the C# AppHost **must** use full project mode (with `.csproj`) so it can be opened in Visual Studio alongside the rest of the solution. This is a hard requirement.
 - **Node.js/TypeScript apps**: directories with `package.json` containing a `start`, `dev`, or `main`/`module` entry
 - **Python apps**: directories with `pyproject.toml`, `requirements.txt`, or `main.py`/`app.py`
 - **Go apps**: directories with `go.mod`
@@ -255,7 +261,7 @@ const frontend = await builder
 
 // .NET project
 const dotnetSvc = await builder
-    .addProject("catalog", "./src/Catalog/Catalog.csproj");
+    .addCsharpApp("catalog", "./src/Catalog");
 
 // Dockerfile-based service
 const worker = await builder
@@ -274,15 +280,11 @@ await builder.build().run();
 #:sdk Aspire.AppHost.Sdk@<version>
 #:property IsAspireHost=true
 
-// Project references
-#:project ../src/Api/Api.csproj
-#:project ../src/Web/Web.csproj
-
 var builder = DistributedApplication.CreateBuilder(args);
 
-var api = builder.AddProject<Projects.Api>("api");
+var api = builder.AddCsharpApp("api", "../src/Api");
 
-var web = builder.AddProject<Projects.Web>("web")
+var web = builder.AddCsharpApp("web", "../src/Web")
     .WithReference(api)
     .WaitFor(api);
 
@@ -296,9 +298,9 @@ Edit `apphost.cs`:
 ```csharp
 var builder = DistributedApplication.CreateBuilder(args);
 
-var api = builder.AddProject<Projects.Api>("api");
+var api = builder.AddCsharpApp("api", "../src/Api");
 
-var web = builder.AddProject<Projects.Web>("web")
+var web = builder.AddCsharpApp("web", "../src/Web")
     .WithReference(api)
     .WaitFor(api);
 
@@ -686,18 +688,18 @@ This section covers the patterns you'll need when writing Step 4 (Wire up the Ap
 ```csharp
 // C#: api gets the database connection string injected automatically
 var db = builder.AddPostgres("pg").AddDatabase("mydb");
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithReference(db);
 
 // C#: frontend gets service discovery URL for api
-var frontend = builder.AddProject<Projects.Web>("web")
+var frontend = builder.AddCsharpApp("web", "../src/Web")
     .WithReference(api);
 ```
 
 ```typescript
 // TypeScript equivalent
 const db = await builder.addPostgres("pg").addDatabase("mydb");
-const api = await builder.addProject("api", "./src/Api/Api.csproj")
+const api = await builder.addCsharpApp("api", "./src/Api")
     .withReference(db);
 ```
 
@@ -708,7 +710,7 @@ const api = await builder.addProject("api", "./src/Api/Api.csproj")
 **`WithEnvironment()`** injects raw environment variables. Use this for custom config that isn't a service reference:
 
 ```csharp
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithEnvironment("FEATURE_FLAG_X", "true")
     .WithEnvironment("API_KEY", someParameter);
 ```
@@ -724,11 +726,11 @@ var api = builder.AddProject<Projects.Api>("api")
 
 ```csharp
 // Let Aspire assign a random port (recommended for most cases)
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithHttpEndpoint();
 
 // Use a specific port
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithHttpEndpoint(port: 5000);
 
 // For non-.NET services that read the port from an env var
@@ -741,7 +743,7 @@ var nodeApi = builder.AddNpmApp("api", "../api", "start")
 **`WithEndpoint()`** — expose a non-HTTP endpoint (gRPC, TCP, custom protocols):
 
 ```csharp
-var grpcService = builder.AddProject<Projects.GrpcService>("grpc")
+var grpcService = builder.AddCsharpApp("grpc", "../src/GrpcService")
     .WithEndpoint("grpc", endpoint =>
     {
         endpoint.Port = 5050;
@@ -769,7 +771,7 @@ Customize how endpoints appear in the Aspire dashboard:
 
 ```csharp
 // Named endpoints for clarity
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithHttpEndpoint(name: "public", port: 8080)
     .WithHttpEndpoint(name: "internal", port: 8081);
 ```
@@ -781,7 +783,7 @@ var frontend = builder.AddNpmApp("frontend", "../frontend", "dev")
     .WithHttpEndpoint(env: "PORT")
     .WithUrlForEndpoint("http", url => url.Host = "frontend.dev.localhost");
 
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithUrlForEndpoint("http", url => url.Host = "api.dev.localhost");
 ```
 
@@ -795,7 +797,7 @@ Use `aspire docs search "url for endpoint"` to check the latest API shape if uns
 
 ```csharp
 var db = builder.AddPostgres("pg").AddDatabase("mydb");
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithReference(db)
     .WaitFor(db);  // Don't start api until db is healthy
 ```
@@ -805,11 +807,11 @@ Always pair `WithReference()` with `WaitFor()` for infrastructure dependencies (
 **`WaitForCompletion()`** — wait for a resource to run to completion (exit successfully). Use for init containers, database migrations, or seed data scripts:
 
 ```csharp
-var migration = builder.AddProject<Projects.MigrationRunner>("migration")
+var migration = builder.AddCsharpApp("migration", "../src/MigrationRunner")
     .WithReference(db)
     .WaitFor(db);
 
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithReference(db)
     .WaitFor(db)
     .WaitForCompletion(migration);  // Don't start until migration finishes
@@ -863,9 +865,9 @@ This happens automatically for databases added to a server resource. For custom 
 
 ```csharp
 var backend = builder.AddResource(new ContainerResource("backend-group"));
-var api = builder.AddProject<Projects.Api>("api")
+var api = builder.AddCsharpApp("api", "../src/Api")
     .WithParentRelationship(backend);
-var worker = builder.AddProject<Projects.Worker>("worker")
+var worker = builder.AddCsharpApp("worker", "../src/Worker")
     .WithParentRelationship(backend);
 ```
 
