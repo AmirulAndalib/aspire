@@ -29,4 +29,4 @@ When reviewing PRs that add or modify tests, check for:
 
 ## Shared Test Dependencies
 
-When writing tests, prefer using shared test service implementations from a common location (e.g., `Aspire.Cli.Tests/TestServices`) rather than creating private implementation classes within individual test files. Reusing existing test fakes and helpers keeps tests consistent, reduces duplication, and makes maintenance easier. Do not create private test classes when a shared one already exists or can be extended.
+When writing tests, prefer using shared test service implementations (e.g., project-level `TestServices/` or `Helpers/` directories, or the cross-project `tests/Shared/` folder) rather than creating private implementation classes within individual test files. Reusing existing test fakes and helpers keeps tests consistent, reduces duplication, and makes maintenance easier. Do not create private test classes when a shared one already exists or can be extended.
