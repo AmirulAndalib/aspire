@@ -105,7 +105,7 @@ var pyApi = builder.AddUvicornApp("py-api", "../py-api", "app:main")
     .WithHttpsDeveloperCertificate();
 
 // .NET — HTTPS works out of the box, no extra config needed
-var api = builder.AddCsharpApp("api", "../src/Api");
+var api = builder.AddCSharpApp("api", "../src/Api");
 ```
 
 > **Note**: These certificate APIs are experimental (`ASPIRECERTIFICATES001`). Use `aspire docs search "certificate configuration"` to check the latest API shape. If `WithHttpsDeveloperCertificate` causes errors for a resource type, fall back to `WithHttpEndpoint()`.
@@ -125,7 +125,7 @@ This means:
 ```csharp
 // Instead of the service hardcoding "https://api.stripe.com"
 var stripeUrl = builder.AddParameter("stripe-url", secret: false);
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithEnvironment("STRIPE_API_URL", stripeUrl);
 ```
 
@@ -148,7 +148,7 @@ Many projects use `.env` files for configuration. These should be migrated into 
 var db = builder.AddPostgres("pg").AddDatabase("mydb");
 var stripeKey = builder.AddParameter("stripe-key", secret: true);
 
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithReference(db)                              // replaces DATABASE_URL
     .WithEnvironment("STRIPE_KEY", stripeKey)       // secret, stored securely
     .WithEnvironment("DEBUG", "true");              // plain config
@@ -286,7 +286,7 @@ const frontend = await builder
 
 // .NET project — HTTPS works out of the box
 const dotnetSvc = await builder
-    .addCsharpApp("catalog", "./src/Catalog");
+    .addCSharpApp("catalog", "./src/Catalog");
 
 // Dockerfile-based service
 const worker = await builder
@@ -308,9 +308,9 @@ await builder.build().run();
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var api = builder.AddCsharpApp("api", "../src/Api");
+var api = builder.AddCSharpApp("api", "../src/Api");
 
-var web = builder.AddCsharpApp("web", "../src/Web")
+var web = builder.AddCSharpApp("web", "../src/Web")
     .WithReference(api)
     .WaitFor(api);
 
@@ -324,9 +324,9 @@ Edit `apphost.cs`:
 ```csharp
 var builder = DistributedApplication.CreateBuilder(args);
 
-var api = builder.AddCsharpApp("api", "../src/Api");
+var api = builder.AddCSharpApp("api", "../src/Api");
 
-var web = builder.AddCsharpApp("web", "../src/Web")
+var web = builder.AddCSharpApp("web", "../src/Web")
     .WithReference(api)
     .WaitFor(api);
 
@@ -732,18 +732,18 @@ This section covers the patterns you'll need when writing Step 4 (Wire up the Ap
 ```csharp
 // C#: api gets the database connection string injected automatically
 var db = builder.AddPostgres("pg").AddDatabase("mydb");
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithReference(db);
 
 // C#: frontend gets service discovery URL for api
-var frontend = builder.AddCsharpApp("web", "../src/Web")
+var frontend = builder.AddCSharpApp("web", "../src/Web")
     .WithReference(api);
 ```
 
 ```typescript
 // TypeScript equivalent
 const db = await builder.addPostgres("pg").addDatabase("mydb");
-const api = await builder.addCsharpApp("api", "./src/Api")
+const api = await builder.addCSharpApp("api", "./src/Api")
     .withReference(db);
 ```
 
@@ -754,7 +754,7 @@ const api = await builder.addCsharpApp("api", "./src/Api")
 **`WithEnvironment()`** injects raw environment variables. Use this for custom config that isn't a service reference:
 
 ```csharp
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithEnvironment("FEATURE_FLAG_X", "true")
     .WithEnvironment("API_KEY", someParameter);
 ```
@@ -772,11 +772,11 @@ var api = builder.AddCsharpApp("api", "../src/Api")
 
 ```csharp
 // Let Aspire assign a random port (recommended for most cases)
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithHttpsEndpoint();
 
 // Use a specific port
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithHttpsEndpoint(port: 5001);
 
 // For services that read the port from an env var
@@ -808,7 +808,7 @@ var legacy = builder.AddJavaScriptApp("legacy", "../legacy", "start")
 **`WithEndpoint()`** — expose a non-HTTP endpoint (gRPC, TCP, custom protocols):
 
 ```csharp
-var grpcService = builder.AddCsharpApp("grpc", "../src/GrpcService")
+var grpcService = builder.AddCSharpApp("grpc", "../src/GrpcService")
     .WithEndpoint("grpc", endpoint =>
     {
         endpoint.Port = 5050;
@@ -837,7 +837,7 @@ Customize how endpoints appear in the Aspire dashboard:
 
 ```csharp
 // Named endpoints for clarity
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithHttpsEndpoint(name: "public", port: 8443)
     .WithHttpsEndpoint(name: "internal", port: 8444);
 ```
@@ -850,7 +850,7 @@ var frontend = builder.AddViteApp("frontend", "../frontend")
     .WithHttpsEndpoint(env: "PORT")
     .WithUrlForEndpoint("https", url => url.Host = "frontend.dev.localhost");
 
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithUrlForEndpoint("https", url => url.Host = "api.dev.localhost");
 ```
 
@@ -864,7 +864,7 @@ Use `aspire docs search "url for endpoint"` to check the latest API shape if uns
 
 ```csharp
 var db = builder.AddPostgres("pg").AddDatabase("mydb");
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithReference(db)
     .WaitFor(db);  // Don't start api until db is healthy
 ```
@@ -874,11 +874,11 @@ Always pair `WithReference()` with `WaitFor()` for infrastructure dependencies (
 **`WaitForCompletion()`** — wait for a resource to run to completion (exit successfully). Use for init containers, database migrations, or seed data scripts:
 
 ```csharp
-var migration = builder.AddCsharpApp("migration", "../src/MigrationRunner")
+var migration = builder.AddCSharpApp("migration", "../src/MigrationRunner")
     .WithReference(db)
     .WaitFor(db);
 
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithReference(db)
     .WaitFor(db)
     .WaitForCompletion(migration);  // Don't start until migration finishes
@@ -932,9 +932,9 @@ This happens automatically for databases added to a server resource. For custom 
 
 ```csharp
 var backend = builder.AddResource(new ContainerResource("backend-group"));
-var api = builder.AddCsharpApp("api", "../src/Api")
+var api = builder.AddCSharpApp("api", "../src/Api")
     .WithParentRelationship(backend);
-var worker = builder.AddCsharpApp("worker", "../src/Worker")
+var worker = builder.AddCSharpApp("worker", "../src/Worker")
     .WithParentRelationship(backend);
 ```
 
