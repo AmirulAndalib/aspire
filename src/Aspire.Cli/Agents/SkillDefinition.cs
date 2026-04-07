@@ -162,5 +162,5 @@ internal sealed class SkillDefinition
     /// <summary>
     /// Gets all available skill definitions.
     /// </summary>
-    public static IReadOnlyList<SkillDefinition> All { get; } = [Aspire, PlaywrightCli, DotnetInspect, AspireInit];
+    public static IReadOnlyList<SkillDefinition> All { get; } = [Aspire, AspireInit, PlaywrightCli, DotnetInspect];
 }
