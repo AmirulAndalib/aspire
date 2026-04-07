@@ -107,4 +107,40 @@
            vs regex: $(FileSignatureRegex)" />
   </Target>
 
+  <!--
+    Smoke test target: validates the native binary after build.
+    1. File signature check (Unix only, works for cross-compiled binaries)
+    2. aspire - -version execution (only when host can run the binary)
+
+    _CanExecuteNativeBinary is true only for exact OS+arch matches:
+      linux-x64 on linux-x64 glibc host, osx-arm64 on osx-arm64 host, win-x64 on win-x64 host
+    musl binaries cannot run on glibc hosts so are excluded.
+  -->
+  <PropertyGroup>
+    <!-- Host architecture as a RID-style string (X64 -> x64, Arm64 -> arm64) -->
+    <_HostArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</_HostArch>
+
+    <!-- Determine whether the binary can actually execute on this machine.
+         PublishNativeAot already ensures same-OS; we additionally check:
+         - Architecture match (CliRuntime must end with the host arch)
+         - Not a musl binary on a glibc host (linux-musl-* can't run on standard linux) -->
+    <_CanExecuteNativeBinary Condition="'$(PublishNativeAot)' == 'true'
+      and $(CliRuntime.EndsWith('$(_HostArch)'))
+      and !$(CliRuntime.Contains('musl'))">true</_CanExecuteNativeBinary>
+  </PropertyGroup>
+
+  <Target Name="_RunVersionCheck" Condition="'$(_CanExecuteNativeBinary)' == 'true'">
+    <Message Importance="high" Text="Running 'aspire --version' on $(CliRuntime) binary..." />
+    <Exec Command="$(_NativeBinaryPath) --version" />
+  </Target>
+
+  <Target Name="_SkipVersionCheck" Condition="'$(_CanExecuteNativeBinary)' != 'true'">
+    <Message Importance="high" Text="Skipping 'aspire --version' for $(CliRuntime) — cannot execute on this host (arch=$(_HostArch), nativeAot=$(PublishNativeAot))." />
+  </Target>
+
+  <Target Name="SmokeTestNativeBinary"
+          DependsOnTargets="_ValidateNativeBinaryFileSignatureOnUnix;_RunVersionCheck;_SkipVersionCheck">
+    <Message Importance="high" Text="Smoke test complete for $(CliRuntime)." />
+  </Target>
+
 </Project>

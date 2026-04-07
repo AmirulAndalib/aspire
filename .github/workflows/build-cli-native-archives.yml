@@ -144,6 +144,30 @@ jobs:
           /p:BundlePayloadPath=${{ github.workspace }}/artifacts/bundle/aspire-ci-bundlepayload-${{ matrix.targets.rids }}.tar.gz
           ${{ inputs.versionOverrideArg }}
 
+      - name: Smoke test CLI binary (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: >
+          .\dotnet.cmd
+          msbuild
+          eng/clipack/Aspire.Cli.${{ matrix.targets.rids }}.csproj
+          /t:SmokeTestNativeBinary
+          /p:Configuration=${{ inputs.configuration }}
+          /bl:${{ github.workspace }}/artifacts/log/${{ inputs.configuration }}/SmokeTest.binlog
+          ${{ inputs.versionOverrideArg }}
+
+      - name: Smoke test CLI binary (Unix)
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: >
+          ./dotnet.sh
+          msbuild
+          eng/clipack/Aspire.Cli.${{ matrix.targets.rids }}.csproj
+          /t:SmokeTestNativeBinary
+          /p:Configuration=${{ inputs.configuration }}
+          /bl:${{ github.workspace }}/artifacts/log/${{ inputs.configuration }}/SmokeTest.binlog
+          ${{ inputs.versionOverrideArg }}
+
       - name: Upload CLI archives
         if: success()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0

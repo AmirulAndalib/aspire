@@ -110,6 +110,15 @@ jobs:
               SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
           - script: >-
+              $(Build.SourcesDirectory)/$(dotnetScript)
+              msbuild
+              $(Build.SourcesDirectory)/eng/clipack/Aspire.Cli.${{ targetRid }}.csproj
+              /t:SmokeTestNativeBinary
+              /p:Configuration=$(_BuildConfig)
+              /bl:$(Build.Arcade.LogsPath)SmokeTest.${{ replace(targetRid, '-', '_') }}.binlog
+            displayName: 🟣Smoke test CLI binary (${{ targetRid }})
+
+          - script: >-
               mkdir -p $(Build.Arcade.ArtifactsPath)packages/$(_BuildConfig)/Shipping &&
               cp $(Build.SourcesDirectory)/artifacts/tool-packages/${{ targetRid }}/Aspire.Cli*.nupkg
               $(Build.Arcade.ArtifactsPath)packages/$(_BuildConfig)/Shipping/
