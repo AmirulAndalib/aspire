@@ -19,7 +19,6 @@ public sealed class DockerDeploymentTests(ITestOutputHelper output)
     private const string ProjectName = "AspireDockerDeployTest";
 
     [Fact]
-    [ActiveIssue("https://github.com/microsoft/aspire/issues/15930")]
     [QuarantinedTest("https://github.com/microsoft/aspire/issues/15882")]
     public async Task CreateAndDeployToDockerCompose()
     {
@@ -140,7 +139,6 @@ builder.Build().Run();
     }
 
     [Fact]
-    [ActiveIssue("https://github.com/microsoft/aspire/issues/15930")]
     [QuarantinedTest("https://github.com/microsoft/aspire/issues/15871")]
     public async Task CreateAndDeployToDockerComposeInteractive()
     {
