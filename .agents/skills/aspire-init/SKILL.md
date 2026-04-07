@@ -198,6 +198,7 @@ Analyze the repository to discover all projects and services that could be model
   - Prefer typed Aspire integrations over raw `AddContainer()` when the image matches a known integration (use `aspire docs search` to check). For example, `postgres:16` → `AddPostgres()`, `redis:7` → `AddRedis()`, `rabbitmq:3` → `AddRabbitMQ()`.
 - **Static frontends**: Vite, Next.js, Create React App, or other frontend framework configs
 - **`.env` files**: Scan for `.env`, `.env.local`, `.env.development`, `.env.example`, etc. These contain configuration that should be migrated into AppHost parameters (see Guiding Principles above)
+- **Package manager**: Detect which Node.js package manager the repo uses by looking for lock files: `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, `package-lock.json` or none → npm. Use the detected package manager for all install/run commands throughout this skill.
 
 **Ignore:**
 
@@ -357,33 +358,42 @@ Always check `aspire list integrations` and `aspire docs search "<language>"` to
 
 #### TypeScript AppHost
 
-**package.json** — if one exists at the root, augment it (do not overwrite). Add/merge:
+**package.json** — if one exists at the root, augment it (do not overwrite). Add/merge these scripts that delegate to the Aspire CLI:
 
 ```json
 {
   "type": "module",
   "scripts": {
-    "start": "npx tsc && node --enable-source-maps apphost.js"
+    "dev": "aspire run",
+    "build": "tsc",
+    "watch": "tsc --watch"
   }
 }
 ```
 
-If no root `package.json` exists, create a minimal one:
+If no root `package.json` exists, create a minimal one matching the canonical Aspire template:
 
 ```json
 {
-  "name": "<repo-name>-apphost",
-  "version": "1.0.0",
+  "name": "<repo-name>",
+  "private": true,
   "type": "module",
   "scripts": {
-    "start": "npx tsc && node --enable-source-maps apphost.js"
+    "dev": "aspire run",
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
   }
 }
 ```
+
+**Important**: Scripts should point to `aspire run`/`aspire start` — the Aspire CLI handles TypeScript compilation internally. Do not use `npx tsc && node apphost.js` patterns.
 
 Never overwrite existing `scripts`, `dependencies`, or `devDependencies` — merge only. Do not manually add Aspire SDK packages — `aspire restore` handles those.
 
-Run `aspire restore` to generate the `.modules/` directory with TypeScript SDK bindings, then `npm install`.
+Run `aspire restore` to generate the `.modules/` directory with TypeScript SDK bindings, then install dependencies with the repo's package manager (`npm install`, `pnpm install`, or `yarn`).
 
 **tsconfig.json** — augment if it exists:
 
@@ -456,7 +466,10 @@ If they say yes, follow the per-language guide below.
 #### Node.js/TypeScript services
 
 ```bash
+# Use the repo's package manager (npm/pnpm/yarn)
 npm install @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node @opentelemetry/exporter-otlp-grpc
+# or: pnpm add ...
+# or: yarn add ...
 ```
 
 Create an instrumentation file (e.g., `instrumentation.ts` or `instrumentation.js`):
@@ -605,7 +618,7 @@ Check that:
 
 If it fails, diagnose and iterate. Common issues:
 
-- **TypeScript**: missing `npm install`, TS compilation errors, port conflicts
+- **TypeScript**: missing dependency install, TS compilation errors, port conflicts
 - **C# project mode**: missing project references, NuGet restore needed, TFM mismatches, build errors
 - **C# single-file**: `#:project` paths wrong, missing SDK directive
 - **Both**: missing environment variables, port conflicts
