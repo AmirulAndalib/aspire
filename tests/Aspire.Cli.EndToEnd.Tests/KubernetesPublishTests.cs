@@ -33,9 +33,6 @@ public sealed class KubernetesPublishTests(ITestOutputHelper output)
     {
         using var workspace = TemporaryWorkspace.Create(output);
 
-        var prNumber = CliE2ETestHelpers.GetRequiredPrNumber();
-        var commitSha = CliE2ETestHelpers.GetRequiredCommitSha();
-        var isCI = CliE2ETestHelpers.IsRunningInCI;
         var clusterName = GenerateUniqueClusterName();
 
         output.WriteLine($"Using KinD version: {KindVersion}");
@@ -52,11 +49,11 @@ public sealed class KubernetesPublishTests(ITestOutputHelper output)
         // Prepare environment
         await auto.PrepareEnvironmentAsync(workspace, counter);
 
-        if (isCI)
+        if (CliE2ETestHelpers.PreInstalledCliDir is not null)
         {
-            await auto.InstallAspireCliFromPullRequestAsync(prNumber, counter);
+            // CI: CLI was pre-installed by the workflow — just configure env vars and verify.
             await auto.SourceAspireCliEnvironmentAsync(counter);
-            await auto.VerifyAspireCliVersionAsync(commitSha, counter);
+            await auto.VerifyAspireCliVersionAsync(counter);
         }
 
         try
