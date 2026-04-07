@@ -3,6 +3,8 @@
 
 using System.CommandLine;
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aspire.Cli.Agents;
 using Aspire.Cli.Configuration;
 using Aspire.Cli.Interaction;
@@ -239,29 +241,45 @@ internal sealed class InitCommand : BaseCommand
     private void DropAspireConfig(DirectoryInfo directory, string appHostPath, string? language)
     {
         var configPath = Path.Combine(directory.FullName, AspireConfigFile.FileName);
+
+        JsonObject settings;
+        var isUpdate = false;
+
         if (File.Exists(configPath))
         {
-            InteractionService.DisplayMessage(KnownEmojis.CheckMark, $"{AspireConfigFile.FileName} already exists — skipping.");
-            return;
+            // Merge into existing file (e.g. language selection already wrote it)
+            var existingContent = File.ReadAllText(configPath);
+            settings = string.IsNullOrWhiteSpace(existingContent)
+                ? new JsonObject()
+                : JsonNode.Parse(existingContent)?.AsObject() ?? new JsonObject();
+            isUpdate = true;
+        }
+        else
+        {
+            settings = new JsonObject();
         }
 
-        var languageLine = language is not null
-            ? $"""
-                ,
-                    "language": "{language}"
-            """
-            : string.Empty;
+        // Ensure appHost section exists
+        if (settings["appHost"] is not JsonObject appHost)
+        {
+            appHost = new JsonObject();
+            settings["appHost"] = appHost;
+        }
 
-        var configContent = $$"""
-            {
-              "appHost": {
-                "path": "{{appHostPath}}"{{languageLine}}
-              }
-            }
-            """;
+        // Set path (always — this is the primary purpose of DropAspireConfig)
+        appHost["path"] = appHostPath;
 
-        File.WriteAllText(configPath, configContent);
-        InteractionService.DisplayMessage(KnownEmojis.CheckMark, $"Created {AspireConfigFile.FileName}");
+        // Set language if provided and not already present
+        if (language is not null && appHost["language"] is null)
+        {
+            appHost["language"] = language;
+        }
+
+        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+        File.WriteAllText(configPath, settings.ToJsonString(jsonOptions));
+
+        var verb = isUpdate ? "Updated" : "Created";
+        InteractionService.DisplayMessage(KnownEmojis.CheckMark, $"{verb} {AspireConfigFile.FileName}");
     }
 
     private async Task<bool> InstallInitSkillAsync(DirectoryInfo workspaceRoot, SkillDefinition skill, CancellationToken cancellationToken)
