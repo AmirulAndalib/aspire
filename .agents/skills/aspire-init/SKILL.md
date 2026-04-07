@@ -744,6 +744,23 @@ Once the app is running, use the Aspire CLI to verify everything is wired up cor
 
 **This skill is not done until `aspire start` runs without errors and all resources are healthy.** If anything fails, diagnose, fix, and run `aspire start` again. Keep iterating until it works — do not move on to Step 11 with a broken app.
 
+Once everything is healthy, print a summary for the user:
+
+```
+✅ Aspire init complete!
+
+Dashboard: <full dashboard URL including login token>
+
+Resources:
+  <name>  <type>  <status>
+  <name>  <type>  <status>
+  ...
+
+<any notes about optional steps skipped, e.g., "OTel not configured — run the aspire skill to add it later">
+```
+
+Get the dashboard URL from `aspire start` output (always include the `?t=<token>` parameter). Get resource status from `aspire describe`. This summary is the user's confirmation that init worked — make it complete and accurate.
+
 Common issues:
 
 - **TypeScript**: missing dependency install, TS compilation errors, port conflicts
