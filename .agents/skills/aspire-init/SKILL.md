@@ -63,6 +63,36 @@ var api = builder.AddProject<Projects.Api>("api")
 
 This makes the external dependency visible in the dashboard and lets developers easily swap endpoints (e.g., to a Stripe test endpoint) without digging through service code. Present this as an option to the user — don't silently refactor their external service calls.
 
+### Migrate `.env` files into AppHost parameters
+
+Many projects use `.env` files for configuration. These should be migrated into the AppHost so that all config is centralized and visible in the dashboard. Scan for `.env`, `.env.local`, `.env.development`, etc. and propose migrating their contents:
+
+- **Secrets** (API keys, tokens, passwords, connection strings): use `AddParameter(name, secret: true)`. Aspire stores these securely via user secrets and prompts the developer to set them.
+- **Non-secret config** (feature flags, URLs, mode settings): use `AddParameter(name, secret: false)` with a default value, or `WithEnvironment()` directly.
+- **Values that map to Aspire resources** (e.g., `DATABASE_URL=postgres://...`, `REDIS_URL=redis://...`): replace with actual Aspire resources (`AddPostgres`, `AddRedis`) and `WithReference()` — the connection string is then managed by Aspire.
+
+```csharp
+// Before: .env file with DATABASE_URL=postgres://user:pass@localhost:5432/mydb
+//         STRIPE_KEY=sk_test_abc123
+//         DEBUG=true
+
+// After: modeled in AppHost
+var db = builder.AddPostgres("pg").AddDatabase("mydb");
+var stripeKey = builder.AddParameter("stripe-key", secret: true);
+
+var api = builder.AddProject<Projects.Api>("api")
+    .WithReference(db)                              // replaces DATABASE_URL
+    .WithEnvironment("STRIPE_KEY", stripeKey)       // secret, stored securely
+    .WithEnvironment("DEBUG", "true");              // plain config
+```
+
+**The goal is to eliminate `.env` files entirely** so all configuration flows through the AppHost. This means:
+- No more "did you copy the .env.example?" onboarding friction
+- Secrets are stored securely (not in plaintext files that get accidentally committed)
+- All service config is visible in one place (the dashboard)
+
+Present this as a recommendation. Walk through the `.env` contents with the user and classify each variable together. Some values may be intentionally local-only and the user may prefer to keep them — that's fine.
+
 ## Prerequisites
 
 Before running this skill, `aspire init` must have already:
@@ -115,6 +145,7 @@ Analyze the repository to discover all projects and services that could be model
   - **Build contexts**: `build:` entries → `AddDockerfile()` pointing to the build context directory
   - Prefer typed Aspire integrations over raw `AddContainer()` when the image matches a known integration (use `aspire docs search` to check). For example, `postgres:16` → `AddPostgres()`, `redis:7` → `AddRedis()`, `rabbitmq:3` → `AddRabbitMQ()`.
 - **Static frontends**: Vite, Next.js, Create React App, or other frontend framework configs
+- **`.env` files**: Scan for `.env`, `.env.local`, `.env.development`, `.env.example`, etc. These contain configuration that should be migrated into AppHost parameters (see Guiding Principles above)
 
 **Ignore:**
 
