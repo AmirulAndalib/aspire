@@ -48,7 +48,16 @@ Analyze the repository to discover all projects and services that could be model
 - **Python apps**: directories with `pyproject.toml`, `requirements.txt`, or `main.py`/`app.py`
 - **Go apps**: directories with `go.mod`
 - **Java apps**: directories with `pom.xml` or `build.gradle`
-- **Dockerfiles**: standalone `Dockerfile` or `docker-compose.yml` entries representing services
+- **Dockerfiles**: standalone `Dockerfile` entries representing services
+- **Docker Compose**: `docker-compose.yml` or `compose.yml` files — these are a goldmine. Parse them to extract:
+  - **Services**: each named service maps to a potential AppHost resource
+  - **Images**: container images used (e.g., `postgres:16`, `redis:7`) → these become `AddContainer()` or typed Aspire integrations (e.g., `AddPostgres()`, `AddRedis()`)
+  - **Ports**: published port mappings → `WithHttpEndpoint()` or `WithEndpoint()`
+  - **Environment variables**: env vars and `.env` file references → `WithEnvironment()`
+  - **Volumes**: named/bind volumes → `WithVolume()` or `WithBindMount()`
+  - **Dependencies**: `depends_on` → `WithReference()` and `WaitFor()`
+  - **Build contexts**: `build:` entries → `AddDockerfile()` pointing to the build context directory
+  - Prefer typed Aspire integrations over raw `AddContainer()` when the image matches a known integration (use `aspire docs search` to check). For example, `postgres:16` → `AddPostgres()`, `redis:7` → `AddRedis()`, `rabbitmq:3` → `AddRabbitMQ()`.
 - **Static frontends**: Vite, Next.js, Create React App, or other frontend framework configs
 
 **Ignore:**
@@ -305,13 +314,7 @@ Add an instrumentation file that reads `OTEL_EXPORTER_OTLP_ENDPOINT` (injected b
 
 **Important**: Ask the user before modifying any service code. OTel setup may conflict with existing instrumentation. Present it as a recommendation, not an automatic change.
 
-### Step 8: Trust development certificates
-
-```bash
-aspire certs trust
-```
-
-### Step 9: Validate
+### Step 8: Validate
 
 ```bash
 aspire start
@@ -329,8 +332,9 @@ If it fails, diagnose and iterate. Common issues:
 - **C# project mode**: missing project references, NuGet restore needed, TFM mismatches, build errors
 - **C# single-file**: `#:project` paths wrong, missing SDK directive
 - **Both**: missing environment variables, port conflicts
+- **Certificate errors**: if HTTPS fails, run `aspire certs trust` and retry
 
-### Step 10: Update solution file (C# full project mode only)
+### Step 9: Update solution file (C# full project mode only)
 
 If a `.sln`/`.slnx` exists, verify all new projects are included:
 
@@ -340,7 +344,7 @@ dotnet sln <solution> list
 
 Ensure both the AppHost and ServiceDefaults projects appear.
 
-### Step 11: Clean up
+### Step 10: Clean up
 
 After successful validation:
 
