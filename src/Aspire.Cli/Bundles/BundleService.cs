@@ -4,7 +4,6 @@
 using System.Diagnostics;
 using System.Formats.Tar;
 using System.IO.Compression;
-using System.Reflection;
 using Aspire.Cli.Layout;
 using Aspire.Cli.Utils;
 using Aspire.Shared;
@@ -27,17 +26,16 @@ internal sealed class BundleService(ILayoutDiscovery layoutDiscovery, ILogger<Bu
     private static readonly bool s_isBundle =
         typeof(BundleService).Assembly.GetManifestResourceInfo(PayloadResourceName) is not null;
 
-    private static readonly bool s_isSelfExtracting = string.Equals(
-        typeof(BundleService).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-            .FirstOrDefault(m => string.Equals(m.Key, "SelfExtractingBundle", StringComparison.OrdinalIgnoreCase))?.Value,
-        "true",
-        StringComparison.OrdinalIgnoreCase);
-
     /// <inheritdoc/>
     public bool IsBundle => s_isBundle;
 
     /// <inheritdoc/>
-    public bool IsSelfExtracting => s_isSelfExtracting;
+    public bool IsSelfExtracting =>
+#if SELF_EXTRACTING_BUNDLE
+        true;
+#else
+        false;
+#endif
 
     /// <summary>
     /// Opens a read-only stream over the embedded bundle payload.
