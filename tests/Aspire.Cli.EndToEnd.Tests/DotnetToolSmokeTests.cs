@@ -126,9 +126,23 @@ public sealed class DotnetToolSmokeTests(ITestOutputHelper output)
             return null;
         }
 
+        // Prefer Release over Debug when multiple configurations are present.
         var nupkg = Directory.GetFiles(packagesDir, "Aspire.Cli.linux-x64.*.nupkg", SearchOption.AllDirectories)
+            .OrderByDescending(f => f.Contains("Release", StringComparison.OrdinalIgnoreCase))
             .FirstOrDefault();
 
-        return nupkg is not null ? Path.GetDirectoryName(nupkg) : null;
+        if (nupkg is null)
+        {
+            return null;
+        }
+
+        // Both the pointer package (Aspire.Cli.*.nupkg) and the RID package must be in
+        // the same directory for `dotnet tool install` to succeed.
+        var dir = Path.GetDirectoryName(nupkg)!;
+        var hasPointerPackage = Directory.GetFiles(dir, "Aspire.Cli.*.nupkg")
+            .Any(f => !Path.GetFileName(f).Contains("linux-x64", StringComparison.OrdinalIgnoreCase)
+                    && !Path.GetFileName(f).Contains(".symbols.", StringComparison.OrdinalIgnoreCase));
+
+        return hasPointerPackage ? dir : null;
     }
 }

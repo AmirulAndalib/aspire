@@ -171,6 +171,9 @@ jobs:
       - name: Pack CLI dotnet tool (Windows)
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
+        # RuntimeIdentifier sets the build target RID.
+        # ToolPackageRuntimeIdentifiers overrides the csproj default (all 7 RIDs) to produce
+        # only the current matrix RID's nupkgs: a pointer package + a RID-specific runtime package.
         run: >
           .\dotnet.cmd pack
           src\Aspire.Cli\Aspire.Cli.Tool.csproj
@@ -210,7 +213,9 @@ jobs:
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: cli-tool-nupkg-${{ matrix.targets.rids }}
-          path: artifacts/packages/**/Aspire.Cli*.nupkg
+          path: |
+            artifacts/packages/**/Aspire.Cli*.nupkg
+            !artifacts/packages/**/*.symbols.nupkg
           retention-days: 15
           if-no-files-found: error
 
