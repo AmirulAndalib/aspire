@@ -50,12 +50,6 @@
     <LinkerArg Condition="'$(RuntimeIdentifier)' == 'linux-musl-x64'" Include="--target=x86_64-alpine-linux-musl" />
   </ItemGroup>
 
-  <!-- Define a compile-time constant so BundleService can check self-extraction mode without reflection.
-       Using DefineConstants avoids native-AOT issues with AssemblyMetadataAttribute + embedded resources. -->
-  <PropertyGroup Condition="'$(SelfExtractingBundle)' == 'true'">
-    <DefineConstants>$(DefineConstants);SELF_EXTRACTING_BUNDLE</DefineConstants>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
     <PackageReference Include="Spectre.Console" />

@@ -30,12 +30,7 @@ internal sealed class BundleService(ILayoutDiscovery layoutDiscovery, ILogger<Bu
     public bool IsBundle => s_isBundle;
 
     /// <inheritdoc/>
-    public bool IsSelfExtracting =>
-#if SELF_EXTRACTING_BUNDLE
-        true;
-#else
-        false;
-#endif
+    public bool IsSelfExtracting => false;
 
     /// <summary>
     /// Opens a read-only stream over the embedded bundle payload.
