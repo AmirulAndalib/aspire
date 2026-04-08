@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Reflection;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Aspire.TypeSystem;
@@ -207,9 +208,7 @@ internal static partial class PolyglotCapabilityErrorFormatter
             return true;
         }
 
-        if (expectedType.ContainsGenericParameters &&
-            HostingTypeHelpers.IsResourceBuilderType(expectedType) &&
-            HostingTypeHelpers.IsResourceBuilderType(handleObject.GetType()))
+        if (CanUseOpenGenericResourceBuilder(expectedType, handleObject))
         {
             converted = handleObject;
             return true;
@@ -230,6 +229,23 @@ internal static partial class PolyglotCapabilityErrorFormatter
 
         converted = null;
         return false;
+    }
+
+    internal static bool CanUseOpenGenericResourceBuilder(Type expectedType, object handleObject)
+    {
+        if (!expectedType.ContainsGenericParameters ||
+            !HostingTypeHelpers.IsResourceBuilderType(expectedType) ||
+            !HostingTypeHelpers.IsResourceBuilderType(handleObject.GetType()))
+        {
+            return false;
+        }
+
+        var expectedResourceType = TryGetBuilderResourceType(expectedType);
+        var actualResourceType = TryGetBuilderResourceType(handleObject);
+
+        return expectedResourceType is not null &&
+            actualResourceType is not null &&
+            SatisfiesExpectedResourceType(actualResourceType, expectedResourceType);
     }
 
     private static string TryGetTargetContext(JsonObject? args, HandleRegistry handles, string? targetParameterName)
@@ -345,6 +361,63 @@ internal static partial class PolyglotCapabilityErrorFormatter
 
         var resource = valueType.GetProperty("Resource")?.GetValue(value);
         return resource?.GetType();
+    }
+
+    private static Type? TryGetBuilderResourceType(Type builderType)
+    {
+        if (builderType.IsGenericType && HostingTypeHelpers.IsResourceBuilderType(builderType))
+        {
+            return builderType.GetGenericArguments()[0];
+        }
+
+        var builderInterface = builderType.GetInterfaces().FirstOrDefault(static type =>
+            type.IsGenericType &&
+            string.Equals(type.GetGenericTypeDefinition().FullName, HostingTypeNames.ResourceBuilderInterface, StringComparison.Ordinal));
+
+        return builderInterface?.GetGenericArguments()[0];
+    }
+
+    private static bool SatisfiesExpectedResourceType(Type actualResourceType, Type expectedResourceType)
+    {
+        if (expectedResourceType.IsGenericParameter)
+        {
+            return SatisfiesGenericParameterConstraints(actualResourceType, expectedResourceType);
+        }
+
+        return !expectedResourceType.ContainsGenericParameters && expectedResourceType.IsAssignableFrom(actualResourceType);
+    }
+
+    private static bool SatisfiesGenericParameterConstraints(Type actualResourceType, Type genericParameter)
+    {
+        var specialConstraints = genericParameter.GenericParameterAttributes & GenericParameterAttributes.SpecialConstraintMask;
+
+        if (specialConstraints.HasFlag(GenericParameterAttributes.ReferenceTypeConstraint) && actualResourceType.IsValueType)
+        {
+            return false;
+        }
+
+        if (specialConstraints.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint) &&
+            (!actualResourceType.IsValueType || Nullable.GetUnderlyingType(actualResourceType) is not null))
+        {
+            return false;
+        }
+
+        if (specialConstraints.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint) &&
+            !actualResourceType.IsValueType &&
+            actualResourceType.GetConstructor(Type.EmptyTypes) is null)
+        {
+            return false;
+        }
+
+        foreach (var constraint in genericParameter.GetGenericParameterConstraints())
+        {
+            if (!constraint.IsAssignableFrom(actualResourceType))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static string DescribeResourceContract(Type type)

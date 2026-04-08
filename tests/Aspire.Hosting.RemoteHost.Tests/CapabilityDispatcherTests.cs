@@ -1513,6 +1513,30 @@ public class CapabilityDispatcherTests
     }
 
     [Fact]
+    public void Invoke_GenericBuilderCapability_WithIncompatibleBuilderHandle_UsesFriendlyTypeMismatch()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestGenericPolyglotErrorCapabilities).Assembly]);
+
+        var resource = new TestResourceWithProperties("backend");
+        var builderHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(resource), "target-type");
+        var args = new JsonObject
+        {
+            ["builder"] = new JsonObject { ["$handle"] = builderHandleId }
+        };
+
+        var ex = Assert.Throws<CapabilityException>(() =>
+            dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/withHttpEndpoint", args));
+
+        Assert.Equal(AtsErrorCodes.TypeMismatch, ex.Error.Code);
+        Assert.Contains("expects a resource builder for a resource with endpoints", ex.Message);
+        Assert.Contains("got a resource builder for a TestResourceWithProperties named 'backend'", ex.Message);
+        Assert.Equal("builder", ex.Error.Details?.Parameter);
+        Assert.Equal("a resource builder for a resource with endpoints", ex.Error.Details?.Expected);
+        Assert.Equal("a resource builder for a TestResourceWithProperties named 'backend'", ex.Error.Details?.Actual);
+    }
+
+    [Fact]
     public void Invoke_PropertySetter_WithHandleValue_UsesTargetAndActualResourceNames()
     {
         var handles = new HandleRegistry();
@@ -1533,8 +1557,11 @@ public class CapabilityDispatcherTests
 
         Assert.Equal(AtsErrorCodes.TypeMismatch, ex.Error.Code);
         Assert.Contains("Could not invoke 'setColor' on resource 'frontend'", ex.Message);
-        Assert.Contains("parameter 'Color' expects a string", ex.Message);
+        Assert.Contains("parameter 'value' expects a string", ex.Message);
         Assert.Contains("named 'backend'", ex.Message);
+        Assert.Equal("value", ex.Error.Details?.Parameter);
+        Assert.Equal("a string", ex.Error.Details?.Expected);
+        Assert.Equal("a resource builder for a TestResourceWithProperties named 'backend'", ex.Error.Details?.Actual);
     }
 
     [Fact]

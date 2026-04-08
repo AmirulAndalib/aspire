@@ -236,7 +236,7 @@ internal sealed class CapabilityDispatcher
                 };
                 var value = UnmarshalArgument(
                     capability,
-                    prop.Name,
+                    "value",
                     prop.PropertyType,
                     valueNode,
                     unmarshalContext,
@@ -759,7 +759,7 @@ internal sealed class CapabilityDispatcher
         // Handle is an open-generic builder (e.g., IResourceBuilder<T>) and the context is also a builder
         if (declaringType.ContainsGenericParameters &&
             HostingTypeHelpers.IsResourceBuilderType(declaringType) &&
-            HostingTypeHelpers.IsResourceBuilderType(contextObj.GetType()))
+            PolyglotCapabilityErrorFormatter.CanUseOpenGenericResourceBuilder(declaringType, contextObj))
         {
             return contextObj;
         }
