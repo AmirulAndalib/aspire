@@ -669,6 +669,18 @@ internal sealed class CapabilityDispatcher
     }
 
     /// <summary>
+    /// Checks if an exception indicates a type mismatch.
+    /// </summary>
+    private static bool IsTypeMismatchException(ArgumentException ex)
+    {
+        var message = ex.Message;
+        return message.Contains("cannot be converted") ||
+               message.Contains("could not be converted") ||
+               message.Contains("is not assignable") ||
+               message.Contains("type mismatch", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Finds the mismatched parameter by comparing actual argument types against expected parameter types.
     /// Falls back to parsing the exception message if no mismatch is found by inspection.
     /// </summary>
