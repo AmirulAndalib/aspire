@@ -739,7 +739,7 @@ public class AspireConfigFileTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public void FromLegacy_DoesNotMigrateChannel()
+    public void FromLegacy_PreservesChannelInExtensionData()
     {
         var legacy = new AspireJsonConfiguration
         {
@@ -750,13 +750,15 @@ public class AspireConfigFileTests(ITestOutputHelper outputHelper)
 
         var result = AspireConfigFile.FromLegacy(legacy, null);
 
-        // Channel should NOT be carried over — it's now embedded in the binary
+        // Channel should be preserved in ExtensionData for backward compatibility
         Assert.Equal("9.2.0", result.Sdk?.Version);
-        Assert.Null(result.ExtensionData);
+        Assert.NotNull(result.ExtensionData);
+        Assert.True(result.ExtensionData.ContainsKey("channel"));
+        Assert.Equal("daily", result.ExtensionData["channel"].GetString());
     }
 
     [Fact]
-    public void FromLegacy_MigratesOtherFieldsWithoutChannel()
+    public void FromLegacy_MigratesAllFieldsIncludingChannel()
     {
         var features = new Dictionary<string, bool> { ["polyglotSupportEnabled"] = true };
         var packages = new Dictionary<string, string> { ["Aspire.Hosting.Redis"] = "9.2.0" };
@@ -772,7 +774,7 @@ public class AspireConfigFileTests(ITestOutputHelper outputHelper)
 
         var result = AspireConfigFile.FromLegacy(legacy, null);
 
-        // All fields except channel should be migrated
+        // All fields should be migrated
         Assert.NotNull(result.AppHost);
         Assert.Equal("typescript/nodejs", result.AppHost.Language);
         Assert.Equal("9.2.0", result.Sdk?.Version);
@@ -780,7 +782,22 @@ public class AspireConfigFileTests(ITestOutputHelper outputHelper)
         Assert.True(result.Features["polyglotSupportEnabled"]);
         Assert.NotNull(result.Packages);
         Assert.Equal("9.2.0", result.Packages["Aspire.Hosting.Redis"]);
-        // Channel must not appear anywhere in the migrated config
+        // Channel preserved in extension data
+        Assert.NotNull(result.ExtensionData);
+        Assert.Equal("stable", result.ExtensionData["channel"].GetString());
+    }
+
+    [Fact]
+    public void FromLegacy_NoChannelDoesNotCreateExtensionData()
+    {
+        var legacy = new AspireJsonConfiguration
+        {
+            AppHostPath = "../MyApp/MyApp.csproj",
+            SdkVersion = "9.2.0"
+        };
+
+        var result = AspireConfigFile.FromLegacy(legacy, null);
+
         Assert.Null(result.ExtensionData);
     }
 }

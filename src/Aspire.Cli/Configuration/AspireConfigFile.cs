@@ -400,8 +400,16 @@ internal sealed class AspireConfigFile
                 config.Sdk = new AspireConfigSdk { Version = settings.SdkVersion };
             }
 
-            // Note: Channel is no longer migrated — it's now embedded in the binary
-            // via [assembly: AssemblyMetadata("CliChannel", "...")].
+            // Preserve channel in extension data for backward compatibility.
+            // The typed Channel property was removed (channel is now embedded in the binary),
+            // but users who previously set a channel should keep it in their config file.
+            if (!string.IsNullOrEmpty(settings.Channel))
+            {
+                config.ExtensionData ??= new Dictionary<string, JsonElement>();
+                using var doc = JsonDocument.Parse($"\"{settings.Channel}\"");
+                config.ExtensionData["channel"] = doc.RootElement.Clone();
+            }
+
             config.Features = settings.Features;
             config.Packages = settings.Packages;
         }
