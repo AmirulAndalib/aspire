@@ -68,7 +68,8 @@ internal sealed class ValidateTokenMiddleware
 
     private static void RedirectAfterValidation(HttpContext context)
     {
-        if (context.Request.Query.TryGetValue("returnUrl", out var returnUrl))
+        if (context.Request.Query.TryGetValue("returnUrl", out var returnUrl)
+            && IsLocalUrl(returnUrl.ToString()))
         {
             context.Response.Redirect(returnUrl.ToString());
         }
@@ -76,6 +77,15 @@ internal sealed class ValidateTokenMiddleware
         {
             context.Response.Redirect(DashboardUrls.ResourcesUrl());
         }
+    }
+
+    private static bool IsLocalUrl(string url)
+    {
+        // Only allow local URLs that start with "/" (but not "//" or "/\" which browsers treat as absolute).
+        // This mirrors the logic in ASP.NET Core's IUrlHelper.IsLocalUrl.
+        return url.Length > 0
+            && url[0] == '/'
+            && (url.Length == 1 || (url[1] != '/' && url[1] != '\\'));
     }
 
     public static async Task<bool> TryAuthenticateAsync(string incomingBrowserToken, HttpContext httpContext, IOptionsMonitor<DashboardOptions> dashboardOptions)
