@@ -390,6 +390,7 @@ public class DocsFetcherTests
         private readonly Dictionary<string, string> _content = [];
         private readonly Dictionary<string, string> _etags = [];
         private LlmsDocument[]? _index;
+        private string? _indexSourceFingerprint;
 
         public Task<string?> GetAsync(string key, CancellationToken cancellationToken = default)
         {
@@ -430,6 +431,17 @@ public class DocsFetcherTests
         public Task SetIndexAsync(LlmsDocument[] documents, CancellationToken cancellationToken = default)
         {
             _index = documents;
+            return Task.CompletedTask;
+        }
+
+        public Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_indexSourceFingerprint);
+        }
+
+        public Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
+        {
+            _indexSourceFingerprint = fingerprint;
             return Task.CompletedTask;
         }
 

@@ -423,6 +423,8 @@ public class DocsSearchServiceTests
         public Task SetETagAsync(string url, string? etag, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<LlmsDocument[]?> GetIndexAsync(CancellationToken cancellationToken = default) => Task.FromResult<LlmsDocument[]?>(null);
         public Task SetIndexAsync(LlmsDocument[] documents, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
+        public Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task InvalidateAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

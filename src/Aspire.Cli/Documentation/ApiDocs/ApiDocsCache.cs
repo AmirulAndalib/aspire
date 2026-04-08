@@ -26,8 +26,8 @@ internal sealed class ApiDocsCache(
     private const string ApiDocsCacheSubdirectory = "api-docs";
 
     private readonly FileBackedDocumentContentCache _contentCache = new(memoryCache, executionContext, ApiDocsCacheSubdirectory, logger);
-    private readonly string _sitemapUrl = ApiDocsSourceConfiguration.GetSitemapUrl(configuration);
     private readonly string _indexCacheKey = ApiDocsSourceConfiguration.GetIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration));
+    private readonly string _indexSourceFingerprintCacheKey = $"{ApiDocsSourceConfiguration.GetIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration))}:fingerprint";
 
     /// <summary>
     /// Gets cached content for the specified key.
@@ -79,7 +79,7 @@ internal sealed class ApiDocsCache(
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The cached index, or <c>null</c> if it is not available.</returns>
     public Task<ApiReferenceItem[]?> GetIndexAsync(CancellationToken cancellationToken = default)
-        => _contentCache.GetJsonAsync(_indexCacheKey, JsonSourceGenerationContext.Default.ApiReferenceItemArray, _sitemapUrl, cancellationToken);
+        => _contentCache.GetJsonAsync(_indexCacheKey, JsonSourceGenerationContext.Default.ApiReferenceItemArray, cancellationToken: cancellationToken);
 
     /// <summary>
     /// Stores the API reference index in the cache.
@@ -88,4 +88,20 @@ internal sealed class ApiDocsCache(
     /// <param name="cancellationToken">The cancellation token.</param>
     public Task SetIndexAsync(ApiReferenceItem[] documents, CancellationToken cancellationToken = default)
         => _contentCache.SetJsonAsync(_indexCacheKey, documents, JsonSourceGenerationContext.Default.ApiReferenceItemArray, cancellationToken);
+
+    /// <summary>
+    /// Gets the fingerprint for the sitemap content used to build the cached index.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The cached sitemap fingerprint, or <c>null</c> if it is not available.</returns>
+    public Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default)
+        => _contentCache.GetAsync(_indexSourceFingerprintCacheKey, cancellationToken);
+
+    /// <summary>
+    /// Stores the fingerprint for the sitemap content used to build the cached index.
+    /// </summary>
+    /// <param name="fingerprint">The sitemap fingerprint.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
+        => _contentCache.SetAsync(_indexSourceFingerprintCacheKey, fingerprint, cancellationToken);
 }

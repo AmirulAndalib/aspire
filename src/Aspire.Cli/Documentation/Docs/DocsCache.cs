@@ -18,6 +18,7 @@ internal sealed class DocsCache : IDocsCache
     private readonly FileBackedDocumentContentCache _contentCache;
     private readonly string _llmsTxtUrl;
     private readonly string _indexCacheKey;
+    private readonly string _indexSourceFingerprintCacheKey;
 
     public DocsCache(
         IMemoryCache memoryCache,
@@ -27,6 +28,7 @@ internal sealed class DocsCache : IDocsCache
     {
         _llmsTxtUrl = DocsSourceConfiguration.GetLlmsTxtUrl(configuration);
         _indexCacheKey = DocsSourceConfiguration.GetIndexCacheKey(_llmsTxtUrl);
+        _indexSourceFingerprintCacheKey = $"{_indexCacheKey}:fingerprint";
         _contentCache = new FileBackedDocumentContentCache(memoryCache, executionContext, DocsCacheSubdirectory, logger);
     }
 
@@ -46,8 +48,14 @@ internal sealed class DocsCache : IDocsCache
         => _contentCache.InvalidateAsync(key, cancellationToken);
 
     public Task<LlmsDocument[]?> GetIndexAsync(CancellationToken cancellationToken = default)
-        => _contentCache.GetJsonAsync(_indexCacheKey, JsonSourceGenerationContext.Default.LlmsDocumentArray, _llmsTxtUrl, cancellationToken);
+        => _contentCache.GetJsonAsync(_indexCacheKey, JsonSourceGenerationContext.Default.LlmsDocumentArray, cancellationToken: cancellationToken);
 
     public Task SetIndexAsync(LlmsDocument[] documents, CancellationToken cancellationToken = default)
         => _contentCache.SetJsonAsync(_indexCacheKey, documents, JsonSourceGenerationContext.Default.LlmsDocumentArray, cancellationToken);
+
+    public Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default)
+        => _contentCache.GetAsync(_indexSourceFingerprintCacheKey, cancellationToken);
+
+    public Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
+        => _contentCache.SetAsync(_indexSourceFingerprintCacheKey, fingerprint, cancellationToken);
 }

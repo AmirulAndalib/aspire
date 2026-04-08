@@ -197,6 +197,74 @@ public class ApiDocsIndexServiceTests
         Assert.Contains("# addPostgres", item.Content, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task EnsureIndexedAsync_RebuildsCachedIndexWhenSitemapChangesAcrossInstances()
+    {
+        var cache = new TestApiDocsCache();
+        var fetcher = new SequenceApiDocsFetcher(
+        [
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.first.package/</loc></url>
+            </urlset>
+            """,
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.second.package/</loc></url>
+            </urlset>
+            """
+        ]);
+
+        var firstService = new ApiDocsIndexService(fetcher, cache, new ConfigurationBuilder().Build(), NullLogger<ApiDocsIndexService>.Instance);
+        var firstItems = await firstService.ListAsync("csharp");
+
+        Assert.Collection(
+            firstItems,
+            item => Assert.Equal("csharp/aspire.first.package", item.Id));
+
+        var secondService = new ApiDocsIndexService(fetcher, cache, new ConfigurationBuilder().Build(), NullLogger<ApiDocsIndexService>.Instance);
+        var secondItems = await secondService.ListAsync("csharp");
+
+        Assert.Collection(
+            secondItems,
+            item => Assert.Equal("csharp/aspire.second.package", item.Id));
+    }
+
+    [Fact]
+    public async Task EnsureIndexedAsync_UsesCachedIndexWhenSitemapUnavailableAfterInitialLoad()
+    {
+        var cache = new TestApiDocsCache();
+        var firstService = new ApiDocsIndexService(
+            new SequenceApiDocsFetcher(
+            [
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+                  <url><loc>https://aspire.dev/reference/api/csharp/aspire.cached.package/</loc></url>
+                </urlset>
+                """
+            ]),
+            cache,
+            new ConfigurationBuilder().Build(),
+            NullLogger<ApiDocsIndexService>.Instance);
+
+        await firstService.EnsureIndexedAsync();
+
+        var secondService = new ApiDocsIndexService(
+            new SequenceApiDocsFetcher([null]),
+            cache,
+            new ConfigurationBuilder().Build(),
+            NullLogger<ApiDocsIndexService>.Instance);
+
+        var items = await secondService.ListAsync("csharp");
+
+        Assert.Collection(
+            items,
+            item => Assert.Equal("csharp/aspire.cached.package", item.Id));
+    }
+
     private static ApiDocsIndexService CreateService(IConfiguration? configuration = null)
     {
         var fetcher = new TestApiDocsFetcher(
@@ -250,10 +318,22 @@ public class ApiDocsIndexServiceTests
         }
     }
 
+    private sealed class SequenceApiDocsFetcher(IEnumerable<string?> sitemapContents) : IApiDocsFetcher
+    {
+        private readonly Queue<string?> _sitemapContents = new(sitemapContents);
+
+        public Task<string?> FetchSitemapAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_sitemapContents.Count > 0 ? _sitemapContents.Dequeue() : null);
+
+        public Task<string?> FetchPageAsync(string pageUrl, CancellationToken cancellationToken = default)
+            => Task.FromResult<string?>(null);
+    }
+
     private sealed class TestApiDocsCache : IApiDocsCache
     {
         private readonly Dictionary<string, string> _content = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string?> _etags = new(StringComparer.OrdinalIgnoreCase);
+        private string? _indexSourceFingerprint;
 
         public ApiReferenceItem[]? Index { get; private set; }
 
@@ -295,6 +375,15 @@ public class ApiDocsIndexServiceTests
         public Task SetIndexAsync(ApiReferenceItem[] documents, CancellationToken cancellationToken = default)
         {
             Index = documents;
+            return Task.CompletedTask;
+        }
+
+        public Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_indexSourceFingerprint);
+
+        public Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
+        {
+            _indexSourceFingerprint = fingerprint;
             return Task.CompletedTask;
         }
     }

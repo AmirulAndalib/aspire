@@ -371,17 +371,26 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
             _logger.LogDebug("Loading Aspire API documentation index");
 
             var cachedItems = await _cache.GetIndexAsync(cancellationToken).ConfigureAwait(false);
-            if (cachedItems is not null)
-            {
-                SetIndex(cachedItems);
-                _logger.LogInformation("Loaded {Count} API reference items from cache in {ElapsedTime:ss\\.fff} seconds.", cachedItems.Length, Stopwatch.GetElapsedTime(startTimestamp));
-                return;
-            }
-
+            var cachedFingerprint = await _cache.GetIndexSourceFingerprintAsync(cancellationToken).ConfigureAwait(false);
             var sitemapContent = await _fetcher.FetchSitemapAsync(cancellationToken).ConfigureAwait(false);
             if (sitemapContent is null)
             {
+                if (cachedItems is not null)
+                {
+                    SetIndex(cachedItems);
+                    _logger.LogWarning("Failed to refresh Aspire API sitemap. Using cached index with {Count} items.", cachedItems.Length);
+                    return;
+                }
+
                 _logger.LogWarning("Failed to fetch Aspire API sitemap");
+                return;
+            }
+
+            var currentFingerprint = SourceContentFingerprint.Compute(sitemapContent);
+            if (cachedItems is not null && string.Equals(cachedFingerprint, currentFingerprint, StringComparison.Ordinal))
+            {
+                SetIndex(cachedItems);
+                _logger.LogInformation("Loaded {Count} API reference items from cache in {ElapsedTime:ss\\.fff} seconds.", cachedItems.Length, Stopwatch.GetElapsedTime(startTimestamp));
                 return;
             }
 
@@ -394,6 +403,7 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
 
             SetIndex(itemArray);
             await _cache.SetIndexAsync(itemArray, cancellationToken).ConfigureAwait(false);
+            await _cache.SetIndexSourceFingerprintAsync(currentFingerprint, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Indexed {Count} API reference items in {ElapsedTime:ss\\.fff} seconds.", itemArray.Length, Stopwatch.GetElapsedTime(startTimestamp));
         }

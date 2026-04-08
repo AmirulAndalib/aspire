@@ -420,6 +420,63 @@ public class DocsIndexServiceTests
     }
 
     [Fact]
+    public async Task EnsureIndexedAsync_RebuildsCachedIndexWhenSourceChangesAcrossInstances()
+    {
+        var cache = new MemoryDocsCache();
+        var fetcher = new SequenceDocsFetcher(
+        [
+            """
+            # Redis Integration
+            > Connect to Redis.
+
+            Redis content.
+            """,
+            """
+            # PostgreSQL Integration
+            > Connect to PostgreSQL.
+
+            PostgreSQL content.
+            """
+        ]);
+
+        var firstService = CreateService(fetcher, cache);
+        var firstDocs = await firstService.ListDocumentsAsync();
+
+        var doc = Assert.Single(firstDocs);
+        Assert.Equal("Redis Integration", doc.Title);
+        var secondService = CreateService(fetcher, cache);
+        var secondDocs = await secondService.ListDocumentsAsync();
+
+        var doc_2 = Assert.Single(secondDocs);
+        Assert.Equal("PostgreSQL Integration", doc_2.Title);
+
+    }
+
+    [Fact]
+    public async Task EnsureIndexedAsync_UsesCachedIndexWhenSourceUnavailableAfterInitialLoad()
+    {
+        var cache = new MemoryDocsCache();
+        var firstService = CreateService(
+            CreateMockFetcher(
+                """
+                # Redis Integration
+                > Connect to Redis.
+
+                Redis content.
+                """),
+            cache);
+
+        await firstService.EnsureIndexedAsync();
+
+        var secondService = CreateService(CreateMockFetcher(null), cache);
+        var docs = await secondService.ListDocumentsAsync();
+
+        var doc = Assert.Single(docs);
+        Assert.Equal("Redis Integration", doc.Title);
+
+    }
+
+    [Fact]
     public async Task SearchAsync_OrdersResultsByScore()
     {
         var content = """
@@ -998,6 +1055,16 @@ public class DocsIndexServiceTests
         }
     }
 
+    private sealed class SequenceDocsFetcher(IEnumerable<string?> contents) : IDocsFetcher
+    {
+        private readonly Queue<string?> _contents = new(contents);
+
+        public Task<string?> FetchDocsAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_contents.Count > 0 ? _contents.Dequeue() : null);
+        }
+    }
+
     private sealed class ThrowingDocsFetcher(Exception exception) : IDocsFetcher
     {
         public Task<string?> FetchDocsAsync(CancellationToken cancellationToken = default)
@@ -1023,6 +1090,72 @@ public class DocsIndexServiceTests
         public Task SetETagAsync(string url, string? etag, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<LlmsDocument[]?> GetIndexAsync(CancellationToken cancellationToken = default) => Task.FromResult<LlmsDocument[]?>(null);
         public Task SetIndexAsync(LlmsDocument[] documents, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
+        public Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task InvalidateAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class MemoryDocsCache : IDocsCache
+    {
+        private readonly Dictionary<string, string> _content = [];
+        private readonly Dictionary<string, string?> _etags = [];
+        private LlmsDocument[]? _index;
+        private string? _indexSourceFingerprint;
+
+        public Task<string?> GetAsync(string key, CancellationToken cancellationToken = default)
+        {
+            _content.TryGetValue(key, out var value);
+            return Task.FromResult(value);
+        }
+
+        public Task SetAsync(string key, string content, CancellationToken cancellationToken = default)
+        {
+            _content[key] = content;
+            return Task.CompletedTask;
+        }
+
+        public Task<string?> GetETagAsync(string url, CancellationToken cancellationToken = default)
+        {
+            _etags.TryGetValue(url, out var value);
+            return Task.FromResult(value);
+        }
+
+        public Task SetETagAsync(string url, string? etag, CancellationToken cancellationToken = default)
+        {
+            if (etag is null)
+            {
+                _etags.Remove(url);
+            }
+            else
+            {
+                _etags[url] = etag;
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task<LlmsDocument[]?> GetIndexAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_index);
+
+        public Task SetIndexAsync(LlmsDocument[] documents, CancellationToken cancellationToken = default)
+        {
+            _index = documents;
+            return Task.CompletedTask;
+        }
+
+        public Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_indexSourceFingerprint);
+
+        public Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
+        {
+            _indexSourceFingerprint = fingerprint;
+            return Task.CompletedTask;
+        }
+
+        public Task InvalidateAsync(string key, CancellationToken cancellationToken = default)
+        {
+            _content.Remove(key);
+            return Task.CompletedTask;
+        }
     }
 }
