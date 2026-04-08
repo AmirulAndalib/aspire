@@ -74,11 +74,23 @@ The core loop is typically:
 3. Any authentication/identity service
 4. The essential cache (Redis, etc.)
 
-Once the core loop works with `aspire start`, add services incrementally. This prevents a failed first experience where 8 services are wired but 3 have config issues that block everything.
-
 Present this explicitly:
 
 > *"You have 8 services. I recommend wiring the core loop first — Api, Identity, and the database — so we can validate `aspire start` works. Then we'll add the remaining services. Sound good?"*
+
+**After the core loop succeeds with `aspire start`:**
+
+1. Stop the AppHost
+2. Add the next batch of services (2-3 at a time) to the AppHost
+3. Run `aspire start` again to validate
+4. If it fails, diagnose and fix before adding more
+5. Repeat until all selected services are wired
+
+Present progress to the user as you go:
+
+> *"Core loop is working (Api + Identity + Postgres + Redis). Adding the next batch: Admin, Billing, and Events..."*
+
+Do not consider the skill complete until all services the user selected in Step 3 are wired and `aspire start` runs with all of them healthy. The core loop is a risk-reduction strategy, not an excuse to stop early.
 
 ## Migration runners and setup utilities
 
