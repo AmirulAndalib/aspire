@@ -229,7 +229,12 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
             Value = result.Data is { } v ? new ExecuteResourceCommandResult
             {
                 Value = v.Value,
-                Format = v.Format.ToString().ToLowerInvariant(),
+                Format = v.Format switch
+                {
+                    ApplicationModel.CommandResultFormat.Json => CommandResultFormat.Json,
+                    ApplicationModel.CommandResultFormat.Markdown => CommandResultFormat.Markdown,
+                    _ => CommandResultFormat.Text
+                },
                 DisplayImmediately = v.DisplayImmediately
             } : null
         };

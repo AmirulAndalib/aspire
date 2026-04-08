@@ -154,7 +154,18 @@ builder.AddProject<Projects.Stress_TelemetryService>("stress-telemetryservice")
            executeCommand: (c) =>
            {
                var connectionString = $"Server=localhost,1433;Database=StressDb;User Id=sa;Password={Guid.NewGuid():N};TrustServerCertificate=true";
-               return Task.FromResult(CommandResults.Success("Retrieved connection string.", new CommandResultData { Value = connectionString, DisplayImmediately = true }));
+               var message = """
+                   Retrieved connection string. The database connection was established successfully
+                   after verifying TLS certificates and negotiating encryption parameters.
+
+                   The server responded with protocol version 7.4 and confirmed support for multiple
+                   active result sets. Connection pooling is enabled with a maximum pool size of 100
+                   connections and a minimum of 10 idle connections maintained.
+
+                   The login handshake completed in 42ms with SSPI authentication. All pre-login
+                   checks passed including network library validation and instance name resolution.
+                   """;
+               return Task.FromResult(CommandResults.Success(message, new CommandResultData { Value = connectionString, DisplayImmediately = true }));
            },
            commandOptions: new() { IconName = "LinkMultiple", Description = "Get the connection string for this resource" })
        .WithCommand(

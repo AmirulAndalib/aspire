@@ -11,6 +11,7 @@ namespace Aspire.Hosting.Backchannel;
 
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 
@@ -309,14 +310,39 @@ internal sealed class ExecuteResourceCommandResult
     public required string Value { get; init; }
 
     /// <summary>
-    /// Gets the format of the value data (e.g. "text", "json").
+    /// Gets the format of the value data.
     /// </summary>
-    public string? Format { get; init; }
+    public CommandResultFormat Format { get; init; }
 
     /// <summary>
     /// Gets whether to immediately display the value in the dashboard.
     /// </summary>
     public bool DisplayImmediately { get; init; }
+}
+
+/// <summary>
+/// Specifies the format of a command result.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<CommandResultFormat>))]
+internal enum CommandResultFormat
+{
+    /// <summary>
+    /// Plain text result.
+    /// </summary>
+    [JsonStringEnumMemberName("text")]
+    Text,
+
+    /// <summary>
+    /// JSON result.
+    /// </summary>
+    [JsonStringEnumMemberName("json")]
+    Json,
+
+    /// <summary>
+    /// Markdown result.
+    /// </summary>
+    [JsonStringEnumMemberName("markdown")]
+    Markdown
 }
 
 #endregion

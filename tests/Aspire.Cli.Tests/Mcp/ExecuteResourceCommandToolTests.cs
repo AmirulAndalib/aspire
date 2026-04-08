@@ -163,7 +163,7 @@ public class ExecuteResourceCommandToolTests
                 Value = new ExecuteResourceCommandResult
                 {
                     Value = "{\"token\": \"abc123\"}",
-                    Format = "json"
+                    Format = CommandResultFormat.Json
                 }
             }
         };

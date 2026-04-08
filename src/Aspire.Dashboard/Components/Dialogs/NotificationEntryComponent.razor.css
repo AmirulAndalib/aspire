@@ -64,6 +64,7 @@
     align-items: flex-start;
     gap: 8px;
     font-size: 12px;
+    word-break: break-word;
 }
 
 .notification-entry-time {

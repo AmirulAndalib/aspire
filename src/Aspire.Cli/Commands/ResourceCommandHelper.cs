@@ -126,7 +126,7 @@ internal static class ResourceCommandHelper
 
     private static void DisplayCommandResult(IInteractionService interactionService, ExecuteResourceCommandResult result)
     {
-        if (string.Equals(result.Format, "markdown", StringComparison.OrdinalIgnoreCase))
+        if (result.Format is CommandResultFormat.Markdown)
         {
             interactionService.DisplayMarkdown(result.Value, ConsoleOutput.Standard);
         }

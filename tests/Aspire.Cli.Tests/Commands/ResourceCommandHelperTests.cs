@@ -23,7 +23,7 @@ public class ResourceCommandHelperTests
                 Value = new ExecuteResourceCommandResult
                 {
                     Value = "{\"items\": [\"a\", \"b\"]}",
-                    Format = "json"
+                    Format = CommandResultFormat.Json
                 }
             }
         };
@@ -86,7 +86,7 @@ public class ResourceCommandHelperTests
                 Value = new ExecuteResourceCommandResult
                 {
                     Value = "{\"errors\": [\"invalid host\"]}",
-                    Format = "json"
+                    Format = CommandResultFormat.Json
                 }
             }
         };
@@ -121,7 +121,7 @@ public class ResourceCommandHelperTests
                 Value = new ExecuteResourceCommandResult
                 {
                     Value = "some output",
-                    Format = "text"
+                    Format = CommandResultFormat.Text
                 }
             }
         };
