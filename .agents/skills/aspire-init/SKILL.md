@@ -241,6 +241,25 @@ Some teams still need `.env` files for CI, Docker Compose, or developers who hav
 
 Present this as a recommendation. Walk through the `.env` contents with the user and classify each variable together. Some values may be intentionally local-only and the user may prefer to keep them — that's fine.
 
+### Migrate .NET User Secrets into AppHost parameters
+
+.NET projects often use `dotnet user-secrets` for local development configuration. Look for:
+
+- `dev/secrets.json.example` or `secrets.json.example` files — these document expected secrets
+- `<UserSecretsId>` in `.csproj` files — indicates the project uses User Secrets
+- Documentation referencing `dotnet user-secrets set` or `setup_secrets` scripts
+
+**Aspire's `AddParameter(name, secret: true)` stores values in the same .NET User Secrets store under the hood.** This means migration is seamless — the developer's existing workflow stays nearly identical, but secrets are now centralized in the AppHost instead of scattered across individual service projects.
+
+Migration approach:
+
+1. **Inventory existing secrets** — check `secrets.json.example` files or setup scripts to understand what secrets the repo expects
+2. **Classify each secret** — same as `.env` migration: connection strings become Aspire resources, API keys become parameters, plain config becomes `WithEnvironment()`
+3. **Present the migration** — show the user which secrets will become AppHost parameters and which will become Aspire resources:
+   → *"Your services use dotnet user-secrets with 8 configured values. I'll migrate the SQL connection string to an Aspire Postgres resource, the 3 API keys to secret parameters, and the remaining config to environment variables. The secrets will still be stored in user-secrets but centralized under the AppHost. Sound good?"*
+
+**Important:** Don't delete or modify existing `UserSecretsId` entries in service `.csproj` files — other tooling or non-Aspire workflows may still depend on them.
+
 ## Prerequisites
 
 Before running this skill, `aspire init` must have already:
@@ -301,16 +320,23 @@ Analyze the repository to discover all projects and services that could be model
 - **Java apps**: directories with `pom.xml` or `build.gradle`
 - **Dockerfiles**: standalone `Dockerfile` entries representing services
 - **Docker Compose**: `docker-compose.yml` or `compose.yml` files — these are a goldmine. Parse them to extract:
-  - **Services**: each named service maps to a potential AppHost resource
+  - **Profiles**: if any service has a `profiles:` key, the compose file uses profiles to organize services into groups (e.g., `cloud`, `storage`, `mssql`, `postgres`). When profiles exist:
+    1. List the available profiles and what services each includes
+    2. Ask the user which profile(s) to target for the AppHost (e.g., *"Your docker-compose uses profiles: cloud, mssql, postgres, storage, redis. Which represent your local dev stack?"*)
+    3. Only model services that belong to the selected profile(s) — skip the rest
+    4. If a service has no `profiles:` key, it runs in all profiles — always include it
+  - **Services**: each named service (in the selected profiles) maps to a potential AppHost resource
   - **Images**: container images used (e.g., `postgres:16`, `redis:7`) → these become `AddContainer()` or typed Aspire integrations (e.g., `AddPostgres()`, `AddRedis()`)
   - **Ports**: published port mappings → `WithHttpsEndpoint()` or `WithEndpoint()`
-  - **Environment variables**: env vars and `.env` file references → `WithEnvironment()`
+  - **Environment variables**: env vars and `.env` file references → `WithEnvironment()`. Watch for `${VAR}` interpolation syntax — trace these back to `.env` files and migrate them to AppHost parameters
   - **Volumes**: named/bind volumes → `WithVolume()` or `WithBindMount()`
   - **Dependencies**: `depends_on` → `WithReference()` and `WaitFor()`
   - **Build contexts**: `build:` entries → `AddDockerfile()` pointing to the build context directory
   - Prefer typed Aspire integrations over raw `AddContainer()` when the image matches a known integration (use `aspire docs search` to check). For example, `postgres:16` → `AddPostgres()`, `redis:7` → `AddRedis()`, `rabbitmq:3` → `AddRabbitMQ()`.
+  - For complex compose files, also load [references/docker-compose.md](references/docker-compose.md) for detailed migration patterns.
 - **Static frontends**: Vite, Next.js, Create React App, or other frontend framework configs
 - **`.env` files**: Scan for `.env`, `.env.local`, `.env.development`, `.env.example`, etc. These contain configuration that should be migrated into AppHost parameters (see Guiding Principles above)
+- **User Secrets**: Scan for `secrets.json.example` files and `<UserSecretsId>` in `.csproj` files. These indicate .NET User Secrets are in use — migrate them into AppHost parameters (see Guiding Principles above)
 - **Package manager**: Detect which Node.js package manager the repo uses by looking for lock files: `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, `package-lock.json` or none → npm. Use the detected package manager for all install/run commands throughout this skill.
 
 **Ignore:**
@@ -881,6 +907,7 @@ After adding, run `aspire restore` (TypeScript) or `dotnet restore` (C#) to upda
 ## References
 
 - For solution-backed C# AppHosts (`.sln`/`.slnx` + `.csproj` AppHost), see [references/full-solution-apphosts.md](references/full-solution-apphosts.md).
+- For repos with `docker-compose.yml` or `compose.yml`, see [references/docker-compose.md](references/docker-compose.md).
 
 ## AppHost wiring reference
 
