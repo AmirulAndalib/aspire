@@ -161,6 +161,42 @@ public class ApiDocsIndexServiceTests
         Assert.Contains("## LocalOnly()", item.Content, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task GetAsync_ForTypeScriptDirectRouteItem_ReturnsMarkdownFromConfiguredHost()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [ApiDocsSourceConfiguration.SitemapUrlConfigKey] = "http://localhost:4321/sitemap-0.xml"
+            })
+            .Build();
+
+        var fetcher = new TestApiDocsFetcher(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+              <url><loc>https://aspire.dev/reference/api/typescript/aspire.hosting.postgresql/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/typescript/aspire.hosting.postgresql/addpostgres/</loc></url>
+            </urlset>
+            """,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["http://localhost:4321/reference/api/typescript/aspire.hosting.postgresql/addpostgres.md"] = "# addPostgres\n\n## Parameters\n\n- name"
+            });
+
+        var service = new ApiDocsIndexService(fetcher, new TestApiDocsCache(), configuration, NullLogger<ApiDocsIndexService>.Instance);
+
+        var item = await service.GetAsync("typescript/aspire.hosting.postgresql/addpostgres");
+
+        Assert.NotNull(item);
+        Assert.Equal(ApiReferenceLanguages.TypeScript, item.Language);
+        Assert.Equal(ApiReferenceKinds.Member, item.Kind);
+        Assert.Equal("http://localhost:4321/reference/api/typescript/aspire.hosting.postgresql/addpostgres", item.Url);
+        Assert.Equal(["http://localhost:4321/reference/api/typescript/aspire.hosting.postgresql/addpostgres"], fetcher.RequestedPageUrls);
+        Assert.Equal(["http://localhost:4321/reference/api/typescript/aspire.hosting.postgresql/addpostgres.md"], fetcher.RequestedMarkdownUrls);
+        Assert.Contains("# addPostgres", item.Content, StringComparison.Ordinal);
+    }
+
     private static ApiDocsIndexService CreateService(IConfiguration? configuration = null)
     {
         var fetcher = new TestApiDocsFetcher(
