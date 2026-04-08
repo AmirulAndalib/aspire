@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspire.Cli.Agents;
 using Aspire.Cli.Configuration;
+using Aspire.Cli.DotNet;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.Projects;
 using Aspire.Cli.Resources;
@@ -31,6 +32,7 @@ internal sealed class InitCommand : BaseCommand
     private readonly ISolutionLocator _solutionLocator;
     private readonly AgentInitCommand _agentInitCommand;
     private readonly ICliHostEnvironment _hostEnvironment;
+    private readonly IDotNetCliRunner _runner;
 
     private readonly Option<string?> _languageOption;
 
@@ -43,7 +45,8 @@ internal sealed class InitCommand : BaseCommand
         CliExecutionContext executionContext,
         IInteractionService interactionService,
         AgentInitCommand agentInitCommand,
-        ICliHostEnvironment hostEnvironment)
+        ICliHostEnvironment hostEnvironment,
+        IDotNetCliRunner runner)
         : base("init", InitCommandStrings.Description, features, updateNotifier, executionContext, interactionService, telemetry)
     {
         _executionContext = executionContext;
@@ -51,6 +54,7 @@ internal sealed class InitCommand : BaseCommand
         _solutionLocator = solutionLocator;
         _agentInitCommand = agentInitCommand;
         _hostEnvironment = hostEnvironment;
+        _runner = runner;
 
         _languageOption = new Option<string?>("--language")
         {
@@ -180,10 +184,8 @@ internal sealed class InitCommand : BaseCommand
         return Task.FromResult(ExitCodeConstants.Success);
     }
 
-    private Task<int> DropCSharpProjectSkeletonAsync(FileInfo solutionFile, CancellationToken cancellationToken)
+    private async Task<int> DropCSharpProjectSkeletonAsync(FileInfo solutionFile, CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
-
         var solutionDir = solutionFile.Directory!;
         var solutionName = Path.GetFileNameWithoutExtension(solutionFile.Name);
         var appHostDirName = $"{solutionName}.AppHost";
@@ -192,44 +194,33 @@ internal sealed class InitCommand : BaseCommand
         if (Directory.Exists(appHostDirPath))
         {
             InteractionService.DisplayMessage(KnownEmojis.CheckMark, $"{appHostDirName}/ already exists — skipping.");
-            return Task.FromResult(ExitCodeConstants.Success);
+            return ExitCodeConstants.Success;
         }
 
-        Directory.CreateDirectory(appHostDirPath);
+        // Use the aspire-apphost template to generate a correct AppHost project
+        // with proper launchSettings.json, .csproj, and Program.cs.
+        var result = await InteractionService.ShowStatusAsync(
+            "Creating AppHost from template...",
+            async () =>
+            {
+                return await _runner.NewProjectAsync(
+                    "aspire-apphost",
+                    appHostDirName,
+                    appHostDirPath,
+                    extraArgs: [],
+                    options: new ProcessInvocationOptions(),
+                    cancellationToken: cancellationToken);
+            });
 
-        // Drop bare apphost.cs
-        var appHostContent = """
-            var builder = DistributedApplication.CreateBuilder(args);
-
-            // The aspire-init-csharp skill will wire up your projects here.
-
-            builder.Build().Run();
-            """;
-        File.WriteAllText(Path.Combine(appHostDirPath, "apphost.cs"), appHostContent);
-
-        // Drop minimal .csproj
-        var csprojContent = $"""
-            <Project Sdk="Microsoft.NET.Sdk">
-
-              <PropertyGroup>
-                <OutputType>Exe</OutputType>
-                <TargetFramework>net10.0</TargetFramework>
-                <ImplicitUsings>enable</ImplicitUsings>
-                <Nullable>enable</Nullable>
-                <IsAspireHost>true</IsAspireHost>
-              </PropertyGroup>
-
-              <ItemGroup>
-                <PackageReference Include="Aspire.AppHost.Sdk" Version="*" />
-              </ItemGroup>
-
-            </Project>
-            """;
-        File.WriteAllText(Path.Combine(appHostDirPath, $"{appHostDirName}.csproj"), csprojContent);
+        if (result != 0)
+        {
+            InteractionService.DisplayError($"Failed to create AppHost from template (exit code {result}).");
+            return ExitCodeConstants.FailedToCreateNewProject;
+        }
 
         InteractionService.DisplayMessage(KnownEmojis.CheckMark, $"Created {appHostDirName}/");
 
-        return Task.FromResult(ExitCodeConstants.Success);
+        return ExitCodeConstants.Success;
     }
 
     private Task<int> DropPolyglotSkeletonAsync(string languageId, DirectoryInfo workingDirectory, CancellationToken cancellationToken)

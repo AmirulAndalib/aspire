@@ -28,6 +28,10 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
         var projectFile = new FileInfo(Path.Combine(workspace.WorkspaceRoot.FullName, projectFileName));
         File.WriteAllText(projectFile.FullName, "<Project />");
 
+        string? capturedTemplateName = null;
+        string? capturedName = null;
+        string? capturedOutputPath = null;
+
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
             options.DotNetCliRunnerFactory = _ =>
@@ -36,6 +40,15 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
                 runner.GetSolutionProjectsAsyncCallback = (_, _, _) =>
                 {
                     throw new InvalidOperationException("GetSolutionProjectsAsync should not be called by init.");
+                };
+                runner.NewProjectAsyncCallback = (templateName, name, outputPath, _, _) =>
+                {
+                    capturedTemplateName = templateName;
+                    capturedName = name;
+                    capturedOutputPath = outputPath;
+                    // Simulate template creating the directory
+                    Directory.CreateDirectory(outputPath);
+                    return 0;
                 };
                 return runner;
             };
@@ -48,8 +61,9 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
         var exitCode = await parseResult.InvokeAsync().DefaultTimeout();
 
         Assert.Equal(ExitCodeConstants.Success, exitCode);
-        Assert.True(File.Exists(Path.Combine(workspace.WorkspaceRoot.FullName, "Test.AppHost", "apphost.cs")));
-        Assert.True(File.Exists(Path.Combine(workspace.WorkspaceRoot.FullName, "Test.AppHost", "Test.AppHost.csproj")));
+        Assert.Equal("aspire-apphost", capturedTemplateName);
+        Assert.Equal("Test.AppHost", capturedName);
+        Assert.Contains("Test.AppHost", capturedOutputPath);
         Assert.False(File.Exists(Path.Combine(workspace.WorkspaceRoot.FullName, "aspire.config.json")));
     }
 
@@ -61,6 +75,8 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
         var solutionFile = new FileInfo(Path.Combine(workspace.WorkspaceRoot.FullName, "Test.sln"));
         File.WriteAllText(solutionFile.FullName, "Fake solution file");
 
+        string? capturedTemplateName = null;
+
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
             options.DotNetCliRunnerFactory = _ =>
@@ -69,6 +85,12 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
                 runner.GetSolutionProjectsAsyncCallback = (_, _, _) =>
                 {
                     throw new InvalidOperationException("GetSolutionProjectsAsync should not be called by init.");
+                };
+                runner.NewProjectAsyncCallback = (templateName, name, outputPath, _, _) =>
+                {
+                    capturedTemplateName = templateName;
+                    Directory.CreateDirectory(outputPath);
+                    return 0;
                 };
                 return runner;
             };
@@ -81,8 +103,7 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
         var exitCode = await parseResult.InvokeAsync().DefaultTimeout();
 
         Assert.Equal(ExitCodeConstants.Success, exitCode);
-        Assert.True(File.Exists(Path.Combine(workspace.WorkspaceRoot.FullName, "Test.AppHost", "Test.AppHost.csproj")));
-        Assert.True(File.Exists(Path.Combine(workspace.WorkspaceRoot.FullName, "Test.AppHost", "apphost.cs")));
+        Assert.Equal("aspire-apphost", capturedTemplateName);
         Assert.False(File.Exists(Path.Combine(workspace.WorkspaceRoot.FullName, "aspire.config.json")));
     }
 

@@ -306,7 +306,7 @@ Read `aspire.config.json` at the repository root **if it exists**. Key fields:
 For C# AppHosts, there are two sub-modes:
 
 - **Single-file mode**: `appHost.path` points directly to an `apphost.cs` file using the `#:sdk` directive. No `.csproj` needed. Configuration lives in `aspire.config.json`.
-- **Full project mode**: A directory containing a `.csproj` and `Program.cs` (or `apphost.cs`). This was created because a `.sln`/`.slnx` was found. Configuration lives in `Properties/launchSettings.json` inside the AppHost project directory (standard .NET launch settings), **not** in `aspire.config.json`.
+- **Full project mode**: A directory containing a `.csproj`, `Program.cs`, and `Properties/launchSettings.json`. This was created by `aspire init` using the `aspire-apphost` template because a `.sln`/`.slnx` was found. **The template-generated AppHost is correct and complete** — it has proper SDK references, launch profiles with randomized ports, and a skeleton `Program.cs`. Do not recreate or hand-edit the `.csproj` or `launchSettings.json`. Configuration lives in `Properties/launchSettings.json` inside the AppHost project directory (standard .NET launch settings), **not** in `aspire.config.json`.
 
 ### Configuration files — which is which
 
@@ -395,12 +395,15 @@ aspire start
 
 The empty AppHost should start successfully — the dashboard should come up and the process should run without errors. You won't see any resources yet (that's expected), but if `aspire start` fails here, fix the issue before proceeding.
 
-Common failures at this stage:
+For full project mode, the AppHost was created from the `aspire-apphost` template and should work out of the box. If it fails, common causes are:
 
-- **Missing launch profile**: For full project mode, the AppHost needs `Properties/launchSettings.json` with an `applicationUrl`. For single-file mode, `aspire.config.json` needs a `profiles` section. If either is missing, re-run `aspire init` to regenerate.
-- **SDK version mismatch**: For full project mode in a repo with an older root `global.json`, the AppHost directory needs its own nested `global.json` pinning the Aspire-supported SDK (see Critical Rules above).
-- **Missing dependencies**: For TypeScript, ensure the `.modules/aspire.js` SDK is available. Run `aspire restore` if needed.
+- **SDK version mismatch**: The repo's root `global.json` may pin an older SDK (e.g., 8.0). The AppHost directory needs its own nested `global.json` pinning the Aspire-supported SDK. Create one if missing (see Critical Rules above).
 - **Port conflicts**: If another Aspire app is running, the randomly assigned ports may conflict. Stop other instances first.
+
+For single-file mode:
+
+- **Missing profiles in `aspire.config.json`**: The file must have a `profiles` section with `applicationUrl`. Re-run `aspire init` to regenerate.
+- **Missing dependencies**: For TypeScript, ensure the `.modules/aspire.js` SDK is available. Run `aspire restore` if needed.
 
 Once it boots, stop it (Ctrl+C) and continue.
 
