@@ -448,6 +448,8 @@ public class DotNetTemplateFactoryTests
                 _ => defaultValue
             };
         }
+
+        public void LogFeatureState() { }
     }
 
     private sealed class TestInteractionService : IInteractionService

@@ -213,5 +213,7 @@ public class DefaultLanguageDiscoveryTests
         {
             return _features.TryGetValue(featureName, out var value) ? value : defaultValue;
         }
+
+        public void LogFeatureState() { }
     }
 }

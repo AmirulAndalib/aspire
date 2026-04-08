@@ -1862,6 +1862,8 @@ internal sealed class NewCommandTestFeatures(bool showAllTemplates = false) : IF
             _ => defaultValue
         };
     }
+
+    public void LogFeatureState() { }
 }
 
 internal sealed class TestTypeScriptStarterProjectFactory(Func<DirectoryInfo, CancellationToken, Task<bool>> buildAndGenerateSdkAsync) : IAppHostProjectFactory

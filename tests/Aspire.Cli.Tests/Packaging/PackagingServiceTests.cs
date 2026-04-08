@@ -35,6 +35,8 @@ public class PackagingServiceTests(ITestOutputHelper outputHelper)
         {
             _features[featureFlag] = enabled;
         }
+
+        public void LogFeatureState() { }
     }
 
     [Fact]

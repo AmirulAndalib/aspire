@@ -721,6 +721,8 @@ builder.Build().Run();");
         {
             return _features.TryGetValue(featureName, out var value) ? value : defaultValue;
         }
+
+        public void LogFeatureState() { }
     }
 
     private static ProjectLocator CreateProjectLocatorWithSingleFileEnabled(CliExecutionContext executionContext, Func<FileInfo, AppHostValidationResult>? validateCallback = null)

@@ -264,4 +264,6 @@ public class TestFeatures : IFeatures
     {
         return _features.TryGetValue(featureName, out var value) ? value : defaultValue;
     }
+
+    public void LogFeatureState() { }
 }

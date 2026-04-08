@@ -1495,6 +1495,8 @@ public class RunCommandTests(ITestOutputHelper outputHelper)
         {
             return _features.TryGetValue(featureName, out var value) ? value : defaultValue;
         }
+
+        public void LogFeatureState() { }
     }
 
     [Fact]

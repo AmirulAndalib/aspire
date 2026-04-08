@@ -33,6 +33,8 @@ public class NuGetConfigMergerSnapshotTests
     private sealed class FakeFeatures : IFeatures
     {
         public bool IsFeatureEnabled(string featureFlag, bool defaultValue) => defaultValue;
+
+        public void LogFeatureState() { }
     }
 
     private static PackagingService CreatePackagingService(CliExecutionContext executionContext)

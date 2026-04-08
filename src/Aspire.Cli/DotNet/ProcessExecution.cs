@@ -43,23 +43,15 @@ internal sealed class ProcessExecution : IProcessExecution
     /// <inheritdoc />
     public bool Start()
     {
-        var suppressLogging = _options.SuppressLogging;
-
         var started = _process.Start();
 
         if (!started)
         {
-            if (!suppressLogging)
-            {
-                _logger.LogDebug("Failed to start process {FileName} with args: {Args}", FileName, string.Join(" ", Arguments));
-            }
+            _logger.LogDebug("Failed to start process {FileName} with args: {Args}", FileName, string.Join(" ", Arguments));
             return false;
         }
 
-        if (!suppressLogging)
-        {
-            _logger.LogDebug("Started {FileName} with PID: {ProcessId}", FileName, _process.Id);
-        }
+        _logger.LogDebug("Started {FileName} in {WorkingDirectory} with PID: {ProcessId}", FileName, _process.StartInfo.WorkingDirectory, _process.Id);
 
         // Start stream forwarders
         _stdoutForwarder = Task.Run(async () =>
@@ -67,8 +59,7 @@ internal sealed class ProcessExecution : IProcessExecution
             await ForwardStreamToLoggerAsync(
                 _process.StandardOutput,
                 "stdout",
-                _options.StandardOutputCallback,
-                suppressLogging);
+                _options.StandardOutputCallback);
         });
 
         _stderrForwarder = Task.Run(async () =>
@@ -76,8 +67,7 @@ internal sealed class ProcessExecution : IProcessExecution
             await ForwardStreamToLoggerAsync(
                 _process.StandardError,
                 "stderr",
-                _options.StandardErrorCallback,
-                suppressLogging);
+                _options.StandardErrorCallback);
         });
 
         return true;
@@ -86,29 +76,18 @@ internal sealed class ProcessExecution : IProcessExecution
     /// <inheritdoc />
     public async Task<int> WaitForExitAsync(CancellationToken cancellationToken)
     {
-        var suppressLogging = _options.SuppressLogging;
-
-        if (!suppressLogging)
-        {
-            _logger.LogDebug("Waiting for process to exit with PID: {ProcessId}", _process.Id);
-        }
+        _logger.LogDebug("Waiting for process to exit with PID: {ProcessId}", _process.Id);
 
         await _process.WaitForExitAsync(cancellationToken);
 
         if (!_process.HasExited)
         {
-            if (!suppressLogging)
-            {
-                _logger.LogDebug("Process with PID: {ProcessId} has not exited, killing it.", _process.Id);
-            }
+            _logger.LogDebug("Process with PID: {ProcessId} has not exited, killing it.", _process.Id);
             _process.Kill(false);
         }
         else
         {
-            if (!suppressLogging)
-            {
-                _logger.LogDebug("Process with PID: {ProcessId} has exited with code: {ExitCode}", _process.Id, _process.ExitCode);
-            }
+            _logger.LogDebug("Process with PID: {ProcessId} has exited with code: {ExitCode}", _process.Id, _process.ExitCode);
         }
 
         // Explicitly close the streams to unblock any pending ReadLineAsync calls.
@@ -153,32 +132,25 @@ internal sealed class ProcessExecution : IProcessExecution
         _process.Dispose();
     }
 
-    private async Task ForwardStreamToLoggerAsync(StreamReader reader, string identifier, Action<string>? lineCallback, bool suppressLogging)
+    private async Task ForwardStreamToLoggerAsync(StreamReader reader, string identifier, Action<string>? lineCallback)
     {
-        if (!suppressLogging)
-        {
-            _logger.LogDebug(
-                "Starting to forward stream with identifier '{Identifier}' on process '{ProcessId}' to logger",
-                identifier,
-                _process.Id
-                );
-        }
+        _logger.LogDebug(
+            "Starting to forward stream with identifier '{Identifier}' on process '{ProcessId}' to logger",
+            identifier,
+            _process.Id
+            );
 
         try
         {
             string? line;
             while ((line = await reader.ReadLineAsync()) is not null)
             {
-                if (!suppressLogging)
-                {
-                    _logger.LogTrace(
-                        "{FileName}({ProcessId}) {Identifier}: {Line}",
-                        FileName,
-                        _process.Id,
-                        identifier,
-                        line
-                        );
-                }
+                _logger.LogTrace(
+                    "({ProcessId}) {Identifier}: {Line}",
+                    _process.Id,
+                    identifier,
+                    line
+                    );
                 lineCallback?.Invoke(line);
             }
         }

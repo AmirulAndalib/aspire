@@ -106,5 +106,7 @@ public class KnownFeaturesTests
 
             return defaultValue;
         }
+
+        public void LogFeatureState() { }
     }
 }
