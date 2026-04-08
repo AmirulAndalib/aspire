@@ -171,17 +171,19 @@ jobs:
       - name: Pack CLI dotnet tool (Windows)
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
-        # RuntimeIdentifier sets the build target RID.
         # ToolPackageRuntimeIdentifiers overrides the csproj default (all 7 RIDs) to produce
         # only the current matrix RID's nupkgs: a pointer package + a RID-specific runtime package.
+        # Do NOT set RuntimeIdentifier — that puts pack in single-RID mode and skips the pointer package.
+        # PublishAot=false because the tool package contains the managed shim; the native binary
+        # is embedded as a self-extracting bundle resource.
         run: >
           .\dotnet.cmd pack
           src\Aspire.Cli\Aspire.Cli.Tool.csproj
           --configuration ${{ inputs.configuration }}
           /bl:${{ github.workspace }}/artifacts/log/${{ inputs.configuration }}/PackCliTool.binlog
           /p:ContinuousIntegrationBuild=true
-          /p:RuntimeIdentifier=${{ matrix.targets.rids }}
           /p:ToolPackageRuntimeIdentifiers=${{ matrix.targets.rids }}
+          /p:PublishAot=false
           /p:BundlePayloadPath=${{ github.workspace }}/artifacts/bundle/aspire-ci-bundlepayload-${{ matrix.targets.rids }}.tar.gz
           ${{ inputs.versionOverrideArg }}
 
@@ -194,8 +196,8 @@ jobs:
           --configuration ${{ inputs.configuration }}
           /bl:${{ github.workspace }}/artifacts/log/${{ inputs.configuration }}/PackCliTool.binlog
           /p:ContinuousIntegrationBuild=true
-          /p:RuntimeIdentifier=${{ matrix.targets.rids }}
           /p:ToolPackageRuntimeIdentifiers=${{ matrix.targets.rids }}
+          /p:PublishAot=false
           /p:BundlePayloadPath=${{ github.workspace }}/artifacts/bundle/aspire-ci-bundlepayload-${{ matrix.targets.rids }}.tar.gz
           ${{ inputs.versionOverrideArg }}
 
