@@ -115,9 +115,14 @@ Then the test installs from `/opt/aspire-packages/Release/Shipping/`.
 
 ## Todos
 
-- [ ] Upload `Aspire.Cli.{rid}.*.nupkg` from `build-cli-native-archives.yml`
-- [ ] Download the nupkg in `run-tests.yml` for CLI E2E jobs
+- [x] Upload `Aspire.Cli.{rid}.*.nupkg` from `build-cli-native-archives.yml`
+- [x] Download the nupkg in `run-tests.yml` for CLI E2E jobs
 - [ ] Add `COPY --from=build` line to `Dockerfile.e2e` for local SourceBuild
 - [ ] Write `DotnetToolSmokeTests.cs` — install via `dotnet tool install`, then `aspire new` + `aspire run`
 - [ ] Verify it works locally with SourceBuild Docker mode
 - [ ] Verify it works in CI with the uploaded nupkg artifact
+
+## Status
+
+**CI plumbing is committed** (nupkg upload + download). Test class and Dockerfile changes
+deferred to a follow-up.

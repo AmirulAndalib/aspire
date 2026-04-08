@@ -177,6 +177,15 @@ jobs:
           retention-days: 15
           if-no-files-found: error
 
+      - name: Upload CLI tool nupkg
+        if: success()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cli-tool-nupkg-${{ matrix.targets.rids }}
+          path: artifacts/packages/**/Aspire.Cli.${{ matrix.targets.rids }}.*.nupkg
+          retention-days: 15
+          if-no-files-found: error
+
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
