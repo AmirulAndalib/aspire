@@ -89,7 +89,7 @@ public sealed class DotnetToolSmokeTests(ITestOutputHelper output)
         var installCmd =
             $"""nupkg=$(find {ContainerNupkgDir} -name "Aspire.Cli.linux-x64.*.nupkg" | head -1) && """
             + """version=$(basename "$nupkg" | sed 's/Aspire\.Cli\.linux-x64\.\(.*\)\.nupkg/\1/') && """
-            + $"""dotnet tool install --global Aspire.Cli.linux-x64 --add-source "$(dirname "$nupkg")" --version "$version" """;
+            + $"""dotnet tool install --global Aspire.Cli --add-source "{ContainerNupkgDir}" --version "$version" """;
 
         await auto.TypeAsync(installCmd);
         await auto.EnterAsync();
