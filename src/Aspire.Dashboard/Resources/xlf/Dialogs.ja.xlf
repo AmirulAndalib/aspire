@@ -593,8 +593,8 @@
         <note />
       </trans-unit>
       <trans-unit id="TextVisualizerDialogJsonFormat">
-        <source>Format JSON</source>
-        <target state="translated">JSON の書式設定</target>
+        <source>JSON</source>
+        <target state="needs-review-translation">JSON の書式設定</target>
         <note />
       </trans-unit>
       <trans-unit id="TextVisualizerDialogMarkdownFormat">
@@ -608,8 +608,8 @@
         <note />
       </trans-unit>
       <trans-unit id="TextVisualizerDialogXmlFormat">
-        <source>Format XML</source>
-        <target state="translated">XML の書式設定</target>
+        <source>XML</source>
+        <target state="needs-review-translation">XML の書式設定</target>
         <note />
       </trans-unit>
       <trans-unit id="TextVisualizerSecretWarningAcknowledge">

@@ -59,23 +59,19 @@ public partial class TextVisualizerDialog : ComponentBase
     {
         EnabledOptions.Clear();
         EnabledOptions.Add(DashboardUIHelpers.PlaintextFormat);
+        EnabledOptions.Add(DashboardUIHelpers.MarkdownFormat);
 
         _options = [
             new SelectViewModel<string> { Id = DashboardUIHelpers.PlaintextFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogPlaintextFormat)] },
+            new SelectViewModel<string> { Id = DashboardUIHelpers.MarkdownFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogMarkdownFormat)] },
             new SelectViewModel<string> { Id = DashboardUIHelpers.JsonFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogJsonFormat)] },
-            new SelectViewModel<string> { Id = DashboardUIHelpers.XmlFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogXmlFormat)] },
-            new SelectViewModel<string> { Id = DashboardUIHelpers.MarkdownFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogMarkdownFormat)] }
+            new SelectViewModel<string> { Id = DashboardUIHelpers.XmlFormat, Name = Loc[nameof(Resources.Dialogs.TextVisualizerDialogXmlFormat)] }
         ];
 
         // If a fixed format is specified, use it directly without auto-detection.
         if (Content.FixedFormat is not null)
         {
             TextVisualizerViewModel = new TextVisualizerViewModel(Content.Text, indentText: true, Content.FixedFormat);
-
-            if (Content.FixedFormat == DashboardUIHelpers.MarkdownFormat)
-            {
-                EnabledOptions.Add(DashboardUIHelpers.MarkdownFormat);
-            }
         }
         else
         {

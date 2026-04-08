@@ -27,7 +27,6 @@ public partial class NotificationsHeaderButton : ComponentBase, IDisposable
 
     private async Task HandleClick()
     {
-        NotificationService.ResetUnreadCount();
         await OnClick();
     }
 

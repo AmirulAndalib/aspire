@@ -246,10 +246,10 @@
     <value>Unformatted</value>
   </data>
   <data name="TextVisualizerDialogJsonFormat" xml:space="preserve">
-    <value>Format JSON</value>
+    <value>JSON</value>
   </data>
   <data name="TextVisualizerDialogXmlFormat" xml:space="preserve">
-    <value>Format XML</value>
+    <value>XML</value>
   </data>
   <data name="TextVisualizerDialogMarkdownFormat" xml:space="preserve">
     <value>Markdown</value>

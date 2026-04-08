@@ -1060,7 +1060,7 @@ namespace Aspire.Dashboard.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Format JSON.
+        ///   Looks up a localized string similar to JSON.
         /// </summary>
         public static string TextVisualizerDialogJsonFormat {
             get {
@@ -1087,7 +1087,7 @@ namespace Aspire.Dashboard.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Format XML.
+        ///   Looks up a localized string similar to XML.
         /// </summary>
         public static string TextVisualizerDialogXmlFormat {
             get {

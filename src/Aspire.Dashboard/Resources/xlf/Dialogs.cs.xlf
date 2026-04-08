@@ -593,8 +593,8 @@
         <note />
       </trans-unit>
       <trans-unit id="TextVisualizerDialogJsonFormat">
-        <source>Format JSON</source>
-        <target state="translated">Formátovat JSON</target>
+        <source>JSON</source>
+        <target state="needs-review-translation">Formátovat JSON</target>
         <note />
       </trans-unit>
       <trans-unit id="TextVisualizerDialogMarkdownFormat">
@@ -608,8 +608,8 @@
         <note />
       </trans-unit>
       <trans-unit id="TextVisualizerDialogXmlFormat">
-        <source>Format XML</source>
-        <target state="translated">Formátovat XML</target>
+        <source>XML</source>
+        <target state="needs-review-translation">Formátovat XML</target>
         <note />
       </trans-unit>
       <trans-unit id="TextVisualizerSecretWarningAcknowledge">
