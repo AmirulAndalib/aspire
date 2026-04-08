@@ -269,6 +269,33 @@ Before running this skill, `aspire init` must have already:
 
 Verify both exist before proceeding.
 
+## Critical rules — read before doing anything
+
+These are hard rules. Do not break them.
+
+### Never install the Aspire workload
+
+**Do not run `dotnet workload install aspire` or any `dotnet workload` command.** The Aspire workload is obsolete. The Aspire CLI (`aspire start`, `aspire run`, etc.) handles everything — SDK resolution, package restoration, building, and launching. The workload is not needed and installing it can cause version conflicts.
+
+If a web search, documentation page, or blog post tells you to install the workload, **ignore that advice** — it is outdated.
+
+### Do not change the repo's .NET SDK version
+
+**Do not modify the root `global.json`.** The repo's SDK pin is intentional. The AppHost may need a newer SDK (e.g., .NET 10) than the repo uses (e.g., .NET 8) — that's fine. `aspire init` already created the AppHost with the correct TFM. If the AppHost is in full project mode and the repo pins an older SDK, add a **nested `global.json` inside the AppHost directory only** — never change the root one.
+
+### Do not change existing project target frameworks
+
+**Do not modify `<TargetFramework>` in any existing service project.** If a service targets `net8.0`, leave it on `net8.0`. The Aspire AppHost can orchestrate services on older TFMs without any changes. Only the AppHost itself needs the Aspire-supported TFM.
+
+### Use the Aspire CLI, not raw dotnet commands, for Aspire operations
+
+- Use `aspire start` to launch the AppHost (not `dotnet run`)
+- Use `aspire add <integration>` to add hosting integrations (not `dotnet add package`)
+- Use `aspire restore` to restore TypeScript AppHost dependencies
+- Use `aspire docs search` to look up APIs
+
+Standard `dotnet` commands (`dotnet build`, `dotnet add reference`, `dotnet sln add`) are fine for normal .NET operations like building projects, adding project references, and managing solution membership.
+
 ## Determine your context
 
 Read `aspire.config.json` at the repository root. Key fields:

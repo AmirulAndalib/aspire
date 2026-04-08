@@ -142,24 +142,28 @@ This is not a priority to solve perfectly — just make sure the agent doesn't s
 
 Some repos pin the root `global.json` to an older SDK such as .NET 8. A `.csproj`-based Aspire AppHost should still stay on the current Aspire-supported SDK (for example, .NET 10), while existing service projects can remain on `net8.0`.
 
-**Do not downgrade the AppHost project to match the repo's root SDK pin.**
+**Do not downgrade the AppHost project to match the repo's root SDK pin. Do not change the root `global.json`. Do not change any existing project's `<TargetFramework>`.**
 
-Preferred approach:
+### Create a nested `global.json` for the AppHost
+
+If the repo's root `global.json` pins an older SDK and the AppHost is in full project mode, you **must** create a nested `global.json` inside the AppHost directory so it builds with the correct SDK. Check whether one already exists before creating it.
+
+Steps:
 
 1. Keep the repo root `global.json` unchanged.
-2. Keep the AppHost in its own directory.
-3. Add a **nested `global.json` next to the AppHost** that pins the newer SDK.
-4. Leave existing services targeting their current TFM unless the user explicitly asks to migrate them.
-
-Example nested `global.json` beside the AppHost:
+2. Check if a `global.json` already exists in the AppHost directory — if so, skip this.
+3. Create a `global.json` next to the AppHost `.csproj` that pins the Aspire-supported SDK:
 
 ```json
 {
   "sdk": {
-    "version": "10.0.100"
+    "version": "10.0.100",
+    "rollForward": "latestFeature"
   }
 }
 ```
+
+4. Leave existing services targeting their current TFM unless the user explicitly asks to migrate them.
 
 ### Important solution caveat
 
