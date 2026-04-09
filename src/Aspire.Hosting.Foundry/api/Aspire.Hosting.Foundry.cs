@@ -90,6 +90,9 @@ namespace Aspire.Hosting
 
     public static partial class HostedAgentResourceBuilderExtensions
     {
+        [AspireExport("addAndPublishPromptAgent", Description = "Adds and publishes a prompt agent to a Microsoft Foundry project.")]
+        public static ApplicationModel.IResourceBuilder<Foundry.AzurePromptAgentResource> AddAndPublishPromptAgent(this ApplicationModel.IResourceBuilder<Foundry.AzureCognitiveServicesProjectResource> project, ApplicationModel.IResourceBuilder<Foundry.FoundryDeploymentResource> model, string name, string? instructions) { throw null; }
+
         [AspireExportIgnore(Reason = "RunAsHostedAgent is not yet implemented, so AsHostedAgent is not available in polyglot hosts.")]
         public static ApplicationModel.IResourceBuilder<T> AsHostedAgent<T>(this ApplicationModel.IResourceBuilder<T> builder, ApplicationModel.IResourceBuilder<Foundry.AzureCognitiveServicesProjectResource>? project = null, System.Action<Foundry.HostedAgentConfiguration>? configure = null)
             where T : ApplicationModel.ExecutableResource { throw null; }
@@ -179,6 +182,25 @@ namespace Aspire.Hosting.Foundry
         public System.Threading.Tasks.Task PublishAsync(Publishing.ManifestPublishingContext ctx) { throw null; }
 
         public System.Threading.Tasks.Task<HostedAgentConfiguration> ToHostedAgentConfigurationAsync(Pipelines.PipelineStepContext context) { throw null; }
+    }
+
+    public partial class AzurePromptAgentResource : ApplicationModel.ExecutableResource, ApplicationModel.IComputeResource, ApplicationModel.IResource
+    {
+        public AzurePromptAgentResource(string name, string model, string? instructions) : base(default!, default!, default!) { }
+
+        public string Description { get { throw null; } set { } }
+
+        public string Instructions { get { throw null; } set { } }
+
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get { throw null; } init { } }
+
+        public string Model { get { throw null; } set { } }
+
+        public StaticValueProvider<string> Version { get { throw null; } }
+
+        public System.Threading.Tasks.Task<global::Azure.AI.Projects.OpenAI.AgentVersion> DeployAsync(Pipelines.PipelineStepContext context, AzureCognitiveServicesProjectResource project) { throw null; }
+
+        public System.Threading.Tasks.Task PublishAsync(Publishing.ManifestPublishingContext ctx) { throw null; }
     }
 
     public static partial class AzureProvisionableAspireResourceExtensions
@@ -591,6 +613,21 @@ namespace Aspire.Hosting.Foundry
 
         [AspireExportIgnore(Reason = "Azure SDK-specific type not usable from polyglot hosts.")]
         public System.Collections.Generic.IList<global::Azure.AI.Projects.OpenAI.AgentTool> Tools { get { throw null; } init { } }
+
+        public global::Azure.AI.Projects.AgentVersionCreationOptions ToAgentVersionCreationOptions() { throw null; }
+    }
+
+    public partial class PromptAgentConfiguration
+    {
+        public PromptAgentConfiguration(string model, string? instructions) { }
+
+        public string Description { get { throw null; } set { } }
+
+        public string? Instructions { get { throw null; } set { } }
+
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get { throw null; } init { } }
+
+        public string Model { get { throw null; } set { } }
 
         public global::Azure.AI.Projects.AgentVersionCreationOptions ToAgentVersionCreationOptions() { throw null; }
     }
