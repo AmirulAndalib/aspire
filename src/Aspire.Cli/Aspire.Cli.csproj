@@ -328,8 +328,5 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>ExportCommandStrings.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Update="Resources\ApiCommandStrings.resx">
-      <XlfInput>false</XlfInput>
-    </EmbeddedResource>
   </ItemGroup>
 </Project>
