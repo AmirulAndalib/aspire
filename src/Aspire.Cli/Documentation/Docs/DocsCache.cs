@@ -17,6 +17,7 @@ internal sealed class DocsCache : IDocsCache
 
     private readonly FileBackedDocumentContentCache _contentCache;
     private readonly string _llmsTxtUrl;
+    private readonly string _sourceCacheKey;
     private readonly string _indexCacheKey;
     private readonly string _indexSourceFingerprintCacheKey;
 
@@ -27,6 +28,7 @@ internal sealed class DocsCache : IDocsCache
         ILogger<DocsCache> logger)
     {
         _llmsTxtUrl = DocsSourceConfiguration.GetLlmsTxtUrl(configuration);
+        _sourceCacheKey = DocsSourceConfiguration.GetContentCacheKey(_llmsTxtUrl);
         _indexCacheKey = DocsSourceConfiguration.GetIndexCacheKey(_llmsTxtUrl);
         _indexSourceFingerprintCacheKey = $"{_indexCacheKey}:fingerprint";
         _contentCache = new FileBackedDocumentContentCache(memoryCache, executionContext, DocsCacheSubdirectory, logger);
@@ -47,15 +49,37 @@ internal sealed class DocsCache : IDocsCache
     public Task InvalidateAsync(string key, CancellationToken cancellationToken = default)
         => _contentCache.InvalidateAsync(key, cancellationToken);
 
-    public Task<LlmsDocument[]?> GetIndexAsync(CancellationToken cancellationToken = default)
-        => _contentCache.GetJsonAsync(_indexCacheKey, JsonSourceGenerationContext.Default.LlmsDocumentArray, cancellationToken: cancellationToken);
+    public async Task<LlmsDocument[]?> GetIndexAsync(CancellationToken cancellationToken = default)
+    {
+        var documents = await _contentCache.GetJsonAsync(_indexCacheKey, JsonSourceGenerationContext.Default.LlmsDocumentArray, cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (documents is not null)
+        {
+            await ClearLegacySourceCacheAsync(cancellationToken).ConfigureAwait(false);
+        }
 
-    public Task SetIndexAsync(LlmsDocument[] documents, CancellationToken cancellationToken = default)
-        => _contentCache.SetJsonAsync(_indexCacheKey, documents, JsonSourceGenerationContext.Default.LlmsDocumentArray, cancellationToken);
+        return documents;
+    }
+
+    public async Task SetIndexAsync(LlmsDocument[] documents, CancellationToken cancellationToken = default)
+    {
+        await _contentCache.SetJsonAsync(_indexCacheKey, documents, JsonSourceGenerationContext.Default.LlmsDocumentArray, cancellationToken).ConfigureAwait(false);
+        await ClearLegacySourceCacheAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     public Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default)
         => _contentCache.GetAsync(_indexSourceFingerprintCacheKey, cancellationToken);
 
     public Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
         => _contentCache.SetAsync(_indexSourceFingerprintCacheKey, fingerprint, cancellationToken);
+
+    private async Task ClearLegacySourceCacheAsync(CancellationToken cancellationToken)
+    {
+        if (string.Equals(_sourceCacheKey, _llmsTxtUrl, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await _contentCache.InvalidateAsync(_llmsTxtUrl, cancellationToken).ConfigureAwait(false);
+        await _contentCache.SetETagAsync(_llmsTxtUrl, null, cancellationToken).ConfigureAwait(false);
+    }
 }

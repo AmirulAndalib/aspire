@@ -36,5 +36,44 @@ internal static class DocsSourceConfiguration
     /// <param name="llmsTxtUrl">The configured documentation source URL.</param>
     /// <returns>The cache key used for the parsed documentation index.</returns>
     public static string GetIndexCacheKey(string llmsTxtUrl)
-        => $"{IndexCacheKeyPrefix}{llmsTxtUrl.Trim()}";
+        => $"{IndexCacheKeyPrefix}{GetContentCacheKey(llmsTxtUrl)}";
+
+    /// <summary>
+    /// Gets the cache key used for the fetched llms.txt source content.
+    /// </summary>
+    /// <param name="llmsTxtUrl">The configured documentation source URL.</param>
+    /// <returns>The cache key used for source content and ETag persistence.</returns>
+    public static string GetContentCacheKey(string llmsTxtUrl)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(llmsTxtUrl);
+
+        var trimmedUrl = llmsTxtUrl.Trim();
+        if (!Uri.TryCreate(trimmedUrl, UriKind.Absolute, out var uri))
+        {
+            var fallback = Path.GetFileNameWithoutExtension(trimmedUrl);
+            return string.IsNullOrWhiteSpace(fallback) ? "llms" : fallback;
+        }
+
+        var rawSegments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var pathSegments = new List<string>(rawSegments.Length);
+        for (var i = 0; i < rawSegments.Length; i++)
+        {
+            var segment = i == rawSegments.Length - 1
+                ? Path.GetFileNameWithoutExtension(rawSegments[i])
+                : rawSegments[i];
+
+            if (!string.IsNullOrWhiteSpace(segment))
+            {
+                pathSegments.Add(segment);
+            }
+        }
+
+        var stem = pathSegments.Count > 0 ? string.Join('-', pathSegments) : "llms";
+        if (uri.Host.Equals("aspire.dev", StringComparison.OrdinalIgnoreCase) && uri.IsDefaultPort)
+        {
+            return stem;
+        }
+
+        return $"{uri.Host}{(uri.IsDefaultPort ? "" : $"-{uri.Port}")}-{stem}";
+    }
 }

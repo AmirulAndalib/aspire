@@ -28,10 +28,52 @@ internal sealed class DocsFetcher(HttpClient httpClient, IDocsCache cache, IConf
     private readonly HttpClient _httpClient = httpClient;
     private readonly IDocsCache _cache = cache;
     private readonly string _llmsTxtUrl = DocsSourceConfiguration.GetLlmsTxtUrl(configuration);
+    private readonly string _cacheKey = DocsSourceConfiguration.GetContentCacheKey(DocsSourceConfiguration.GetLlmsTxtUrl(configuration));
     private readonly ILogger<DocsFetcher> _logger = logger;
 
     public async Task<string?> FetchDocsAsync(CancellationToken cancellationToken = default)
     {
-        return await CachedHttpDocumentFetcher.FetchAsync(_httpClient, _cache, _llmsTxtUrl, _logger, cancellationToken).ConfigureAwait(false);
+        await MigrateLegacyCacheAsync(cancellationToken).ConfigureAwait(false);
+        return await CachedHttpDocumentFetcher.FetchAsync(_httpClient, _cache, _llmsTxtUrl, _cacheKey, _logger, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task MigrateLegacyCacheAsync(CancellationToken cancellationToken)
+    {
+        if (string.Equals(_cacheKey, _llmsTxtUrl, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var currentContent = await _cache.GetAsync(_cacheKey, cancellationToken).ConfigureAwait(false);
+        var currentETag = await _cache.GetETagAsync(_cacheKey, cancellationToken).ConfigureAwait(false);
+        if (currentContent is not null || currentETag is not null)
+        {
+            await ClearLegacyCacheAsync(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var legacyContent = await _cache.GetAsync(_llmsTxtUrl, cancellationToken).ConfigureAwait(false);
+        var legacyETag = await _cache.GetETagAsync(_llmsTxtUrl, cancellationToken).ConfigureAwait(false);
+
+        if (legacyContent is not null)
+        {
+            await _cache.SetAsync(_cacheKey, legacyContent, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (!string.IsNullOrEmpty(legacyETag))
+        {
+            await _cache.SetETagAsync(_cacheKey, legacyETag, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (legacyContent is not null || !string.IsNullOrEmpty(legacyETag))
+        {
+            await ClearLegacyCacheAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task ClearLegacyCacheAsync(CancellationToken cancellationToken)
+    {
+        await _cache.InvalidateAsync(_llmsTxtUrl, cancellationToken).ConfigureAwait(false);
+        await _cache.SetETagAsync(_llmsTxtUrl, null, cancellationToken).ConfigureAwait(false);
     }
 }

@@ -11,6 +11,9 @@ namespace Aspire.Cli.Tests.Documentation.Docs;
 
 public class DocsFetcherTests
 {
+    private const string DefaultLlmsTxtUrl = "https://aspire.dev/llms-small.txt";
+    private static readonly string s_defaultCacheKey = DocsSourceConfiguration.GetContentCacheKey(DefaultLlmsTxtUrl);
+
     private static DocsFetcher CreateFetcher(HttpClient httpClient, IDocsCache cache, IConfiguration? configuration = null)
     {
         configuration ??= new ConfigurationBuilder().Build();
@@ -60,7 +63,7 @@ public class DocsFetcherTests
 
         await fetcher.FetchDocsAsync();
 
-        var storedETag = await cache.GetETagAsync("https://aspire.dev/llms-small.txt");
+        var storedETag = await cache.GetETagAsync(s_defaultCacheKey);
         Assert.Equal("\"abc123\"", storedETag);
     }
 
@@ -81,7 +84,7 @@ public class DocsFetcherTests
 
         await fetcher.FetchDocsAsync();
 
-        var cached = await cache.GetAsync("https://aspire.dev/llms-small.txt");
+        var cached = await cache.GetAsync(s_defaultCacheKey);
         Assert.Equal(content, cached);
     }
 
@@ -89,8 +92,8 @@ public class DocsFetcherTests
     public async Task FetchDocsAsync_WithCachedETag_SendsIfNoneMatchHeader()
     {
         var cache = new MockDocsCache();
-        await cache.SetETagAsync("https://aspire.dev/llms-small.txt", "\"cached-etag\"");
-        await cache.SetAsync("https://aspire.dev/llms-small.txt", "# Cached");
+        await cache.SetETagAsync(s_defaultCacheKey, "\"cached-etag\"");
+        await cache.SetAsync(s_defaultCacheKey, "# Cached");
 
         using var response = new HttpResponseMessage
         {
@@ -115,8 +118,8 @@ public class DocsFetcherTests
     {
         var cachedContent = "# Cached Content";
         var cache = new MockDocsCache();
-        await cache.SetETagAsync("https://aspire.dev/llms-small.txt", "\"etag\"");
-        await cache.SetAsync("https://aspire.dev/llms-small.txt", cachedContent);
+        await cache.SetETagAsync(s_defaultCacheKey, "\"etag\"");
+        await cache.SetAsync(s_defaultCacheKey, cachedContent);
 
         using var response = new HttpResponseMessage
         {
@@ -137,7 +140,7 @@ public class DocsFetcherTests
     {
         var freshContent = "# Fresh Content";
         var cache = new MockDocsCache();
-        await cache.SetETagAsync("https://aspire.dev/llms-small.txt", "\"etag\"");
+        await cache.SetETagAsync(s_defaultCacheKey, "\"etag\"");
         // Cache content is empty - simulating cache cleared but ETag remains
 
         var callCount = 0;
@@ -205,7 +208,7 @@ public class DocsFetcherTests
         using var handler = new CancellationCheckingHandler();
         using var httpClient = new HttpClient(handler);
         var cache = new MockDocsCache();
-        await cache.SetAsync("https://aspire.dev/llms-small.txt", "# Cached Content");
+        await cache.SetAsync(s_defaultCacheKey, "# Cached Content");
         var fetcher = CreateFetcher(httpClient, cache);
 
         using var cts = new CancellationTokenSource();
@@ -342,7 +345,7 @@ public class DocsFetcherTests
     {
         var serverContent = "# Fresh Content";
         var cache = new MockDocsCache();
-        await cache.SetETagAsync("https://aspire.dev/llms-small.txt", "\"old-etag\"");
+        await cache.SetETagAsync(s_defaultCacheKey, "\"old-etag\"");
         // Note: no cached content set
 
         var callCount = 0;
@@ -367,6 +370,27 @@ public class DocsFetcherTests
 
         Assert.Equal(serverContent, content);
         Assert.Equal(2, callCount);
+    }
+
+    [Fact]
+    public async Task FetchDocsAsync_MigratesLegacyUrlCacheEntries()
+    {
+        var legacyContent = "# Cached Content";
+        var cache = new MockDocsCache();
+        await cache.SetAsync(DefaultLlmsTxtUrl, legacyContent);
+        await cache.SetETagAsync(DefaultLlmsTxtUrl, "\"legacy-etag\"");
+
+        using var handler = new MockHttpMessageHandler(new HttpRequestException("Network error"));
+        using var httpClient = new HttpClient(handler);
+        var fetcher = CreateFetcher(httpClient, cache);
+
+        var content = await fetcher.FetchDocsAsync();
+
+        Assert.Equal(legacyContent, content);
+        Assert.Equal(legacyContent, await cache.GetAsync(s_defaultCacheKey));
+        Assert.Equal("\"legacy-etag\"", await cache.GetETagAsync(s_defaultCacheKey));
+        Assert.Null(await cache.GetAsync(DefaultLlmsTxtUrl));
+        Assert.Null(await cache.GetETagAsync(DefaultLlmsTxtUrl));
     }
 
     private sealed class CancellationCheckingHandler : HttpMessageHandler

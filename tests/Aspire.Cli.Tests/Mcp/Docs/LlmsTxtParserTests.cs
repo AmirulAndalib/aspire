@@ -368,6 +368,35 @@ public class LlmsTxtParserTests
     }
 
     [Fact]
+    public async Task ParseAsync_InlineHeroH1_DoesNotCreateExtraDocument()
+    {
+        var content = """
+            # Aspire Dashboard
+            > Monitor, debug, and manage your distributed applications with the Aspire Dashboard.
+
+            # Your app, at a glance. Fully observable. Real-time visibility into every resource, log, trace, and metric in your distributed app — right from your dev environment. [Explore features ](/dashboard/explore/)[Read dashboard overview](/dashboard/overview/) ## Built on OpenTelemetry [Section titled "Built on OpenTelemetry"] Observe everything.
+
+            # Resource Publishing
+
+            Aspire provides a flexible mechanism for publishing resource manifests.
+            """;
+
+        var result = await LlmsTxtParser.ParseAsync(content).DefaultTimeout();
+
+        Assert.Collection(
+            result,
+            dashboard =>
+            {
+                Assert.Equal("Aspire Dashboard", dashboard.Title);
+                Assert.Contains("# Your app, at a glance.", dashboard.Content);
+            },
+            publishing =>
+            {
+                Assert.Equal("Resource Publishing", publishing.Title);
+            });
+    }
+
+    [Fact]
     public async Task ParseAsync_WithCancellation_ThrowsOperationCanceledException()
     {
         var content = """
