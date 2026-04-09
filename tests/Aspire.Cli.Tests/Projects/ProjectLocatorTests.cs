@@ -707,24 +707,6 @@ builder.Build().Run();");
         }
     }
 
-    public class TestFeatures : IFeatures
-    {
-        private readonly Dictionary<string, bool> _features = new();
-
-        public TestFeatures SetFeature(string featureName, bool value)
-        {
-            _features[featureName] = value;
-            return this;
-        }
-
-        public bool IsFeatureEnabled(string featureName, bool defaultValue = false)
-        {
-            return _features.TryGetValue(featureName, out var value) ? value : defaultValue;
-        }
-
-        public void LogFeatureState() { }
-    }
-
     private static ProjectLocator CreateProjectLocatorWithSingleFileEnabled(CliExecutionContext executionContext, Func<FileInfo, AppHostValidationResult>? validateCallback = null)
     {
         var projectFactory = new TestAppHostProjectFactory();
