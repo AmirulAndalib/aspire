@@ -80,7 +80,7 @@ internal sealed class ApiGetCommand : BaseCommand
             return ExitCodeConstants.Success;
         }
 
-        InteractionService.DisplayRawText(TerminalMarkdownFormatter.Format(item.Content), ConsoleOutput.Standard);
+        InteractionService.DisplayMarkdown(item.Content);
         return ExitCodeConstants.Success;
     }
 }

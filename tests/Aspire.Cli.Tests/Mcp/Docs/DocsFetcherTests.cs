@@ -200,20 +200,18 @@ public class DocsFetcherTests
     }
 
     [Fact]
-    public async Task FetchDocsAsync_Cancellation_ReturnsNull()
+    public async Task FetchDocsAsync_Cancellation_ThrowsOperationCanceledException()
     {
-        // Use a handler that properly checks the cancellation token
         using var handler = new CancellationCheckingHandler();
         using var httpClient = new HttpClient(handler);
         var cache = new MockDocsCache();
+        await cache.SetAsync("https://aspire.dev/llms-small.txt", "# Cached Content");
         var fetcher = CreateFetcher(httpClient, cache);
 
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        // The FetchDocsAsync swallows exceptions and returns null when there's no cached content
-        var result = await fetcher.FetchDocsAsync(cts.Token);
-        Assert.Null(result);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => fetcher.FetchDocsAsync(cts.Token));
     }
 
     [Fact]

@@ -86,9 +86,7 @@ internal sealed partial class DocsGetCommand : BaseCommand
         }
         else
         {
-            var formatted = TerminalMarkdownFormatter.Format(doc.Content);
-            // Structured output always goes to stdout.
-            InteractionService.DisplayRawText(formatted, ConsoleOutput.Standard);
+            InteractionService.DisplayMarkdown(doc.Content);
         }
 
         return ExitCodeConstants.Success;

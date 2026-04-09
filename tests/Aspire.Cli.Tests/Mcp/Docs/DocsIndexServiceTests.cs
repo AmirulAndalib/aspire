@@ -420,36 +420,26 @@ public class DocsIndexServiceTests
     }
 
     [Fact]
-    public async Task EnsureIndexedAsync_RebuildsCachedIndexWhenSourceChangesAcrossInstances()
+    public async Task EnsureIndexedAsync_UsesCachedIndexAcrossInstancesWithoutFetching()
     {
         var cache = new MemoryDocsCache();
-        var fetcher = new SequenceDocsFetcher(
-        [
+        var firstService = CreateService(
+            CreateMockFetcher(
             """
             # Redis Integration
             > Connect to Redis.
 
             Redis content.
-            """,
-            """
-            # PostgreSQL Integration
-            > Connect to PostgreSQL.
+            """),
+            cache);
 
-            PostgreSQL content.
-            """
-        ]);
+        await firstService.EnsureIndexedAsync();
 
-        var firstService = CreateService(fetcher, cache);
-        var firstDocs = await firstService.ListDocumentsAsync();
+        var secondService = CreateService(new ThrowingDocsFetcher(new InvalidOperationException("Should not fetch.")), cache);
+        var docs = await secondService.ListDocumentsAsync();
 
-        var doc = Assert.Single(firstDocs);
+        var doc = Assert.Single(docs);
         Assert.Equal("Redis Integration", doc.Title);
-        var secondService = CreateService(fetcher, cache);
-        var secondDocs = await secondService.ListDocumentsAsync();
-
-        var doc_2 = Assert.Single(secondDocs);
-        Assert.Equal("PostgreSQL Integration", doc_2.Title);
-
     }
 
     [Fact]

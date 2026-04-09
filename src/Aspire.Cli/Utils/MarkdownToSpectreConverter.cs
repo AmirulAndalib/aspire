@@ -166,7 +166,7 @@ internal static partial class MarkdownToSpectreConverter
         // Convert > quoted text - handle all forms: "> text", "> ", and ">"
         // Process line by line to avoid regex matching across line boundaries
         var lines = text.Split('\n');
-        var regex = new Regex(@"^>\s*(.*)$");
+        var regex = QuotedTextRegex();
 
         for (int i = 0; i < lines.Length; i++)
         {
@@ -277,4 +277,7 @@ internal static partial class MarkdownToSpectreConverter
 
     [GeneratedRegex(@"\[([^\]]+)\]\(([^)]+)\)")]
     private static partial Regex LinkRegex();
+
+    [GeneratedRegex(@"^>\s*(.*)$")]
+    private static partial Regex QuotedTextRegex();
 }

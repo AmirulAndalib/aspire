@@ -83,6 +83,10 @@ internal static class CachedHttpDocumentFetcher
             logger.LogInformation("Fetched content from {Url}, length: {Length} chars", url, content.Length);
             return content;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to fetch content from {Url}", url);

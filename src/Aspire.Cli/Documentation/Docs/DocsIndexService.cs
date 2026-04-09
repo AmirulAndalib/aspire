@@ -150,30 +150,20 @@ internal sealed partial class DocsIndexService(IDocsFetcher docsFetcher, IDocsCa
             _logger.LogDebug("Loading aspire.dev documentation");
 
             var cachedDocuments = await _docsCache.GetIndexAsync(cancellationToken).ConfigureAwait(false);
-            var cachedFingerprint = await _docsCache.GetIndexSourceFingerprintAsync(cancellationToken).ConfigureAwait(false);
-
-            var content = await _docsFetcher.FetchDocsAsync(cancellationToken).ConfigureAwait(false);
-            if (content is null)
-            {
-                if (cachedDocuments is not null)
-                {
-                    _indexedDocuments = [.. cachedDocuments.Select(static d => new IndexedDocument(d))];
-                    _logger.LogWarning("Failed to refresh documentation. Using cached index with {Count} documents.", _indexedDocuments.Count);
-                    return;
-                }
-
-                _logger.LogWarning("Failed to fetch documentation");
-
-                return;
-            }
-
-            var currentFingerprint = SourceContentFingerprint.Compute(content);
-            if (cachedDocuments is not null && string.Equals(cachedFingerprint, currentFingerprint, StringComparison.Ordinal))
+            if (cachedDocuments is not null)
             {
                 _indexedDocuments = [.. cachedDocuments.Select(static d => new IndexedDocument(d))];
 
                 var cacheElapsedTime = Stopwatch.GetElapsedTime(startTimestamp);
                 _logger.LogInformation("Loaded {Count} documents from cache in {ElapsedTime:ss\\.fff} seconds.", _indexedDocuments.Count, cacheElapsedTime);
+                return;
+            }
+
+            var content = await _docsFetcher.FetchDocsAsync(cancellationToken).ConfigureAwait(false);
+            if (content is null)
+            {
+                _logger.LogWarning("Failed to fetch documentation");
+
                 return;
             }
 
@@ -184,7 +174,7 @@ internal sealed partial class DocsIndexService(IDocsFetcher docsFetcher, IDocsCa
 
             // Cache the parsed documents for next time
             await _docsCache.SetIndexAsync([.. documents], cancellationToken).ConfigureAwait(false);
-            await _docsCache.SetIndexSourceFingerprintAsync(currentFingerprint, cancellationToken).ConfigureAwait(false);
+            await _docsCache.SetIndexSourceFingerprintAsync(SourceContentFingerprint.Compute(content), cancellationToken).ConfigureAwait(false);
 
             var elapsedTime = Stopwatch.GetElapsedTime(startTimestamp);
 
