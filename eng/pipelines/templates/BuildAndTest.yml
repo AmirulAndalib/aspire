@@ -65,14 +65,19 @@ steps:
           }
 
           $signature = Get-AuthenticodeSignature $managedPath
-          if ($signature.Status -eq [System.Management.Automation.SignatureStatus]::NotSigned) {
-            Write-Host "##[error]aspire-managed.exe is not signed: $managedPath"
+          $allowedStatuses = @(
+            [System.Management.Automation.SignatureStatus]::Valid,
+            [System.Management.Automation.SignatureStatus]::NotTrusted
+          )
+
+          if ($signature.Status -notin $allowedStatuses) {
+            Write-Host "##[error]aspire-managed.exe has an unexpected signature status '$($signature.Status)': $managedPath"
             exit 1
           }
 
           Write-Host "✅ aspire-managed.exe signature status: $($signature.Status)"
         displayName: 🟣Verify managed bundle signature (${{ targetRid }})
-        condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), in(variables['_SignType'], 'real', 'test'), startsWith('${{ targetRid }}', 'win-'))
+        condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), eq(variables['_Sign'], 'true'), in(variables['_SignType'], 'real', 'test'), startsWith('${{ targetRid }}', 'win-'))
 
     - script: ${{ parameters.buildScript }}
               -restore -build
