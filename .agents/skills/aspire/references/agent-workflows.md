@@ -40,8 +40,8 @@ Use the docs commands first for the workflow, then use the API reference command
 ```bash
 aspire docs search postgres
 aspire docs get <slug>
-aspire api search postgres --language csharp
-aspire api get <id>
+aspire docs api search postgres --language csharp
+aspire docs api get <id>
 aspire add <package>
 ```
 
@@ -50,13 +50,13 @@ For dashboard or custom resource commands, use docs for the pattern and API docs
 ```bash
 aspire docs search "custom resource commands"
 aspire docs get custom-resource-commands
-aspire api search WithCommand --language csharp
+aspire docs api search WithCommand --language csharp
 ```
 
 Keep these points in mind:
 
 - Read the docs before editing the AppHost so the implementation follows a documented Aspire pattern instead of guessing the workflow.
-- Use `aspire api` when you need the C# or TypeScript reference entry for the exact API you are about to call.
+- Use `aspire docs api` when you need the C# or TypeScript reference entry for the exact API you are about to call.
 - If the AppHost is C# and you need to understand local overloads or builder chains, use the `dotnet-inspect` skill if it is available after checking the Aspire API reference.
 - After adding an integration, restart with `aspire start` so the updated AppHost takes effect.
 

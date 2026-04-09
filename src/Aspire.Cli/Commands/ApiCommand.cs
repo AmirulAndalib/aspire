@@ -12,7 +12,7 @@ using Aspire.Cli.Utils;
 namespace Aspire.Cli.Commands;
 
 /// <summary>
-/// Parent command for API documentation operations.
+/// Parent command for API documentation operations under <c>docs</c>.
 /// </summary>
 internal sealed class ApiCommand : BaseCommand
 {

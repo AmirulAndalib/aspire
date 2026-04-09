@@ -98,7 +98,7 @@
     <value>No API results found for '{0}'. Try different search terms.</value>
   </data>
   <data name="ApiNotFound" xml:space="preserve">
-    <value>API item '{0}' not found. Use 'aspire api search' or 'aspire api list &lt;scope&gt;' to find available identifiers.</value>
+    <value>API item '{0}' not found. Use 'aspire docs api search' or 'aspire docs api list &lt;scope&gt;' to find available identifiers.</value>
   </data>
   <data name="FoundApiEntries" xml:space="preserve">
     <value>Found {0} API entries under '{1}'.</value>

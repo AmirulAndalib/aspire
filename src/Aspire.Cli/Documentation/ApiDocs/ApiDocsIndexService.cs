@@ -229,7 +229,7 @@ internal sealed class ApiSearchResult
 }
 
 /// <summary>
-/// Represents the content returned by <c>aspire api get</c>.
+/// Represents the content returned by <c>aspire docs api get</c>.
 /// </summary>
 internal sealed class ApiContent
 {

@@ -2,12 +2,12 @@
 
 ## Overview
 
-This specification describes a new `aspire api` command group for browsing, searching, and retrieving Aspire API reference documentation from `aspire.dev`.
+This specification describes a new `aspire docs api` command group for browsing, searching, and retrieving Aspire API reference documentation from `aspire.dev`.
 
-The new command group is parallel to `aspire docs`, but it uses a different ingestion pipeline:
+The new command group lives under `aspire docs`, but it uses a different ingestion pipeline than the existing prose docs commands:
 
 - `aspire docs` indexes `llms-small.txt`
-- `aspire api` indexes `sitemap-0.xml` and uses direct API page routes as addressable items
+- `aspire docs api` indexes `sitemap-0.xml` and uses direct API page routes as addressable items
 
 ## Goals
 
@@ -26,9 +26,9 @@ The new command group is parallel to `aspire docs`, but it uses a different inge
 ## Command surface
 
 ```text
-aspire api list <scope> [--format json]
-aspire api search <query> [--language <language>] [--limit|-n <count>] [--format json]
-aspire api get <id> [--format json]
+aspire docs api list <scope> [--format json]
+aspire docs api search <query> [--language <language>] [--limit|-n <count>] [--format json]
+aspire docs api get <id> [--format json]
 ```
 
 ## Browse model
@@ -38,18 +38,18 @@ aspire api get <id> [--format json]
 ### Supported scopes
 
 ```text
-aspire api list csharp
-aspire api list csharp/<package>
-aspire api list csharp/<package>/<type>
+aspire docs api list csharp
+aspire docs api list csharp/<package>
+aspire docs api list csharp/<package>/<type>
 
-aspire api list typescript
-aspire api list typescript/<module>
-aspire api list typescript/<module>/<symbol>
+aspire docs api list typescript
+aspire docs api list typescript/<module>
+aspire docs api list typescript/<module>/<symbol>
 
-aspire api list java
-aspire api list go
-aspire api list rust
-aspire api list python
+aspire docs api list java
+aspire docs api list go
+aspire docs api list rust
+aspire docs api list python
 ```
 
 ### Scope semantics
@@ -124,7 +124,7 @@ The index should prioritize:
 
 The `--language` option limits results to a supported API language. Today the modeled language set is `csharp`, `typescript`, `java`, `go`, `rust`, and `python`.
 
-Search results should include enough metadata for the user to copy the returned identifier directly into `aspire api get`.
+Search results should include enough metadata for the user to copy the returned identifier directly into `aspire docs api get`.
 
 ## Get behavior
 

@@ -21,7 +21,7 @@ public class ApiCommandTests(ITestOutputHelper outputHelper)
         var provider = services.BuildServiceProvider();
 
         var command = provider.GetRequiredService<Aspire.Cli.Commands.RootCommand>();
-        var result = command.Parse("api");
+        var result = command.Parse("docs api");
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.Equal(ExitCodeConstants.InvalidCommand, exitCode);
@@ -38,7 +38,7 @@ public class ApiCommandTests(ITestOutputHelper outputHelper)
         var provider = services.BuildServiceProvider();
 
         var command = provider.GetRequiredService<Aspire.Cli.Commands.RootCommand>();
-        var result = command.Parse("api list csharp");
+        var result = command.Parse("docs api list csharp");
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.Equal(ExitCodeConstants.Success, exitCode);
@@ -55,7 +55,7 @@ public class ApiCommandTests(ITestOutputHelper outputHelper)
         var provider = services.BuildServiceProvider();
 
         var command = provider.GetRequiredService<Aspire.Cli.Commands.RootCommand>();
-        var result = command.Parse("api search emulator --language typescript --format json");
+        var result = command.Parse("docs api search emulator --language typescript --format json");
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.Equal(ExitCodeConstants.Success, exitCode);
@@ -72,7 +72,7 @@ public class ApiCommandTests(ITestOutputHelper outputHelper)
         var provider = services.BuildServiceProvider();
 
         var command = provider.GetRequiredService<Aspire.Cli.Commands.RootCommand>();
-        var result = command.Parse("api search emulator --language python --format json");
+        var result = command.Parse("docs api search emulator --language python --format json");
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.Equal(ExitCodeConstants.Success, exitCode);
@@ -89,7 +89,7 @@ public class ApiCommandTests(ITestOutputHelper outputHelper)
         var provider = services.BuildServiceProvider();
 
         var command = provider.GetRequiredService<Aspire.Cli.Commands.RootCommand>();
-        var result = command.Parse("api get csharp/aspire.test.package/testtype");
+        var result = command.Parse("docs api get csharp/aspire.test.package/testtype");
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.Equal(ExitCodeConstants.Success, exitCode);
@@ -106,7 +106,7 @@ public class ApiCommandTests(ITestOutputHelper outputHelper)
         var provider = services.BuildServiceProvider();
 
         var command = provider.GetRequiredService<Aspire.Cli.Commands.RootCommand>();
-        var result = command.Parse("api get missing/id");
+        var result = command.Parse("docs api get missing/id");
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.NotEqual(ExitCodeConstants.Success, exitCode);

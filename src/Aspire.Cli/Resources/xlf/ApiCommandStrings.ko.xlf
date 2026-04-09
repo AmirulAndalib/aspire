@@ -3,8 +3,8 @@
   <file datatype="xml" source-language="en" target-language="ko" original="../ApiCommandStrings.resx">
     <body>
       <trans-unit id="ApiNotFound">
-        <source>API item '{0}' not found. Use 'aspire api search' or 'aspire api list &lt;scope&gt;' to find available identifiers.</source>
-        <target state="new">API item '{0}' not found. Use 'aspire api search' or 'aspire api list &lt;scope&gt;' to find available identifiers.</target>
+        <source>API item '{0}' not found. Use 'aspire docs api search' or 'aspire docs api list &lt;scope&gt;' to find available identifiers.</source>
+        <target state="new">API item '{0}' not found. Use 'aspire docs api search' or 'aspire docs api list &lt;scope&gt;' to find available identifiers.</target>
         <note />
       </trans-unit>
       <trans-unit id="Description">

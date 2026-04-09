@@ -9,17 +9,17 @@ Use these commands when the task is to confirm the right Aspire workflow before 
 ```bash
 aspire docs search <query>
 aspire docs get <slug>
-aspire api search <query> --language csharp|typescript
-aspire api list <scope>
-aspire api get <id>
+aspire docs api search <query> --language csharp|typescript
+aspire docs api list <scope>
+aspire docs api get <id>
 ```
 
 Keep these points in mind:
 
 - Use docs commands before changing integrations when you need to confirm the supported path or recommended workflow.
 - Use docs commands before implementing custom resource commands or unfamiliar AppHost patterns such as `WithCommand`.
-- Use API commands when the user needs the C# or TypeScript reference entry for a specific Aspire API.
-- Use `aspire api list <scope>` to browse children under a language, package, module, type, or symbol.
+- Use `aspire docs api` when the user needs the C# or TypeScript reference entry for a specific Aspire API.
+- Use `aspire docs api list <scope>` to browse children under a language, package, module, type, or symbol.
 
 ## Scenario: I Need To Inspect Or Change AppHost Secrets
 
