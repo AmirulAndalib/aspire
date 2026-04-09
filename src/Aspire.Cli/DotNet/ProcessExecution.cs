@@ -47,11 +47,11 @@ internal sealed class ProcessExecution : IProcessExecution
 
         if (!started)
         {
-            _logger.LogDebug("Failed to start process {FileName} with args: {Args}", FileName, string.Join(" ", Arguments));
+            _logger.LogDebug("{FileName}({ProcessId}) failed to start with args: {Args}", FileName, 0, string.Join(" ", Arguments));
             return false;
         }
 
-        _logger.LogDebug("Started {FileName} in {WorkingDirectory} with PID: {ProcessId}", FileName, _process.StartInfo.WorkingDirectory, _process.Id);
+        _logger.LogDebug("{FileName}({ProcessId}) started in {WorkingDirectory}", FileName, _process.Id, _process.StartInfo.WorkingDirectory);
 
         // Start stream forwarders
         _stdoutForwarder = Task.Run(async () =>
@@ -76,25 +76,25 @@ internal sealed class ProcessExecution : IProcessExecution
     /// <inheritdoc />
     public async Task<int> WaitForExitAsync(CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Waiting for process to exit with PID: {ProcessId}", _process.Id);
+        _logger.LogDebug("{FileName}({ProcessId}) waiting for exit", FileName, _process.Id);
 
         await _process.WaitForExitAsync(cancellationToken);
 
         if (!_process.HasExited)
         {
-            _logger.LogDebug("Process with PID: {ProcessId} has not exited, killing it.", _process.Id);
+            _logger.LogDebug("{FileName}({ProcessId}) has not exited, killing it", FileName, _process.Id);
             _process.Kill(false);
         }
         else
         {
-            _logger.LogDebug("Process with PID: {ProcessId} has exited with code: {ExitCode}", _process.Id, _process.ExitCode);
+            _logger.LogDebug("{FileName}({ProcessId}) exited with code: {ExitCode}", FileName, _process.Id, _process.ExitCode);
         }
 
         // Explicitly close the streams to unblock any pending ReadLineAsync calls.
         // In some environments (particularly CI containers), the stream handles may not
         // be automatically closed when the process exits, causing ReadLineAsync to block
         // indefinitely. Disposing the streams forces them to close.
-        _logger.LogDebug("Closing stdout/stderr streams for PID: {ProcessId}", _process.Id);
+        _logger.LogDebug("{FileName}({ProcessId}) closing stdout/stderr streams", FileName, _process.Id);
         _process.StandardOutput.Close();
         _process.StandardError.Close();
 
@@ -109,11 +109,11 @@ internal sealed class ProcessExecution : IProcessExecution
             var completedTask = await Task.WhenAny(forwardersCompleted, forwarderTimeout);
             if (completedTask == forwarderTimeout)
             {
-                _logger.LogWarning("Stream forwarders for PID {ProcessId} did not complete within timeout after stream close. Continuing anyway.", _process.Id);
+                _logger.LogWarning("{FileName}({ProcessId}) stream forwarders did not complete within timeout after stream close", FileName, _process.Id);
             }
             else
             {
-                _logger.LogDebug("Pending forwarders for PID completed: {ProcessId}", _process.Id);
+                _logger.LogDebug("{FileName}({ProcessId}) forwarders completed", FileName, _process.Id);
             }
         }
 
@@ -135,9 +135,10 @@ internal sealed class ProcessExecution : IProcessExecution
     private async Task ForwardStreamToLoggerAsync(StreamReader reader, string identifier, Action<string>? lineCallback)
     {
         _logger.LogDebug(
-            "Starting to forward stream with identifier '{Identifier}' on process '{ProcessId}' to logger",
-            identifier,
-            _process.Id
+            "{FileName}({ProcessId}) starting to forward {Identifier} stream",
+            FileName,
+            _process.Id,
+            identifier
             );
 
         try
@@ -146,7 +147,8 @@ internal sealed class ProcessExecution : IProcessExecution
             while ((line = await reader.ReadLineAsync()) is not null)
             {
                 _logger.LogTrace(
-                    "({ProcessId}) {Identifier}: {Line}",
+                    "{FileName}({ProcessId}) {Identifier}: {Line}",
+                    FileName,
                     _process.Id,
                     identifier,
                     line
@@ -157,7 +159,7 @@ internal sealed class ProcessExecution : IProcessExecution
         catch (ObjectDisposedException)
         {
             // Stream was closed externally (e.g., after process exit). This is expected.
-            _logger.LogDebug("Stream forwarder completed for {Identifier} - stream was closed", identifier);
+            _logger.LogDebug("{FileName}({ProcessId}) {Identifier} stream forwarder completed - stream was closed", FileName, _process.Id, identifier);
         }
     }
 }
