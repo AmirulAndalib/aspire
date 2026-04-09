@@ -135,6 +135,21 @@ internal sealed class FileBackedDocumentContentCache(
     }
 
     /// <summary>
+    /// Removes cached JSON content for the specified key.
+    /// </summary>
+    /// <param name="key">The cache key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public Task InvalidateJsonAsync(string key, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _memoryCache.Remove(GetMemoryCacheKey("json", key));
+        DeleteFileQuietly(GetJsonFilePath(key));
+        _logger.LogDebug("JSON cache invalidated key: {Key}", key);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Gets cached JSON content for the specified key.
     /// </summary>
     /// <typeparam name="T">The JSON payload type.</typeparam>

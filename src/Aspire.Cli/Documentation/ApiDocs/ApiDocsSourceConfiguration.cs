@@ -36,7 +36,23 @@ internal static class ApiDocsSourceConfiguration
     /// <param name="sitemapUrl">The configured sitemap URL.</param>
     /// <returns>The cache key used for the parsed API index.</returns>
     public static string GetIndexCacheKey(string sitemapUrl)
+        => $"{IndexCacheKeyPrefix}{GetSitemapContentCacheKey(sitemapUrl)}";
+
+    /// <summary>
+    /// Gets the legacy raw-URL cache key for the parsed API index.
+    /// </summary>
+    /// <param name="sitemapUrl">The configured sitemap URL.</param>
+    /// <returns>The legacy cache key used by earlier builds.</returns>
+    public static string GetLegacyIndexCacheKey(string sitemapUrl)
         => $"{IndexCacheKeyPrefix}{sitemapUrl.Trim()}";
+
+    /// <summary>
+    /// Gets the cache key used for fetched sitemap content.
+    /// </summary>
+    /// <param name="sitemapUrl">The configured sitemap URL.</param>
+    /// <returns>The cache key used for sitemap content and ETag persistence.</returns>
+    public static string GetSitemapContentCacheKey(string sitemapUrl)
+        => DocumentationCacheKey.FromUrl(sitemapUrl, "sitemap");
 
     /// <summary>
     /// Replaces the scheme, host, and port of a canonical API page URL with the configured sitemap source.
@@ -84,4 +100,13 @@ internal static class ApiDocsSourceConfiguration
 
         return $"{pageUrl.TrimEnd('/')}.md";
     }
+
+    /// <summary>
+    /// Gets the cache key used for a fetched API markdown page.
+    /// </summary>
+    /// <param name="pageUrl">The canonical API page URL.</param>
+    /// <param name="sitemapUrl">The configured sitemap URL.</param>
+    /// <returns>The cache key used for page content and ETag persistence.</returns>
+    public static string GetPageContentCacheKey(string pageUrl, string sitemapUrl)
+        => DocumentationCacheKey.FromUrl(BuildMarkdownUrl(pageUrl, sitemapUrl), "page");
 }

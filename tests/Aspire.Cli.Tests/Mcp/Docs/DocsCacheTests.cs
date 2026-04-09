@@ -48,9 +48,25 @@ public class DocsCacheTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var cache = CreateCache(workspace, memoryCache);
+        var contentCache = CreateContentCache(workspace, memoryCache);
 
         await cache.SetAsync(DefaultLlmsTxtUrl, "# Legacy Content").DefaultTimeout();
         await cache.SetETagAsync(DefaultLlmsTxtUrl, "\"legacy-etag\"").DefaultTimeout();
+        var legacyIndexKey = DocsSourceConfiguration.GetLegacyIndexCacheKey(DefaultLlmsTxtUrl);
+        await contentCache.SetJsonAsync(
+            legacyIndexKey,
+            [
+                new LlmsDocument
+                {
+                    Title = "Legacy Document",
+                    Slug = "legacy-document",
+                    Content = "# Legacy Document",
+                    Sections = [],
+                    Summary = "Legacy summary"
+                }
+            ],
+            Aspire.Cli.JsonSourceGenerationContext.Default.LlmsDocumentArray).DefaultTimeout();
+        await contentCache.SetAsync($"{legacyIndexKey}:fingerprint", "legacy-fingerprint").DefaultTimeout();
         await cache.SetIndexAsync(
             [
                 new LlmsDocument
@@ -62,8 +78,10 @@ public class DocsCacheTests(ITestOutputHelper outputHelper)
                     Summary = "Summary"
                 }
             ]).DefaultTimeout();
+        await cache.SetIndexSourceFingerprintAsync("current-fingerprint").DefaultTimeout();
 
         _ = await cache.GetIndexAsync().DefaultTimeout();
+        _ = await cache.GetIndexSourceFingerprintAsync().DefaultTimeout();
 
         var cacheFiles = Directory.GetFiles(Path.Combine(workspace.WorkspaceRoot.FullName, ".aspire", "cache", "docs"))
             .Select(Path.GetFileName)
@@ -71,20 +89,27 @@ public class DocsCacheTests(ITestOutputHelper outputHelper)
 
         Assert.DoesNotContain("https___aspire.dev_llms-small.txt.txt", cacheFiles);
         Assert.DoesNotContain("https___aspire.dev_llms-small.txt.etag.txt", cacheFiles);
+        Assert.DoesNotContain("index_https___aspire.dev_llms-small.txt.json", cacheFiles);
+        Assert.DoesNotContain("index_https___aspire.dev_llms-small.txt_fingerprint.txt", cacheFiles);
         Assert.Contains("index_llms-small.json", cacheFiles);
+        Assert.Contains("index_llms-small_fingerprint.txt", cacheFiles);
     }
 
     private static DocsCache CreateCache(TemporaryWorkspace workspace, IMemoryCache memoryCache)
     {
         var configuration = new ConfigurationBuilder().Build();
-        var executionContext = new CliExecutionContext(
+        return new DocsCache(memoryCache, CreateExecutionContext(workspace), configuration, NullLogger<DocsCache>.Instance);
+    }
+
+    private static Aspire.Cli.Documentation.FileBackedDocumentContentCache CreateContentCache(TemporaryWorkspace workspace, IMemoryCache memoryCache)
+        => new(memoryCache, CreateExecutionContext(workspace), "docs", NullLogger<DocsCache>.Instance);
+
+    private static CliExecutionContext CreateExecutionContext(TemporaryWorkspace workspace)
+        => new(
             workspace.WorkspaceRoot,
             new DirectoryInfo(Path.Combine(workspace.WorkspaceRoot.FullName, ".aspire", "hives")),
             new DirectoryInfo(Path.Combine(workspace.WorkspaceRoot.FullName, ".aspire", "cache")),
             new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")),
             new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")),
             "test.log");
-
-        return new DocsCache(memoryCache, executionContext, configuration, NullLogger<DocsCache>.Instance);
-    }
 }

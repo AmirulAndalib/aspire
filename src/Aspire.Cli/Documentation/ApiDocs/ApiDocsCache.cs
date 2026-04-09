@@ -28,6 +28,8 @@ internal sealed class ApiDocsCache(
     private readonly FileBackedDocumentContentCache _contentCache = new(memoryCache, executionContext, ApiDocsCacheSubdirectory, logger);
     private readonly string _indexCacheKey = ApiDocsSourceConfiguration.GetIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration));
     private readonly string _indexSourceFingerprintCacheKey = $"{ApiDocsSourceConfiguration.GetIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration))}:fingerprint";
+    private readonly string _legacyIndexCacheKey = ApiDocsSourceConfiguration.GetLegacyIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration));
+    private readonly string _legacyIndexSourceFingerprintCacheKey = $"{ApiDocsSourceConfiguration.GetLegacyIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration))}:fingerprint";
 
     /// <summary>
     /// Gets cached content for the specified key.
@@ -78,30 +80,115 @@ internal sealed class ApiDocsCache(
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The cached index, or <c>null</c> if it is not available.</returns>
-    public Task<ApiReferenceItem[]?> GetIndexAsync(CancellationToken cancellationToken = default)
-        => _contentCache.GetJsonAsync(_indexCacheKey, JsonSourceGenerationContext.Default.ApiReferenceItemArray, cancellationToken: cancellationToken);
+    public async Task<ApiReferenceItem[]?> GetIndexAsync(CancellationToken cancellationToken = default)
+    {
+        var documents = await _contentCache.GetJsonAsync(_indexCacheKey, JsonSourceGenerationContext.Default.ApiReferenceItemArray, cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (documents is not null)
+        {
+            await MigrateLegacyIndexFingerprintAsync(cancellationToken).ConfigureAwait(false);
+            await ClearLegacyIndexCacheAsync(cancellationToken).ConfigureAwait(false);
+            return documents;
+        }
+
+        if (!HasLegacyIndexCacheKey)
+        {
+            return null;
+        }
+
+        var legacyDocuments = await _contentCache.GetJsonAsync(_legacyIndexCacheKey, JsonSourceGenerationContext.Default.ApiReferenceItemArray, cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (legacyDocuments is null)
+        {
+            return null;
+        }
+
+        await _contentCache.SetJsonAsync(_indexCacheKey, legacyDocuments, JsonSourceGenerationContext.Default.ApiReferenceItemArray, cancellationToken).ConfigureAwait(false);
+        await MigrateLegacyIndexFingerprintAsync(cancellationToken).ConfigureAwait(false);
+        await ClearLegacyIndexCacheAsync(cancellationToken).ConfigureAwait(false);
+        return legacyDocuments;
+    }
 
     /// <summary>
     /// Stores the API reference index in the cache.
     /// </summary>
     /// <param name="documents">The items to cache.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public Task SetIndexAsync(ApiReferenceItem[] documents, CancellationToken cancellationToken = default)
-        => _contentCache.SetJsonAsync(_indexCacheKey, documents, JsonSourceGenerationContext.Default.ApiReferenceItemArray, cancellationToken);
+    public async Task SetIndexAsync(ApiReferenceItem[] documents, CancellationToken cancellationToken = default)
+    {
+        await _contentCache.SetJsonAsync(_indexCacheKey, documents, JsonSourceGenerationContext.Default.ApiReferenceItemArray, cancellationToken).ConfigureAwait(false);
+        await ClearLegacyIndexCacheAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     /// <summary>
     /// Gets the fingerprint for the sitemap content used to build the cached index.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The cached sitemap fingerprint, or <c>null</c> if it is not available.</returns>
-    public Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default)
-        => _contentCache.GetAsync(_indexSourceFingerprintCacheKey, cancellationToken);
+    public async Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default)
+    {
+        var fingerprint = await _contentCache.GetAsync(_indexSourceFingerprintCacheKey, cancellationToken).ConfigureAwait(false);
+        if (fingerprint is not null)
+        {
+            await ClearLegacyIndexCacheAsync(cancellationToken).ConfigureAwait(false);
+            return fingerprint;
+        }
+
+        if (!HasLegacyIndexCacheKey)
+        {
+            return null;
+        }
+
+        var legacyFingerprint = await _contentCache.GetAsync(_legacyIndexSourceFingerprintCacheKey, cancellationToken).ConfigureAwait(false);
+        if (legacyFingerprint is null)
+        {
+            return null;
+        }
+
+        await _contentCache.SetAsync(_indexSourceFingerprintCacheKey, legacyFingerprint, cancellationToken).ConfigureAwait(false);
+        await ClearLegacyIndexCacheAsync(cancellationToken).ConfigureAwait(false);
+        return legacyFingerprint;
+    }
 
     /// <summary>
     /// Stores the fingerprint for the sitemap content used to build the cached index.
     /// </summary>
     /// <param name="fingerprint">The sitemap fingerprint.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
-        => _contentCache.SetAsync(_indexSourceFingerprintCacheKey, fingerprint, cancellationToken);
+    public async Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
+    {
+        await _contentCache.SetAsync(_indexSourceFingerprintCacheKey, fingerprint, cancellationToken).ConfigureAwait(false);
+        await ClearLegacyIndexCacheAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private bool HasLegacyIndexCacheKey => !string.Equals(_legacyIndexCacheKey, _indexCacheKey, StringComparison.Ordinal);
+
+    private async Task MigrateLegacyIndexFingerprintAsync(CancellationToken cancellationToken)
+    {
+        if (!HasLegacyIndexCacheKey)
+        {
+            return;
+        }
+
+        var currentFingerprint = await _contentCache.GetAsync(_indexSourceFingerprintCacheKey, cancellationToken).ConfigureAwait(false);
+        if (currentFingerprint is not null)
+        {
+            return;
+        }
+
+        var legacyFingerprint = await _contentCache.GetAsync(_legacyIndexSourceFingerprintCacheKey, cancellationToken).ConfigureAwait(false);
+        if (legacyFingerprint is not null)
+        {
+            await _contentCache.SetAsync(_indexSourceFingerprintCacheKey, legacyFingerprint, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task ClearLegacyIndexCacheAsync(CancellationToken cancellationToken)
+    {
+        if (!HasLegacyIndexCacheKey)
+        {
+            return;
+        }
+
+        await _contentCache.InvalidateJsonAsync(_legacyIndexCacheKey, cancellationToken).ConfigureAwait(false);
+        await _contentCache.InvalidateAsync(_legacyIndexSourceFingerprintCacheKey, cancellationToken).ConfigureAwait(false);
+    }
 }

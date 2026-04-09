@@ -20,6 +20,8 @@ internal sealed class DocsCache : IDocsCache
     private readonly string _sourceCacheKey;
     private readonly string _indexCacheKey;
     private readonly string _indexSourceFingerprintCacheKey;
+    private readonly string _legacyIndexCacheKey;
+    private readonly string _legacyIndexSourceFingerprintCacheKey;
 
     public DocsCache(
         IMemoryCache memoryCache,
@@ -31,6 +33,8 @@ internal sealed class DocsCache : IDocsCache
         _sourceCacheKey = DocsSourceConfiguration.GetContentCacheKey(_llmsTxtUrl);
         _indexCacheKey = DocsSourceConfiguration.GetIndexCacheKey(_llmsTxtUrl);
         _indexSourceFingerprintCacheKey = $"{_indexCacheKey}:fingerprint";
+        _legacyIndexCacheKey = DocsSourceConfiguration.GetLegacyIndexCacheKey(_llmsTxtUrl);
+        _legacyIndexSourceFingerprintCacheKey = $"{_legacyIndexCacheKey}:fingerprint";
         _contentCache = new FileBackedDocumentContentCache(memoryCache, executionContext, DocsCacheSubdirectory, logger);
     }
 
@@ -54,23 +58,92 @@ internal sealed class DocsCache : IDocsCache
         var documents = await _contentCache.GetJsonAsync(_indexCacheKey, JsonSourceGenerationContext.Default.LlmsDocumentArray, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (documents is not null)
         {
-            await ClearLegacySourceCacheAsync(cancellationToken).ConfigureAwait(false);
+            await MigrateLegacyIndexFingerprintAsync(cancellationToken).ConfigureAwait(false);
+            await ClearLegacyCacheAsync(cancellationToken).ConfigureAwait(false);
+            return documents;
         }
 
-        return documents;
+        if (!HasLegacyIndexCacheKey)
+        {
+            return null;
+        }
+
+        var legacyDocuments = await _contentCache.GetJsonAsync(_legacyIndexCacheKey, JsonSourceGenerationContext.Default.LlmsDocumentArray, cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (legacyDocuments is null)
+        {
+            return null;
+        }
+
+        await _contentCache.SetJsonAsync(_indexCacheKey, legacyDocuments, JsonSourceGenerationContext.Default.LlmsDocumentArray, cancellationToken).ConfigureAwait(false);
+        await MigrateLegacyIndexFingerprintAsync(cancellationToken).ConfigureAwait(false);
+        await ClearLegacyCacheAsync(cancellationToken).ConfigureAwait(false);
+        return legacyDocuments;
     }
 
     public async Task SetIndexAsync(LlmsDocument[] documents, CancellationToken cancellationToken = default)
     {
         await _contentCache.SetJsonAsync(_indexCacheKey, documents, JsonSourceGenerationContext.Default.LlmsDocumentArray, cancellationToken).ConfigureAwait(false);
-        await ClearLegacySourceCacheAsync(cancellationToken).ConfigureAwait(false);
+        await ClearLegacyCacheAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default)
-        => _contentCache.GetAsync(_indexSourceFingerprintCacheKey, cancellationToken);
+    public async Task<string?> GetIndexSourceFingerprintAsync(CancellationToken cancellationToken = default)
+    {
+        var fingerprint = await _contentCache.GetAsync(_indexSourceFingerprintCacheKey, cancellationToken).ConfigureAwait(false);
+        if (fingerprint is not null)
+        {
+            await ClearLegacyIndexCacheAsync(cancellationToken).ConfigureAwait(false);
+            return fingerprint;
+        }
 
-    public Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
-        => _contentCache.SetAsync(_indexSourceFingerprintCacheKey, fingerprint, cancellationToken);
+        if (!HasLegacyIndexCacheKey)
+        {
+            return null;
+        }
+
+        var legacyFingerprint = await _contentCache.GetAsync(_legacyIndexSourceFingerprintCacheKey, cancellationToken).ConfigureAwait(false);
+        if (legacyFingerprint is null)
+        {
+            return null;
+        }
+
+        await _contentCache.SetAsync(_indexSourceFingerprintCacheKey, legacyFingerprint, cancellationToken).ConfigureAwait(false);
+        await ClearLegacyIndexCacheAsync(cancellationToken).ConfigureAwait(false);
+        return legacyFingerprint;
+    }
+
+    public async Task SetIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
+    {
+        await _contentCache.SetAsync(_indexSourceFingerprintCacheKey, fingerprint, cancellationToken).ConfigureAwait(false);
+        await ClearLegacyIndexCacheAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private bool HasLegacyIndexCacheKey => !string.Equals(_legacyIndexCacheKey, _indexCacheKey, StringComparison.Ordinal);
+
+    private async Task MigrateLegacyIndexFingerprintAsync(CancellationToken cancellationToken)
+    {
+        if (!HasLegacyIndexCacheKey)
+        {
+            return;
+        }
+
+        var currentFingerprint = await _contentCache.GetAsync(_indexSourceFingerprintCacheKey, cancellationToken).ConfigureAwait(false);
+        if (currentFingerprint is not null)
+        {
+            return;
+        }
+
+        var legacyFingerprint = await _contentCache.GetAsync(_legacyIndexSourceFingerprintCacheKey, cancellationToken).ConfigureAwait(false);
+        if (legacyFingerprint is not null)
+        {
+            await _contentCache.SetAsync(_indexSourceFingerprintCacheKey, legacyFingerprint, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task ClearLegacyCacheAsync(CancellationToken cancellationToken)
+    {
+        await ClearLegacySourceCacheAsync(cancellationToken).ConfigureAwait(false);
+        await ClearLegacyIndexCacheAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     private async Task ClearLegacySourceCacheAsync(CancellationToken cancellationToken)
     {
@@ -81,5 +154,16 @@ internal sealed class DocsCache : IDocsCache
 
         await _contentCache.InvalidateAsync(_llmsTxtUrl, cancellationToken).ConfigureAwait(false);
         await _contentCache.SetETagAsync(_llmsTxtUrl, null, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task ClearLegacyIndexCacheAsync(CancellationToken cancellationToken)
+    {
+        if (!HasLegacyIndexCacheKey)
+        {
+            return;
+        }
+
+        await _contentCache.InvalidateJsonAsync(_legacyIndexCacheKey, cancellationToken).ConfigureAwait(false);
+        await _contentCache.InvalidateAsync(_legacyIndexSourceFingerprintCacheKey, cancellationToken).ConfigureAwait(false);
     }
 }

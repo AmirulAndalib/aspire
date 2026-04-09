@@ -8,11 +8,20 @@ namespace Aspire.Cli.Tests.Documentation.ApiDocs;
 public class ApiDocsSourceConfigurationTests
 {
     [Fact]
+    public void GetSitemapContentCacheKey_DefaultSourceUsesFriendlyStem()
+    {
+        var cacheKey = ApiDocsSourceConfiguration.GetSitemapContentCacheKey("https://aspire.dev/sitemap-0.xml");
+
+        Assert.Equal("sitemap-0", cacheKey);
+    }
+
+    [Fact]
     public void GetIndexCacheKey_UsesConfiguredSourceUrl()
     {
         var aspireDevKey = ApiDocsSourceConfiguration.GetIndexCacheKey("https://aspire.dev/sitemap-0.xml");
         var localhostKey = ApiDocsSourceConfiguration.GetIndexCacheKey("http://localhost:4321/sitemap-0.xml");
 
+        Assert.Equal("index:sitemap-0", aspireDevKey);
         Assert.NotEqual(aspireDevKey, localhostKey);
     }
 
@@ -24,5 +33,15 @@ public class ApiDocsSourceConfigurationTests
             "http://localhost:4321/sitemap-0.xml");
 
         Assert.Equal("http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods.md", markdownUrl);
+    }
+
+    [Fact]
+    public void GetPageContentCacheKey_DefaultHostOmitsSchemeAndHost()
+    {
+        var cacheKey = ApiDocsSourceConfiguration.GetPageContentCacheKey(
+            "https://aspire.dev/reference/api/csharp/aspire.test.package/testtype/methods",
+            "https://aspire.dev/sitemap-0.xml");
+
+        Assert.Equal("reference-api-csharp-aspire.test.package-testtype-methods", cacheKey);
     }
 }
