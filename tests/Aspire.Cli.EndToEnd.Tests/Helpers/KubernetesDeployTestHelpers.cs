@@ -13,6 +13,7 @@ internal static class KubernetesDeployTestHelpers
 {
     private static string KindVersion => Environment.GetEnvironmentVariable("KIND_VERSION") ?? "v0.31.0";
     private static string HelmVersion => Environment.GetEnvironmentVariable("HELM_VERSION") ?? "v3.17.3";
+    private static string KubectlVersion => Environment.GetEnvironmentVariable("KUBECTL_VERSION") ?? "v1.34.3";
 
     /// <summary>
     /// Generates a unique KinD cluster name (max 32 chars).
@@ -21,7 +22,7 @@ internal static class KubernetesDeployTestHelpers
         $"aspire-e2e-{Guid.NewGuid():N}"[..32];
 
     /// <summary>
-    /// Installs KinD and Helm binaries to ~/.local/bin and adds to PATH.
+    /// Installs KinD, Helm, and kubectl binaries to ~/.local/bin and adds to PATH.
     /// Retries downloads up to 3 times to handle transient GitHub CDN failures.
     /// </summary>
     internal static async Task InstallKindAndHelmAsync(
@@ -50,12 +51,21 @@ internal static class KubernetesDeployTestHelpers
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
+        // Download kubectl with retry
+        await auto.TypeAsync($"for i in 1 2 3; do curl -sSLo ~/.local/bin/kubectl \"https://dl.k8s.io/release/{KubectlVersion}/bin/linux/amd64/kubectl\" && file ~/.local/bin/kubectl | grep -q ELF && break; echo \"Retry $i: kubectl download failed, retrying in 5s...\"; sleep 5; done");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(90));
+
+        await auto.TypeAsync("chmod +x ~/.local/bin/kubectl");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
+
         await auto.TypeAsync("export PATH=\"$HOME/.local/bin:$PATH\"");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
-        // Verify both binaries are functional
-        await auto.TypeAsync("kind version && helm version --short");
+        // Verify all three binaries are functional
+        await auto.TypeAsync("kind version && helm version --short && kubectl version --client --short 2>/dev/null || kubectl version --client");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
     }
