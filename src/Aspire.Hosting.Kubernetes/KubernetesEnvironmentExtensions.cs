@@ -66,6 +66,7 @@ public static class KubernetesEnvironmentExtensions
     /// <returns>A reference to the <see cref="IResourceBuilder{T}"/>.</returns>
     /// <remarks>
     /// Helm is the default deployment engine. Call this method to customize Helm-specific settings.
+    /// </remarks>
     /// <example>
     /// Configure Helm deployment with custom settings:
     /// <code>
@@ -78,7 +79,6 @@ public static class KubernetesEnvironmentExtensions
     ///     });
     /// </code>
     /// </example>
-    /// </remarks>
     [AspireExport(Description = "Configures Helm chart deployment settings", RunSyncOnBackgroundThread = true)]
     public static IResourceBuilder<KubernetesEnvironmentResource> WithHelm(
         this IResourceBuilder<KubernetesEnvironmentResource> builder,

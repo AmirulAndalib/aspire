@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Dcp.Process;
+using Aspire.Hosting.Kubernetes.Extensions;
 using Aspire.Hosting.Pipelines;
 using Aspire.Hosting.Utils;
 using Microsoft.Extensions.Logging;
@@ -83,6 +84,18 @@ internal static partial class HelmDeploymentEngine
             summaryStep.RequiredBy(WellKnownPipelineSteps.Deploy);
             steps.Add(summaryStep);
         }
+
+        // Step 3b: Print deployment instructions (dashboard access, Helm commands)
+        var instructionsStep = new PipelineStep
+        {
+            Name = $"print-{environment.Name}-instructions",
+            Description = $"Prints access instructions for {environment.Name}.",
+            Tags = [PrintSummaryTag],
+            Action = ctx => PrintDeploymentInstructionsAsync(ctx, environment)
+        };
+        instructionsStep.DependsOn($"helm-deploy-{environment.Name}");
+        instructionsStep.RequiredBy(WellKnownPipelineSteps.Deploy);
+        steps.Add(instructionsStep);
 
         // Step 4: Helm uninstall (teardown)
         var helmUninstallStep = new PipelineStep
@@ -435,6 +448,72 @@ internal static partial class HelmDeploymentEngine
         {
             context.Logger.LogWarning(ex, "Failed to retrieve endpoints for {ResourceName}", computeResource.Name);
         }
+    }
+
+    private static async Task PrintDeploymentInstructionsAsync(
+        PipelineStepContext context,
+        KubernetesEnvironmentResource environment)
+    {
+        // Resolve namespace and release name for the instructions
+        var @namespace = "default";
+        if (environment.TryGetLastAnnotation<KubernetesNamespaceAnnotation>(out var nsAnnotation))
+        {
+            var resolvedNs = await nsAnnotation.Namespace.GetValueAsync(context.CancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(resolvedNs))
+            {
+                @namespace = resolvedNs;
+            }
+        }
+
+        var releaseName = environment.Name;
+        if (environment.TryGetLastAnnotation<HelmReleaseNameAnnotation>(out var releaseAnnotation))
+        {
+            var resolvedRelease = await releaseAnnotation.ReleaseName.GetValueAsync(context.CancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(resolvedRelease))
+            {
+                releaseName = resolvedRelease;
+            }
+        }
+
+        var sb = new StringBuilder();
+
+        // Dashboard instructions
+        if (environment.DashboardEnabled && environment.Dashboard?.Resource is KubernetesAspireDashboardResource)
+        {
+            var dashboardServiceName = environment.Dashboard.Resource.Name.ToKubernetesResourceName() + "-service";
+            sb.AppendLine("**Aspire Dashboard**");
+            sb.AppendLine();
+            sb.AppendLine("Access the dashboard by port-forwarding:");
+            sb.AppendLine();
+            sb.AppendLine("```bash");
+            sb.Append(CultureInfo.InvariantCulture, $"kubectl port-forward -n {@namespace} svc/{dashboardServiceName} 18888:18888");
+            sb.AppendLine();
+            sb.AppendLine("```");
+            sb.AppendLine();
+            sb.AppendLine("Then open http://localhost:18888 in your browser.");
+            sb.AppendLine();
+        }
+
+        // Helm management commands
+        sb.AppendLine("**Manage your deployment**");
+        sb.AppendLine();
+        sb.AppendLine("View release status and resources:");
+        sb.AppendLine();
+        sb.AppendLine("```bash");
+        sb.Append(CultureInfo.InvariantCulture, $"helm status {releaseName} -n {@namespace}");
+        sb.AppendLine();
+        sb.Append(CultureInfo.InvariantCulture, $"kubectl get all -n {@namespace} -l app.kubernetes.io/instance={releaseName}");
+        sb.AppendLine();
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("Uninstall the deployment:");
+        sb.AppendLine();
+        sb.AppendLine("```bash");
+        sb.Append(CultureInfo.InvariantCulture, $"helm uninstall {releaseName} -n {@namespace}");
+        sb.AppendLine();
+        sb.AppendLine("```");
+
+        context.Summary.Add("instructions", sb.ToString());
     }
 
     private static async Task HelmUninstallAsync(PipelineStepContext context, KubernetesEnvironmentResource environment)

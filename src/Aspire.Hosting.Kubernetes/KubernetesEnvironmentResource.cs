@@ -218,8 +218,8 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
                 var helmDeploySteps = context.GetSteps(this, "helm-deploy");
                 helmDeploySteps.DependsOn(pushSteps);
 
-                // Print summary steps must run after helm deploy
-                var printSummarySteps = context.GetSteps(deploymentTarget, "print-summary");
+                // Print summary steps are created for the environment and must run after helm deploy
+                var printSummarySteps = context.GetSteps(this, "print-summary");
                 printSummarySteps.DependsOn(helmDeploySteps);
             }
         }));
