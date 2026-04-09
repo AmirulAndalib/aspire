@@ -146,6 +146,19 @@ Always refer to the product as just **Aspire**, never ".NET Aspire". This applie
 
 When printing or displaying the Aspire dashboard URL to the user, always include the full login token query parameter. The dashboard requires authentication — a bare URL like `http://localhost:18888` won't work. Use the full URL as printed by `aspire start` (e.g., `http://localhost:18888/login?t=<token>`).
 
+### Redis and auto-TLS
+
+Aspire's infrastructure automatically provisions TLS certificates for container resources that register `WithHttpsCertificateConfiguration` callbacks. `AddRedis()` registers one by default, which means **Redis will get TLS automatically** when the Aspire dev cert infrastructure is active. This is usually fine, but some apps expect plain (non-TLS) Redis.
+
+If Redis health checks fail with `SslStream` / `RedisConnectionException` errors about SSL/TLS handshake failures, the cause is this auto-TLS behavior. **Do not fall back to `AddContainer()`.** Instead, disable the certificate on the Redis resource:
+
+```csharp
+var redis = builder.AddRedis("redis")
+    .WithoutHttpsCertificate();  // plain Redis, no TLS
+```
+
+`WithoutHttpsCertificate()` suppresses the auto-TLS cert injection so Redis stays on plain TCP. Use this when the consuming services don't support TLS Redis connections.
+
 ### Prefer HTTPS over HTTP
 
 Always set up HTTPS endpoints by default. Use `WithHttpsEndpoint()` instead of `WithHttpEndpoint()` unless HTTPS doesn't work for a specific integration.
@@ -287,6 +300,10 @@ If a web search, documentation page, or blog post tells you to install the workl
 
 **Do not modify `<TargetFramework>` in any existing service project.** If a service targets `net8.0`, leave it on `net8.0`. The Aspire AppHost can orchestrate services on older TFMs without any changes. Only the AppHost itself needs the Aspire-supported TFM.
 
+### Use the latest stable Aspire SDK
+
+If `aspire init` created a `.csproj` AppHost, check the `Aspire.AppHost.Sdk` version in the `.csproj`. If it references a preview version that isn't available on NuGet (common when using a PR build of the CLI), update it to the latest stable release. Run `dotnet nuget list source` and check NuGet.org for the current stable version (e.g., `13.2.2`). Do not leave the AppHost pinned to an unavailable preview SDK — `dotnet build` will fail.
+
 ### Use the Aspire CLI, not raw dotnet commands, for Aspire operations
 
 - Use `aspire start` to launch the AppHost (not `dotnet run`)
@@ -426,6 +443,17 @@ Ask the user:
 > **Skip this step for TypeScript AppHosts.** OTel is handled in Step 8.
 
 If the AppHost is in **full project mode**, consult [references/full-solution-apphosts.md](references/full-solution-apphosts.md) before making ServiceDefaults changes. Some existing solutions need bootstrap updates before `AddServiceDefaults()` and `MapDefaultEndpoints()` can be applied safely.
+
+**Before creating ServiceDefaults, check for existing observability setup.** Many repos already have their own OpenTelemetry, Polly (HTTP resilience), or health check wiring — often in a shared extension method or SDK package. Search for:
+
+- `AddOpenTelemetry`, `UseOpenTelemetry`, `AddTracing`, `WithTracing`, `WithMetrics` — existing OTel setup
+- `AddStandardHttp`, `AddPolicyHandler`, `AddHttpStandardResilienceHandler` — existing Polly/resilience config
+- `AddHealthChecks`, `MapHealthChecks` — existing health check registration
+- Custom SDK extensions (e.g., `UseBitwardenSdk()`, `UseCompanySdk()`) — these often bundle OTel, health checks, and auth in one call
+
+If the repo already has OTel/health checks/resilience in a shared extension, **strip those from the generated ServiceDefaults** to avoid duplication. Only keep the parts that don't overlap. For example, if `UseBitwardenSdk()` already sets up OTel tracing and metrics, the ServiceDefaults should skip the OTel builder calls and only add service discovery and health endpoint mapping.
+
+Present the overlap to the user: *"Your services already set up OpenTelemetry via `UseBitwardenSdk()`. I'll create ServiceDefaults without the OTel setup to avoid duplication."*
 
 **Placement is your decision.** Where to put ServiceDefaults depends on the repo's structure:
 
