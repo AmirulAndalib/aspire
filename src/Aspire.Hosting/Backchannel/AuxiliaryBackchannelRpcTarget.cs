@@ -453,7 +453,7 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
     /// </summary>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>An async enumerable of resource snapshots as they change.</returns>
-    public IAsyncEnumerable<ResourceSnapshot> WatchResourceSnapshotsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public IAsyncEnumerable<ResourceSnapshot> WatchResourceSnapshotsAsync(CancellationToken cancellationToken = default)
         => WatchResourceSnapshotsAsync(includeHiddenResources: false, cancellationToken);
 
     /// <summary>

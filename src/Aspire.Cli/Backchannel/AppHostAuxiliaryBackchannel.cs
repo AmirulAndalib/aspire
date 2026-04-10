@@ -361,6 +361,7 @@ internal sealed class AppHostAuxiliaryBackchannel : IAppHostAuxiliaryBackchannel
         _logger?.LogDebug("Starting resource snapshots watch including hidden resources");
 
         IAsyncEnumerable<ResourceSnapshot>? snapshots;
+        var fallbackToVisibleResources = false;
         try
         {
             snapshots = await rpc.InvokeWithCancellationAsync<IAsyncEnumerable<ResourceSnapshot>>(
@@ -371,7 +372,12 @@ internal sealed class AppHostAuxiliaryBackchannel : IAppHostAuxiliaryBackchannel
         catch (RemoteMethodNotFoundException ex)
         {
             _logger?.LogDebug(ex, "WatchResourceSnapshotsAsync(bool) RPC method not available on the remote AppHost. Falling back to visible resources only.");
+            snapshots = null;
+            fallbackToVisibleResources = true;
+        }
 
+        if (fallbackToVisibleResources)
+        {
             await foreach (var snapshot in WatchResourceSnapshotsAsync(cancellationToken).ConfigureAwait(false))
             {
                 yield return snapshot;
