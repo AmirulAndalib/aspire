@@ -311,6 +311,10 @@ const db = await builder.addPostgres("pg")
 
 Recommend persistent lifetime for databases and caches during local development.
 
+**⚠️ Stale persistent volumes can cause auth failures.** Typed integrations like `AddSqlServer()`, `AddPostgres()`, `AddRedis()`, and `AddMySql()` auto-generate passwords on first run. Those passwords are stored inside the container's data volume. If the AppHost is recreated or its user-secrets are reset, Aspire generates a *new* password — but the persistent volume still has the *old* one. The symptom is repeated `Login failed` or `password authentication failed` errors in the container logs.
+
+To fix: stop the AppHost, remove the stale container and its volume (`docker rm -f <name>; docker volume rm <volume>`), then restart. Aspire will recreate both with a matching password. Mention this to the user if they see auth failures on persistent infrastructure containers after recreating the AppHost.
+
 ## Explicit start (manual start)
 
 Some resources shouldn't auto-start with the AppHost. Mark them for explicit start:
