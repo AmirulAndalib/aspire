@@ -4,6 +4,7 @@
 using System.CommandLine;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Aspire.Cli.Configuration;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.Documentation.Docs;
@@ -86,29 +87,35 @@ internal sealed partial class DocsGetCommand : BaseCommand
         }
         else
         {
-            var content = MarkdownToSpectreConverter.ConvertToPlainText(doc.Content)
-                .Replace("\r\n", "\n", StringComparison.Ordinal)
-                .Replace("\r", "\n", StringComparison.Ordinal);
-
-            InteractionService.DisplayRawText(WrapForConsole(content));
+            InteractionService.DisplayRawText(WrapMarkdownForConsole(doc.Content));
         }
 
         return ExitCodeConstants.Success;
     }
 
-    private static string WrapForConsole(string text, int width = 100)
+    internal static string WrapMarkdownForConsole(string markdown, int width = 100)
     {
         var wrappedLines = new List<string>();
+        var inCodeFence = false;
 
-        foreach (var line in text.Split('\n'))
+        foreach (var line in markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\r", "\n", StringComparison.Ordinal).Split('\n'))
         {
-            if (string.IsNullOrWhiteSpace(line))
+            var trimmedLine = line.TrimEnd();
+
+            if (trimmedLine.StartsWith("```", StringComparison.Ordinal))
             {
-                wrappedLines.Add(string.Empty);
+                wrappedLines.Add(trimmedLine);
+                inCodeFence = !inCodeFence;
                 continue;
             }
 
-            WrapLine(line.TrimEnd(), width, wrappedLines);
+            if (inCodeFence || string.IsNullOrWhiteSpace(trimmedLine) || IsHeading(trimmedLine))
+            {
+                wrappedLines.Add(trimmedLine);
+                continue;
+            }
+
+            WrapLine(trimmedLine, width, wrappedLines);
         }
 
         return string.Join("\n", wrappedLines);
@@ -120,32 +127,35 @@ internal sealed partial class DocsGetCommand : BaseCommand
         var prefix = line[..prefixLength];
         var remaining = line[prefixLength..].TrimStart();
         var continuationPrefix = new string(' ', prefixLength);
-        var currentPrefix = prefix;
+        var currentLine = prefix;
 
-        while (!string.IsNullOrEmpty(remaining))
+        foreach (Match token in MarkdownTokenRegex().Matches(remaining))
         {
-            var availableWidth = Math.Max(1, width - currentPrefix.Length);
+            var value = token.Value;
+            var trailingPunctuation = IsTrailingPunctuation(value);
+            var separator = currentLine.Length == prefix.Length || trailingPunctuation ? string.Empty : " ";
+            var candidate = $"{currentLine}{separator}{value}";
 
-            if (remaining.Length <= availableWidth)
+            if (candidate.Length <= width || currentLine.Length == prefix.Length || trailingPunctuation)
             {
-                wrappedLines.Add(currentPrefix + remaining);
-                return;
+                currentLine = candidate;
+                continue;
             }
 
-            var splitIndex = remaining.LastIndexOf(' ', availableWidth);
-            if (splitIndex <= 0)
-            {
-                splitIndex = availableWidth;
-            }
-
-            wrappedLines.Add(currentPrefix + remaining[..splitIndex].TrimEnd());
-            remaining = remaining[splitIndex..].TrimStart();
-            currentPrefix = continuationPrefix;
+            wrappedLines.Add(currentLine);
+            currentLine = continuationPrefix + value;
         }
+
+        wrappedLines.Add(currentLine);
     }
 
     private static int GetPrefixLength(string line)
     {
+        if (line.StartsWith("> ", StringComparison.Ordinal))
+        {
+            return 2;
+        }
+
         if (line.StartsWith("* ", StringComparison.Ordinal))
         {
             return 2;
@@ -167,4 +177,17 @@ internal sealed partial class DocsGetCommand : BaseCommand
 
         return 0;
     }
+
+    private static bool IsHeading(string line)
+    {
+        return line.StartsWith('#');
+    }
+
+    private static bool IsTrailingPunctuation(string value)
+    {
+        return value.All(static character => character is ',' or '.' or ':' or ';' or '!' or '?' or ')' or ']');
+    }
+
+    [GeneratedRegex(@"(\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\([^)]+\)|`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*|_[^_\n]+_|\S+)")]
+    private static partial Regex MarkdownTokenRegex();
 }

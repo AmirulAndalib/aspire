@@ -20,6 +20,8 @@ namespace Aspire.Cli;
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     AllowTrailingCommas = true,
     ReadCommentHandling = JsonCommentHandling.Skip,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true,
     Converters = [typeof(FlexibleBooleanConverter)])]
 [JsonSerializable(typeof(CliSettings))]
 [JsonSerializable(typeof(JsonObject))]
@@ -61,6 +63,7 @@ internal partial class JsonSourceGenerationContext : JsonSerializerContext
         AllowTrailingCommas = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     });
 }

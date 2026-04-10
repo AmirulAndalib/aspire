@@ -27,6 +27,10 @@ namespace Aspire.Cli.Configuration;
 ///   "appHost": { "path": "app.ts", "language": "typescript/nodejs" },
 ///   "sdk": { "version": "9.2.0" },
 ///   "channel": "stable",
+///   "docs": {
+///     "llmsTxtUrl": "https://aspire.dev/llms-small.txt",
+///     "api": { "sitemapUrl": "https://aspire.dev/sitemap-0.xml" }
+///   },
 ///   "features": { "polyglotSupportEnabled": true },
 ///   "profiles": {
 ///     "default": {
@@ -462,7 +466,7 @@ internal sealed class AspireConfigDocs
     /// Optional override for the llms.txt documentation source consumed by aspire docs.
     /// </summary>
     [JsonPropertyName("llmsTxtUrl")]
-    [Description("Optional override for the llms.txt documentation source consumed by aspire docs. Defaults to " + DocsSourceConfiguration.DefaultLlmsTxtUrl + ".")]
+    [Description($"""Optional override for the llms.txt documentation source consumed by aspire docs. Defaults to {DocsSourceConfiguration.DefaultLlmsTxtUrl}.""")]
     public string? LlmsTxtUrl { get; set; }
 
     /// <summary>
@@ -482,7 +486,7 @@ internal sealed class AspireConfigApiDocs
     /// Optional override for the API sitemap consumed by aspire docs api.
     /// </summary>
     [JsonPropertyName("sitemapUrl")]
-    [Description("Optional override for the API sitemap consumed by aspire docs api. Defaults to " + ApiDocsSourceConfiguration.DefaultSitemapUrl + ".")]
+    [Description($"""Optional override for the API sitemap consumed by aspire docs api. Defaults to {ApiDocsSourceConfiguration.DefaultSitemapUrl}.""")]
     public string? SitemapUrl { get; set; }
 }
 

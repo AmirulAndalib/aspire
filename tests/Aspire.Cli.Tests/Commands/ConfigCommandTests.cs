@@ -7,6 +7,7 @@ using Aspire.Cli.Documentation.Docs;
 using Aspire.Cli.Tests.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspire.Cli.Tests.TestServices;
 using Microsoft.AspNetCore.InternalTesting;
@@ -15,6 +16,26 @@ namespace Aspire.Cli.Tests.Commands;
 
 public class ConfigCommandTests(ITestOutputHelper outputHelper)
 {
+    [Fact]
+    public void ConfigInfoJson_UsesCamelCasePropertyNames()
+    {
+        var info = new Aspire.Cli.Commands.ConfigInfo(
+            LocalSettingsPath: "local.json",
+            GlobalSettingsPath: "global.json",
+            AvailableFeatures: [new Aspire.Cli.Commands.FeatureInfo("featureA", "Description", DefaultValue: false)],
+            LocalSettingsSchema: new Aspire.Cli.Commands.SettingsSchema([]),
+            GlobalSettingsSchema: new Aspire.Cli.Commands.SettingsSchema([]),
+            ConfigFileSchema: new Aspire.Cli.Commands.SettingsSchema([]),
+            Capabilities: ["docs"]);
+
+        var json = JsonSerializer.Serialize(info, JsonSourceGenerationContext.Default.ConfigInfo);
+
+        Assert.Contains("\"localSettingsPath\"", json);
+        Assert.Contains("\"globalSettingsPath\"", json);
+        Assert.Contains("\"availableFeatures\"", json);
+        Assert.DoesNotContain("\"LocalSettingsPath\"", json);
+    }
+
     [Fact]
     public async Task ConfigCommand_WithExtensionMode_Works()
     {
