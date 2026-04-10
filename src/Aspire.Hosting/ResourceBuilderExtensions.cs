@@ -1269,22 +1269,13 @@ public static class ResourceBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        // Endpoints for a Container will be consumed from localhost network by default, but the same EndpointAnnotation
-        // can also be resolved in the context of container-to-container communication by using the target port
-        // and the container name as the host. This is why we only set the context network to localhost,
-        // for both container and non-container resources.
-        var annotation = new EndpointAnnotation(
-            protocol: protocol ?? ProtocolType.Tcp,
-            uriScheme: scheme,
-            name: name,
-            port: port,
-            targetPort: targetPort,
-            isExternal: isExternal,
-            isProxied: isProxied,
-            networkID: KnownNetworkIdentifiers.LocalhostNetwork);
+        // Resolve the endpoint name using the same logic as EndpointAnnotation:
+        // name ?? scheme ?? protocol.ToString().ToLowerInvariant()
+        var resolvedScheme = scheme ?? (protocol ?? ProtocolType.Tcp).ToString().ToLowerInvariant();
+        var resolvedName = name ?? resolvedScheme;
 
         var existing = builder.Resource.Annotations.OfType<EndpointAnnotation>()
-            .FirstOrDefault(sb => string.Equals(sb.Name, annotation.Name, StringComparisons.EndpointAnnotationName));
+            .FirstOrDefault(sb => string.Equals(sb.Name, resolvedName, StringComparisons.EndpointAnnotationName));
 
         if (existing is not null)
         {
@@ -1313,6 +1304,20 @@ public static class ResourceBuilderExtensions
 
             return builder;
         }
+
+        // Endpoints for a Container will be consumed from localhost network by default, but the same EndpointAnnotation
+        // can also be resolved in the context of container-to-container communication by using the target port
+        // and the container name as the host. This is why we only set the context network to localhost,
+        // for both container and non-container resources.
+        var annotation = new EndpointAnnotation(
+            protocol: protocol ?? ProtocolType.Tcp,
+            uriScheme: scheme,
+            name: name,
+            port: port,
+            targetPort: targetPort,
+            isExternal: isExternal,
+            isProxied: isProxied,
+            networkID: KnownNetworkIdentifiers.LocalhostNetwork);
 
         ConfigureEndpointEnvironmentVariable(builder, annotation, env);
 
