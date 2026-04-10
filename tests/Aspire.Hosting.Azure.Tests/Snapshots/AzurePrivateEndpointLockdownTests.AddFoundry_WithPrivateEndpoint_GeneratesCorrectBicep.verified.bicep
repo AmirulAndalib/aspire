@@ -1,55 +1,40 @@
 ﻿@description('The location for the resource(s) to be deployed.')
 param location string = resourceGroup().location
 
-param privatelink_cognitiveservices_azure_com_outputs_name string
-
-param myvnet_outputs_pesubnet_id string
-
-param foundry_outputs_id string
-
-resource privatelink_cognitiveservices_azure_com 'Microsoft.Network/privateDnsZones@2024-06-01' existing = {
-  name: privatelink_cognitiveservices_azure_com_outputs_name
-}
-
-resource pesubnet_foundry_pe 'Microsoft.Network/privateEndpoints@2025-05-01' = {
-  name: take('pesubnet_foundry_pe-${uniqueString(resourceGroup().id)}', 64)
+resource foundry 'Microsoft.CognitiveServices/accounts@2025-09-01' = {
+  name: take('foundry-${uniqueString(resourceGroup().id)}', 64)
   location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
+  kind: 'AIServices'
   properties: {
-    privateLinkServiceConnections: [
-      {
-        properties: {
-          privateLinkServiceId: foundry_outputs_id
-          groupIds: [
-            'account'
-          ]
-        }
-        name: 'pesubnet-foundry-pe-connection'
-      }
-    ]
-    subnet: {
-      id: myvnet_outputs_pesubnet_id
-    }
+    customSubDomainName: toLower(take(concat('foundry', uniqueString(resourceGroup().id)), 24))
+    publicNetworkAccess: 'Disabled'
+    disableLocalAuth: true
+    allowProjectManagement: true
+  }
+  sku: {
+    name: 'S0'
   }
   tags: {
-    'aspire-resource-name': 'pesubnet-foundry-pe'
+    'aspire-resource-name': 'foundry'
   }
 }
 
-resource pesubnet_foundry_pe_dnsgroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2025-05-01' = {
-  name: 'default'
+resource foundry_caphost 'Microsoft.CognitiveServices/accounts/capabilityHosts@2025-10-01-preview' = {
+  name: 'foundry-caphost'
   properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: 'privatelink_cognitiveservices_azure_com'
-        properties: {
-          privateDnsZoneId: privatelink_cognitiveservices_azure_com.id
-        }
-      }
-    ]
+    capabilityHostKind: 'Agents'
+    enablePublicHostingEnvironment: true
   }
-  parent: pesubnet_foundry_pe
+  parent: foundry
 }
 
-output id string = pesubnet_foundry_pe.id
+output aiFoundryApiEndpoint string = foundry.properties.endpoints['AI Foundry API']
 
-output name string = pesubnet_foundry_pe.name
+output endpoint string = foundry.properties.endpoint
+
+output name string = foundry.name
+
+output id string = foundry.id

@@ -1,55 +1,27 @@
 ﻿@description('The location for the resource(s) to be deployed.')
 param location string = resourceGroup().location
 
-param privatelink_openai_azure_com_outputs_name string
-
-param myvnet_outputs_pesubnet_id string
-
-param openai_outputs_id string
-
-resource privatelink_openai_azure_com 'Microsoft.Network/privateDnsZones@2024-06-01' existing = {
-  name: privatelink_openai_azure_com_outputs_name
-}
-
-resource pesubnet_openai_pe 'Microsoft.Network/privateEndpoints@2025-05-01' = {
-  name: take('pesubnet_openai_pe-${uniqueString(resourceGroup().id)}', 64)
+resource openai 'Microsoft.CognitiveServices/accounts@2025-09-01' = {
+  name: take('openai-${uniqueString(resourceGroup().id)}', 64)
   location: location
+  kind: 'OpenAI'
   properties: {
-    privateLinkServiceConnections: [
-      {
-        properties: {
-          privateLinkServiceId: openai_outputs_id
-          groupIds: [
-            'account'
-          ]
-        }
-        name: 'pesubnet-openai-pe-connection'
-      }
-    ]
-    subnet: {
-      id: myvnet_outputs_pesubnet_id
-    }
+    customSubDomainName: toLower(take(concat('openai', uniqueString(resourceGroup().id)), 24))
+    publicNetworkAccess: 'Disabled'
+    disableLocalAuth: true
+  }
+  sku: {
+    name: 'S0'
   }
   tags: {
-    'aspire-resource-name': 'pesubnet-openai-pe'
+    'aspire-resource-name': 'openai'
   }
 }
 
-resource pesubnet_openai_pe_dnsgroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2025-05-01' = {
-  name: 'default'
-  properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: 'privatelink_openai_azure_com'
-        properties: {
-          privateDnsZoneId: privatelink_openai_azure_com.id
-        }
-      }
-    ]
-  }
-  parent: pesubnet_openai_pe
-}
+output connectionString string = 'Endpoint=${openai.properties.endpoint}'
 
-output id string = pesubnet_openai_pe.id
+output endpoint string = openai.properties.endpoint
 
-output name string = pesubnet_openai_pe.name
+output name string = openai.name
+
+output id string = openai.id

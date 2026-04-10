@@ -194,11 +194,11 @@ public class AzurePrivateEndpointLockdownTests
         var subnet = vnet.AddSubnet("pesubnet", "10.0.1.0/24");
         var openai = builder.AddAzureOpenAI("openai");
 
-        var pe = subnet.AddPrivateEndpoint(openai);
+        subnet.AddPrivateEndpoint(openai);
 
-        var (peManifest, peBicep) = await AzureManifestUtils.GetManifestWithBicep(pe.Resource);
+        var manifest = await AzureManifestUtils.GetManifestWithBicep(openai.Resource);
 
-        await Verify(peBicep, extension: "bicep");
+        await Verify(manifest.BicepText, extension: "bicep");
     }
 
     [Fact]
@@ -210,10 +210,10 @@ public class AzurePrivateEndpointLockdownTests
         var subnet = vnet.AddSubnet("pesubnet", "10.0.1.0/24");
         var foundry = builder.AddFoundry("foundry");
 
-        var pe = subnet.AddPrivateEndpoint(foundry);
+        subnet.AddPrivateEndpoint(foundry);
 
-        var (peManifest, peBicep) = await AzureManifestUtils.GetManifestWithBicep(pe.Resource);
+        var manifest = await AzureManifestUtils.GetManifestWithBicep(foundry.Resource);
 
-        await Verify(peBicep, extension: "bicep");
+        await Verify(manifest.BicepText, extension: "bicep");
     }
 }
