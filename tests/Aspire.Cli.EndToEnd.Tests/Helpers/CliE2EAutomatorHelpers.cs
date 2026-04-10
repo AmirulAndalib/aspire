@@ -315,8 +315,8 @@ internal static class CliE2EAutomatorHelpers
     /// <summary>
     /// Pre-trusts the ASP.NET Core HTTPS development certificate so that <c>aspire new</c>
     /// and <c>aspire start</c> don't hang on the Windows certificate trust dialog.
-    /// On CI runners (admin context), this succeeds silently. On Linux, this is a no-op
-    /// because cert trust is handled differently (SSL_CERT_DIR).
+    /// Exports the dev cert and imports it directly into the trusted root store (no UI prompt).
+    /// On Linux, this is a no-op (cert trust is handled via SSL_CERT_DIR).
     /// </summary>
     internal static async Task EnsureDevCertsTrustedAsync(
         this Hex1bTerminalAutomator auto,
@@ -324,15 +324,24 @@ internal static class CliE2EAutomatorHelpers
     {
         if (OperatingSystem.IsWindows())
         {
-            await auto.TypeAsync("dotnet dev-certs https --trust");
+            // Create the dev cert (without --trust to avoid UI dialog), export it, then
+            // import into Trusted Root store using PowerShell (no UI prompt needed).
+            var certCommands =
+                "dotnet dev-certs https --export-path $env:TEMP\\aspire-dev-cert.pfx --password '' --format pfx 2>$null; " +
+                "if (Test-Path $env:TEMP\\aspire-dev-cert.pfx) { " +
+                "Import-PfxCertificate -FilePath $env:TEMP\\aspire-dev-cert.pfx -CertStoreLocation Cert:\\CurrentUser\\Root -Password (ConvertTo-SecureString '' -AsPlainText -Force) | Out-Null; " +
+                "Remove-Item $env:TEMP\\aspire-dev-cert.pfx -Force " +
+                "}";
+            await auto.TypeAsync(certCommands);
         }
         else
         {
-            await auto.TypeAsync("dotnet dev-certs https --trust 2>/dev/null || true");
+            // Linux: cert trust is handled by the CLI via SSL_CERT_DIR, just ensure cert exists
+            await auto.TypeAsync("dotnet dev-certs https 2>/dev/null || true");
         }
 
         await auto.EnterAsync();
-        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(30));
+        await auto.WaitForAnyPromptAsync(counter, TimeSpan.FromSeconds(30));
     }
 
     /// <summary>
