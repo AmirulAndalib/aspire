@@ -1711,6 +1711,36 @@ public class CSharpAppResource extends ResourceBuilderBase {
         return this;
     }
 
+    public CSharpAppResource withHttpPort() {
+        return withHttpPort(null);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    public CSharpAppResource withHttpPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpPort", reqArgs);
+        return this;
+    }
+
+    public CSharpAppResource withHttpsPort() {
+        return withHttpsPort(null);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    public CSharpAppResource withHttpsPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpsPort", reqArgs);
+        return this;
+    }
+
     /** Makes HTTP endpoints externally accessible */
     public CSharpAppResource withExternalHttpEndpoints() {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -5153,6 +5183,36 @@ public class ContainerResource extends ResourceBuilderBase {
         return this;
     }
 
+    public ContainerResource withHttpPort() {
+        return withHttpPort(null);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    public ContainerResource withHttpPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpPort", reqArgs);
+        return this;
+    }
+
+    public ContainerResource withHttpsPort() {
+        return withHttpsPort(null);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    public ContainerResource withHttpsPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpsPort", reqArgs);
+        return this;
+    }
+
     /** Makes HTTP endpoints externally accessible */
     public ContainerResource withExternalHttpEndpoints() {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -6856,6 +6916,36 @@ public class DotnetToolResource extends ResourceBuilderBase {
         return this;
     }
 
+    public DotnetToolResource withHttpPort() {
+        return withHttpPort(null);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    public DotnetToolResource withHttpPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpPort", reqArgs);
+        return this;
+    }
+
+    public DotnetToolResource withHttpsPort() {
+        return withHttpsPort(null);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    public DotnetToolResource withHttpsPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpsPort", reqArgs);
+        return this;
+    }
+
     /** Makes HTTP endpoints externally accessible */
     public DotnetToolResource withExternalHttpEndpoints() {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -8495,6 +8585,36 @@ public class ExecutableResource extends ResourceBuilderBase {
             reqArgs.put("isProxied", AspireClient.serializeValue(isProxied));
         }
         getClient().invokeCapability("Aspire.Hosting/withHttpsEndpoint", reqArgs);
+        return this;
+    }
+
+    public ExecutableResource withHttpPort() {
+        return withHttpPort(null);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    public ExecutableResource withHttpPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpPort", reqArgs);
+        return this;
+    }
+
+    public ExecutableResource withHttpsPort() {
+        return withHttpsPort(null);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    public ExecutableResource withHttpsPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpsPort", reqArgs);
         return this;
     }
 
@@ -13224,6 +13344,36 @@ public class ProjectResource extends ResourceBuilderBase {
         return this;
     }
 
+    public ProjectResource withHttpPort() {
+        return withHttpPort(null);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    public ProjectResource withHttpPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpPort", reqArgs);
+        return this;
+    }
+
+    public ProjectResource withHttpsPort() {
+        return withHttpsPort(null);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    public ProjectResource withHttpsPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpsPort", reqArgs);
+        return this;
+    }
+
     /** Makes HTTP endpoints externally accessible */
     public ProjectResource withExternalHttpEndpoints() {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -15592,6 +15742,36 @@ public class TestDatabaseResource extends ResourceBuilderBase {
         return this;
     }
 
+    public TestDatabaseResource withHttpPort() {
+        return withHttpPort(null);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    public TestDatabaseResource withHttpPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpPort", reqArgs);
+        return this;
+    }
+
+    public TestDatabaseResource withHttpsPort() {
+        return withHttpsPort(null);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    public TestDatabaseResource withHttpsPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpsPort", reqArgs);
+        return this;
+    }
+
     /** Makes HTTP endpoints externally accessible */
     public TestDatabaseResource withExternalHttpEndpoints() {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -17297,6 +17477,36 @@ public class TestRedisResource extends ResourceBuilderBase {
             reqArgs.put("isProxied", AspireClient.serializeValue(isProxied));
         }
         getClient().invokeCapability("Aspire.Hosting/withHttpsEndpoint", reqArgs);
+        return this;
+    }
+
+    public TestRedisResource withHttpPort() {
+        return withHttpPort(null);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    public TestRedisResource withHttpPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpPort", reqArgs);
+        return this;
+    }
+
+    public TestRedisResource withHttpsPort() {
+        return withHttpsPort(null);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    public TestRedisResource withHttpsPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpsPort", reqArgs);
         return this;
     }
 
@@ -19094,6 +19304,36 @@ public class TestVaultResource extends ResourceBuilderBase {
             reqArgs.put("isProxied", AspireClient.serializeValue(isProxied));
         }
         getClient().invokeCapability("Aspire.Hosting/withHttpsEndpoint", reqArgs);
+        return this;
+    }
+
+    public TestVaultResource withHttpPort() {
+        return withHttpPort(null);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    public TestVaultResource withHttpPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpPort", reqArgs);
+        return this;
+    }
+
+    public TestVaultResource withHttpsPort() {
+        return withHttpsPort(null);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    public TestVaultResource withHttpsPort(Double port) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        if (port != null) {
+            reqArgs.put("port", AspireClient.serializeValue(port));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpsPort", reqArgs);
         return this;
     }
 

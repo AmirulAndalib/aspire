@@ -637,6 +637,10 @@ export interface WithHttpHealthCheckOptions {
     endpointName?: string;
 }
 
+export interface WithHttpPortOptions {
+    port?: number;
+}
+
 export interface WithHttpProbeOptions {
     path?: string;
     initialDelaySeconds?: number;
@@ -657,6 +661,10 @@ export interface WithHttpsEndpointOptions {
     name?: string;
     env?: string;
     isProxied?: boolean;
+}
+
+export interface WithHttpsPortOptions {
+    port?: number;
 }
 
 export interface WithIconNameOptions {
@@ -8136,6 +8144,8 @@ export interface ContainerResource {
     withEndpoint(options?: WithEndpointOptions): ContainerResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ContainerResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ContainerResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): ContainerResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): ContainerResourcePromise;
     withExternalHttpEndpoints(): ContainerResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): ContainerResourcePromise;
@@ -8239,6 +8249,8 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
     withEndpoint(options?: WithEndpointOptions): ContainerResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ContainerResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ContainerResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): ContainerResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): ContainerResourcePromise;
     withExternalHttpEndpoints(): ContainerResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): ContainerResourcePromise;
@@ -8972,6 +8984,40 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
         const env = options?.env;
         const isProxied = options?.isProxied;
         return new ContainerResourcePromiseImpl(this._withHttpsEndpointInternal(port, targetPort, name, env, isProxied), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpPortInternal(port?: number): Promise<ContainerResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withHttpPort',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): ContainerResourcePromise {
+        const port = options?.port;
+        return new ContainerResourcePromiseImpl(this._withHttpPortInternal(port), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsPortInternal(port?: number): Promise<ContainerResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withHttpsPort',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): ContainerResourcePromise {
+        const port = options?.port;
+        return new ContainerResourcePromiseImpl(this._withHttpsPortInternal(port), this._client);
     }
 
     /** @internal */
@@ -10255,6 +10301,16 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpoint(options)), this._client);
     }
 
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withHttpPort(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withHttpsPort(options)), this._client);
+    }
+
     /** Makes HTTP endpoints externally accessible */
     withExternalHttpEndpoints(): ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withExternalHttpEndpoints()), this._client);
@@ -10597,6 +10653,8 @@ export interface CSharpAppResource {
     withEndpoint(options?: WithEndpointOptions): CSharpAppResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): CSharpAppResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): CSharpAppResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): CSharpAppResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): CSharpAppResourcePromise;
     withExternalHttpEndpoints(): CSharpAppResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): CSharpAppResourcePromise;
@@ -10686,6 +10744,8 @@ export interface CSharpAppResourcePromise extends PromiseLike<CSharpAppResource>
     withEndpoint(options?: WithEndpointOptions): CSharpAppResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): CSharpAppResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): CSharpAppResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): CSharpAppResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): CSharpAppResourcePromise;
     withExternalHttpEndpoints(): CSharpAppResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): CSharpAppResourcePromise;
@@ -11206,6 +11266,40 @@ class CSharpAppResourceImpl extends ResourceBuilderBase<CSharpAppResourceHandle>
         const env = options?.env;
         const isProxied = options?.isProxied;
         return new CSharpAppResourcePromiseImpl(this._withHttpsEndpointInternal(port, targetPort, name, env, isProxied), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpPortInternal(port?: number): Promise<CSharpAppResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withHttpPort',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): CSharpAppResourcePromise {
+        const port = options?.port;
+        return new CSharpAppResourcePromiseImpl(this._withHttpPortInternal(port), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsPortInternal(port?: number): Promise<CSharpAppResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withHttpsPort',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): CSharpAppResourcePromise {
+        const port = options?.port;
+        return new CSharpAppResourcePromiseImpl(this._withHttpsPortInternal(port), this._client);
     }
 
     /** @internal */
@@ -12416,6 +12510,16 @@ class CSharpAppResourcePromiseImpl implements CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpoint(options)), this._client);
     }
 
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withHttpPort(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withHttpsPort(options)), this._client);
+    }
+
     /** Makes HTTP endpoints externally accessible */
     withExternalHttpEndpoints(): CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withExternalHttpEndpoints()), this._client);
@@ -12765,6 +12869,8 @@ export interface DotnetToolResource {
     withEndpoint(options?: WithEndpointOptions): DotnetToolResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): DotnetToolResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): DotnetToolResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): DotnetToolResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): DotnetToolResourcePromise;
     withExternalHttpEndpoints(): DotnetToolResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): DotnetToolResourcePromise;
@@ -12860,6 +12966,8 @@ export interface DotnetToolResourcePromise extends PromiseLike<DotnetToolResourc
     withEndpoint(options?: WithEndpointOptions): DotnetToolResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): DotnetToolResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): DotnetToolResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): DotnetToolResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): DotnetToolResourcePromise;
     withExternalHttpEndpoints(): DotnetToolResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): DotnetToolResourcePromise;
@@ -13482,6 +13590,40 @@ class DotnetToolResourceImpl extends ResourceBuilderBase<DotnetToolResourceHandl
         const env = options?.env;
         const isProxied = options?.isProxied;
         return new DotnetToolResourcePromiseImpl(this._withHttpsEndpointInternal(port, targetPort, name, env, isProxied), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpPortInternal(port?: number): Promise<DotnetToolResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withHttpPort',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): DotnetToolResourcePromise {
+        const port = options?.port;
+        return new DotnetToolResourcePromiseImpl(this._withHttpPortInternal(port), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsPortInternal(port?: number): Promise<DotnetToolResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withHttpsPort',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): DotnetToolResourcePromise {
+        const port = options?.port;
+        return new DotnetToolResourcePromiseImpl(this._withHttpsPortInternal(port), this._client);
     }
 
     /** @internal */
@@ -14711,6 +14853,16 @@ class DotnetToolResourcePromiseImpl implements DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpoint(options)), this._client);
     }
 
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withHttpPort(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withHttpsPort(options)), this._client);
+    }
+
     /** Makes HTTP endpoints externally accessible */
     withExternalHttpEndpoints(): DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withExternalHttpEndpoints()), this._client);
@@ -15049,6 +15201,8 @@ export interface ExecutableResource {
     withEndpoint(options?: WithEndpointOptions): ExecutableResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ExecutableResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ExecutableResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): ExecutableResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): ExecutableResourcePromise;
     withExternalHttpEndpoints(): ExecutableResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): ExecutableResourcePromise;
@@ -15138,6 +15292,8 @@ export interface ExecutableResourcePromise extends PromiseLike<ExecutableResourc
     withEndpoint(options?: WithEndpointOptions): ExecutableResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ExecutableResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ExecutableResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): ExecutableResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): ExecutableResourcePromise;
     withExternalHttpEndpoints(): ExecutableResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): ExecutableResourcePromise;
@@ -15670,6 +15826,40 @@ class ExecutableResourceImpl extends ResourceBuilderBase<ExecutableResourceHandl
         const env = options?.env;
         const isProxied = options?.isProxied;
         return new ExecutableResourcePromiseImpl(this._withHttpsEndpointInternal(port, targetPort, name, env, isProxied), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpPortInternal(port?: number): Promise<ExecutableResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withHttpPort',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): ExecutableResourcePromise {
+        const port = options?.port;
+        return new ExecutableResourcePromiseImpl(this._withHttpPortInternal(port), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsPortInternal(port?: number): Promise<ExecutableResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withHttpsPort',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): ExecutableResourcePromise {
+        const port = options?.port;
+        return new ExecutableResourcePromiseImpl(this._withHttpsPortInternal(port), this._client);
     }
 
     /** @internal */
@@ -16867,6 +17057,16 @@ class ExecutableResourcePromiseImpl implements ExecutableResourcePromise {
     /** Adds an HTTPS endpoint */
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ExecutableResourcePromise {
         return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpoint(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withHttpPort(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withHttpsPort(options)), this._client);
     }
 
     /** Makes HTTP endpoints externally accessible */
@@ -19462,6 +19662,8 @@ export interface ProjectResource {
     withEndpoint(options?: WithEndpointOptions): ProjectResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ProjectResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ProjectResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): ProjectResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): ProjectResourcePromise;
     withExternalHttpEndpoints(): ProjectResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): ProjectResourcePromise;
@@ -19551,6 +19753,8 @@ export interface ProjectResourcePromise extends PromiseLike<ProjectResource> {
     withEndpoint(options?: WithEndpointOptions): ProjectResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ProjectResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ProjectResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): ProjectResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): ProjectResourcePromise;
     withExternalHttpEndpoints(): ProjectResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): ProjectResourcePromise;
@@ -20071,6 +20275,40 @@ class ProjectResourceImpl extends ResourceBuilderBase<ProjectResourceHandle> imp
         const env = options?.env;
         const isProxied = options?.isProxied;
         return new ProjectResourcePromiseImpl(this._withHttpsEndpointInternal(port, targetPort, name, env, isProxied), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpPortInternal(port?: number): Promise<ProjectResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withHttpPort',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): ProjectResourcePromise {
+        const port = options?.port;
+        return new ProjectResourcePromiseImpl(this._withHttpPortInternal(port), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsPortInternal(port?: number): Promise<ProjectResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withHttpsPort',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): ProjectResourcePromise {
+        const port = options?.port;
+        return new ProjectResourcePromiseImpl(this._withHttpsPortInternal(port), this._client);
     }
 
     /** @internal */
@@ -21281,6 +21519,16 @@ class ProjectResourcePromiseImpl implements ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpoint(options)), this._client);
     }
 
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withHttpPort(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withHttpsPort(options)), this._client);
+    }
+
     /** Makes HTTP endpoints externally accessible */
     withExternalHttpEndpoints(): ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withExternalHttpEndpoints()), this._client);
@@ -21637,6 +21885,8 @@ export interface TestDatabaseResource {
     withEndpoint(options?: WithEndpointOptions): TestDatabaseResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestDatabaseResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestDatabaseResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): TestDatabaseResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): TestDatabaseResourcePromise;
     withExternalHttpEndpoints(): TestDatabaseResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): TestDatabaseResourcePromise;
@@ -21740,6 +21990,8 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
     withEndpoint(options?: WithEndpointOptions): TestDatabaseResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestDatabaseResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestDatabaseResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): TestDatabaseResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): TestDatabaseResourcePromise;
     withExternalHttpEndpoints(): TestDatabaseResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): TestDatabaseResourcePromise;
@@ -22473,6 +22725,40 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
         const env = options?.env;
         const isProxied = options?.isProxied;
         return new TestDatabaseResourcePromiseImpl(this._withHttpsEndpointInternal(port, targetPort, name, env, isProxied), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpPortInternal(port?: number): Promise<TestDatabaseResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withHttpPort',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): TestDatabaseResourcePromise {
+        const port = options?.port;
+        return new TestDatabaseResourcePromiseImpl(this._withHttpPortInternal(port), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsPortInternal(port?: number): Promise<TestDatabaseResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withHttpsPort',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): TestDatabaseResourcePromise {
+        const port = options?.port;
+        return new TestDatabaseResourcePromiseImpl(this._withHttpsPortInternal(port), this._client);
     }
 
     /** @internal */
@@ -23756,6 +24042,16 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpoint(options)), this._client);
     }
 
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withHttpPort(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withHttpsPort(options)), this._client);
+    }
+
     /** Makes HTTP endpoints externally accessible */
     withExternalHttpEndpoints(): TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withExternalHttpEndpoints()), this._client);
@@ -24115,6 +24411,8 @@ export interface TestRedisResource {
     withEndpoint(options?: WithEndpointOptions): TestRedisResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestRedisResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestRedisResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): TestRedisResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): TestRedisResourcePromise;
     withExternalHttpEndpoints(): TestRedisResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): TestRedisResourcePromise;
@@ -24234,6 +24532,8 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
     withEndpoint(options?: WithEndpointOptions): TestRedisResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestRedisResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestRedisResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): TestRedisResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): TestRedisResourcePromise;
     withExternalHttpEndpoints(): TestRedisResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): TestRedisResourcePromise;
@@ -25019,6 +25319,40 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
         const env = options?.env;
         const isProxied = options?.isProxied;
         return new TestRedisResourcePromiseImpl(this._withHttpsEndpointInternal(port, targetPort, name, env, isProxied), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpPortInternal(port?: number): Promise<TestRedisResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withHttpPort',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): TestRedisResourcePromise {
+        const port = options?.port;
+        return new TestRedisResourcePromiseImpl(this._withHttpPortInternal(port), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsPortInternal(port?: number): Promise<TestRedisResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withHttpsPort',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): TestRedisResourcePromise {
+        const port = options?.port;
+        return new TestRedisResourcePromiseImpl(this._withHttpsPortInternal(port), this._client);
     }
 
     /** @internal */
@@ -26506,6 +26840,16 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpoint(options)), this._client);
     }
 
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withHttpPort(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withHttpsPort(options)), this._client);
+    }
+
     /** Makes HTTP endpoints externally accessible */
     withExternalHttpEndpoints(): TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withExternalHttpEndpoints()), this._client);
@@ -26927,6 +27271,8 @@ export interface TestVaultResource {
     withEndpoint(options?: WithEndpointOptions): TestVaultResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestVaultResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestVaultResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): TestVaultResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): TestVaultResourcePromise;
     withExternalHttpEndpoints(): TestVaultResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): TestVaultResourcePromise;
@@ -27031,6 +27377,8 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
     withEndpoint(options?: WithEndpointOptions): TestVaultResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestVaultResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestVaultResourcePromise;
+    withHttpPort(options?: WithHttpPortOptions): TestVaultResourcePromise;
+    withHttpsPort(options?: WithHttpsPortOptions): TestVaultResourcePromise;
     withExternalHttpEndpoints(): TestVaultResourcePromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): TestVaultResourcePromise;
@@ -27765,6 +28113,40 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
         const env = options?.env;
         const isProxied = options?.isProxied;
         return new TestVaultResourcePromiseImpl(this._withHttpsEndpointInternal(port, targetPort, name, env, isProxied), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpPortInternal(port?: number): Promise<TestVaultResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withHttpPort',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): TestVaultResourcePromise {
+        const port = options?.port;
+        return new TestVaultResourcePromiseImpl(this._withHttpPortInternal(port), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsPortInternal(port?: number): Promise<TestVaultResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withHttpsPort',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): TestVaultResourcePromise {
+        const port = options?.port;
+        return new TestVaultResourcePromiseImpl(this._withHttpsPortInternal(port), this._client);
     }
 
     /** @internal */
@@ -29061,6 +29443,16 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
     /** Adds an HTTPS endpoint */
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpoint(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withHttpPort(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withHttpsPort(options)), this._client);
     }
 
     /** Makes HTTP endpoints externally accessible */
@@ -30989,6 +31381,8 @@ export interface ResourceWithEndpoints {
     withEndpoint(options?: WithEndpointOptions): ResourceWithEndpointsPromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ResourceWithEndpointsPromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ResourceWithEndpointsPromise;
+    withHttpPort(options?: WithHttpPortOptions): ResourceWithEndpointsPromise;
+    withHttpsPort(options?: WithHttpsPortOptions): ResourceWithEndpointsPromise;
     withExternalHttpEndpoints(): ResourceWithEndpointsPromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): ResourceWithEndpointsPromise;
@@ -31003,6 +31397,8 @@ export interface ResourceWithEndpointsPromise extends PromiseLike<ResourceWithEn
     withEndpoint(options?: WithEndpointOptions): ResourceWithEndpointsPromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ResourceWithEndpointsPromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ResourceWithEndpointsPromise;
+    withHttpPort(options?: WithHttpPortOptions): ResourceWithEndpointsPromise;
+    withHttpsPort(options?: WithHttpsPortOptions): ResourceWithEndpointsPromise;
     withExternalHttpEndpoints(): ResourceWithEndpointsPromise;
     getEndpoint(name: string): Promise<EndpointReference>;
     asHttp2Service(): ResourceWithEndpointsPromise;
@@ -31119,6 +31515,40 @@ class ResourceWithEndpointsImpl extends ResourceBuilderBase<IResourceWithEndpoin
         const env = options?.env;
         const isProxied = options?.isProxied;
         return new ResourceWithEndpointsPromiseImpl(this._withHttpsEndpointInternal(port, targetPort, name, env, isProxied), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpPortInternal(port?: number): Promise<ResourceWithEndpoints> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<IResourceWithEndpointsHandle>(
+            'Aspire.Hosting/withHttpPort',
+            rpcArgs
+        );
+        return new ResourceWithEndpointsImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): ResourceWithEndpointsPromise {
+        const port = options?.port;
+        return new ResourceWithEndpointsPromiseImpl(this._withHttpPortInternal(port), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsPortInternal(port?: number): Promise<ResourceWithEndpoints> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (port !== undefined) rpcArgs.port = port;
+        const result = await this._client.invokeCapability<IResourceWithEndpointsHandle>(
+            'Aspire.Hosting/withHttpsPort',
+            rpcArgs
+        );
+        return new ResourceWithEndpointsImpl(result, this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): ResourceWithEndpointsPromise {
+        const port = options?.port;
+        return new ResourceWithEndpointsPromiseImpl(this._withHttpsPortInternal(port), this._client);
     }
 
     /** @internal */
@@ -31287,6 +31717,16 @@ class ResourceWithEndpointsPromiseImpl implements ResourceWithEndpointsPromise {
     /** Adds an HTTPS endpoint */
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ResourceWithEndpointsPromise {
         return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withHttpsEndpoint(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTP endpoint */
+    withHttpPort(options?: WithHttpPortOptions): ResourceWithEndpointsPromise {
+        return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withHttpPort(options)), this._client);
+    }
+
+    /** Sets the host port for the HTTPS endpoint */
+    withHttpsPort(options?: WithHttpsPortOptions): ResourceWithEndpointsPromise {
+        return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withHttpsPort(options)), this._client);
     }
 
     /** Makes HTTP endpoints externally accessible */
