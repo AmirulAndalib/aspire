@@ -1304,18 +1304,23 @@ public static class ResourceBuilderExtensions
 
             if (env is not null && builder.Resource is IResourceWithEndpoints existingResourceWithEndpoints and IResourceWithEnvironment)
             {
-                // Only add the environment callback if env was not already configured
-                if (existing.TargetPortEnvironmentVariable is null)
+                var previousEnv = existing.TargetPortEnvironmentVariable;
+                existing.TargetPortEnvironmentVariable = env;
+
+                // Add a new callback only if there wasn't one before.
+                // When there was a previous env, the existing callback already captures
+                // the EndpointAnnotation and will read TargetPortEnvironmentVariable at
+                // evaluation time, so updating the property above is sufficient.
+                if (previousEnv is null)
                 {
                     var endpointReference = new EndpointReference(existingResourceWithEndpoints, existing, KnownNetworkIdentifiers.LocalhostNetwork);
+                    var capturedAnnotation = existing;
 
                     builder.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
                     {
-                        context.EnvironmentVariables[env] = endpointReference.Property(EndpointProperty.TargetPort);
+                        context.EnvironmentVariables[capturedAnnotation.TargetPortEnvironmentVariable!] = endpointReference.Property(EndpointProperty.TargetPort);
                     }));
                 }
-
-                existing.TargetPortEnvironmentVariable = env;
             }
 
             return builder;
@@ -1327,10 +1332,11 @@ public static class ResourceBuilderExtensions
             annotation.TargetPortEnvironmentVariable = env;
 
             var endpointReference = new EndpointReference(resourceWithEndpoints, annotation, KnownNetworkIdentifiers.LocalhostNetwork);
+            var capturedAnnotation = annotation;
 
             builder.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
             {
-                context.EnvironmentVariables[env] = endpointReference.Property(EndpointProperty.TargetPort);
+                context.EnvironmentVariables[capturedAnnotation.TargetPortEnvironmentVariable!] = endpointReference.Property(EndpointProperty.TargetPort);
             }));
         }
 

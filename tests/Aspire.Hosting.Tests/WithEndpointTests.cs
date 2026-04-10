@@ -808,6 +808,27 @@ public class WithEndpointTests
         Assert.Single(envAnnotations);
     }
 
+    [Fact]
+    public async Task WithHttpEndpointUpdateReplacesEnvVar()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create();
+
+        builder.AddExecutable("foo", "foo", ".")
+            .WithHttpEndpoint(targetPort: 3001, env: "PORT")
+            .WithHttpEndpoint(env: "NEW_PORT");
+
+        using var app = builder.Build();
+
+        var appModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+        var resource = Assert.Single(appModel.GetExecutableResources());
+
+        var config = await EnvironmentVariableEvaluator.GetEnvironmentVariablesAsync(resource, DistributedApplicationOperation.Run, TestServiceProvider.Instance).DefaultTimeout();
+
+        // NEW_PORT should be set, PORT should not
+        Assert.True(config.ContainsKey("NEW_PORT"));
+        Assert.False(config.ContainsKey("PORT"));
+    }
+
     private sealed class ProjectA : IProjectMetadata
     {
         public string ProjectPath => "projectA";
