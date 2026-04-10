@@ -113,7 +113,7 @@ public class ApiDocsIndexServiceTests
         var results = await service.SearchAsync("DoThing", ApiReferenceLanguages.CSharp, 10);
 
         var result = Assert.Single(results);
-        Assert.Equal("csharp/aspire.test.package/testtype/methods#dothing-string", result.Id);
+        Assert.Equal("csharp/aspire.test.package/testtype/methods#dothing", result.Id);
         Assert.Equal("DoThing(string)", result.Name);
         Assert.Equal(ApiReferenceKinds.Member, result.Kind);
         Assert.Equal("Does the thing.", result.Summary);
@@ -128,8 +128,26 @@ public class ApiDocsIndexServiceTests
 
         Assert.Equal(3, results.Count);
         Assert.Contains(results, result => result.Id == "csharp/aspire.test.package/iresourcewithenvironment");
-        Assert.Contains(results, result => result.Id == "csharp/aspire.test.package/resourcebuilderextensions/methods#withenvironment-iresourcebuilder-t-string-string");
-        Assert.Contains(results, result => result.Id == "csharp/aspire.test.package/resourcebuilderextensions/methods#withenvironment-iresourcebuilder-t-action-environmentcallbackcontext");
+        Assert.Contains(results, result => result.Name == "WithEnvironment(IResourceBuilder<T>, string, string?)" &&
+            result.Id.StartsWith("csharp/aspire.test.package/resourcebuilderextensions/methods#withenvironment-", StringComparison.Ordinal));
+        Assert.Contains(results, result => result.Name == "WithEnvironment(IResourceBuilder<T>, Action<EnvironmentCallbackContext>)" &&
+            result.Id.StartsWith("csharp/aspire.test.package/resourcebuilderextensions/methods#withenvironment-", StringComparison.Ordinal));
+        Assert.DoesNotContain(results, result => result.Id.Contains("iresourcebuilder", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task SearchAsync_PrefersTypesForBroadIdentifierQueries()
+    {
+        var service = CreateDistributedApplicationService();
+
+        var results = await service.SearchAsync("distributedapp", ApiReferenceLanguages.CSharp, 10);
+
+        Assert.NotEmpty(results);
+        var firstResult = results[0];
+        Assert.Equal("csharp/aspire.hosting/distributedapplication", firstResult.Id);
+        Assert.Equal(ApiReferenceKinds.Type, firstResult.Kind);
+        Assert.Contains(results, result => result.Id == "csharp/aspire.hosting.testing/distributedapplicationfactory");
+        Assert.Contains(results, result => result.Kind == ApiReferenceKinds.Member);
     }
 
     [Fact]
@@ -221,7 +239,7 @@ public class ApiDocsIndexServiceTests
             },
             item =>
             {
-                Assert.Equal("csharp/aspire.test.package/testtype/methods#dothing-string", item.Id);
+                Assert.Equal("csharp/aspire.test.package/testtype/methods#dothing", item.Id);
                 Assert.Equal("DoThing(string)", item.Name);
                 Assert.Equal(ApiReferenceKinds.Member, item.Kind);
                 Assert.Equal("csharp/aspire.test.package/testtype/methods", item.ParentId);
@@ -247,7 +265,7 @@ public class ApiDocsIndexServiceTests
     {
         var service = CreateService();
 
-        var item = await service.GetAsync("csharp/aspire.test.package/testtype/methods#dothing-string");
+        var item = await service.GetAsync("csharp/aspire.test.package/testtype/methods#dothing");
 
         Assert.NotNull(item);
         Assert.Equal("DoThing(string)", item.Name);
@@ -279,6 +297,7 @@ public class ApiDocsIndexServiceTests
                     # Methods
 
                     - [Package](/reference/api/csharp/aspire.test.package.md)
+                    - [CreateBuilder(string[])](/reference/api/csharp/aspire.hosting/distributedapplication/methods.md#createbuilder-string)
                     - [Current](#localonly)
 
                     ## LocalOnly() {#localonly}
@@ -294,6 +313,7 @@ public class ApiDocsIndexServiceTests
         Assert.Equal(["http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods"], fetcher.RequestedPageUrls);
         Assert.Equal(["http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods.md"], fetcher.RequestedMarkdownUrls);
         Assert.Contains("[Package](http://localhost:4321/reference/api/csharp/aspire.test.package.md)", item.Content, StringComparison.Ordinal);
+        Assert.Contains("[CreateBuilder(string[])](http://localhost:4321/reference/api/csharp/aspire.hosting/distributedapplication/methods.md#createbuilder-string)", item.Content, StringComparison.Ordinal);
         Assert.Contains("[Current](http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods#localonly)", item.Content, StringComparison.Ordinal);
         Assert.Contains("## LocalOnly()", item.Content, StringComparison.Ordinal);
     }
@@ -497,6 +517,62 @@ public class ApiDocsIndexServiceTests
                     ## WithEnvironment(IResourceBuilder<T>, Action<EnvironmentCallbackContext>) {#withenvironment-iresourcebuilder-t-action-environmentcallbackcontext}
 
                     Adds environment variables from a callback.
+                    """
+            });
+
+        return new ApiDocsIndexService(fetcher, new TestApiDocsCache(), new ConfigurationBuilder().Build(), NullLogger<ApiDocsIndexService>.Instance);
+    }
+
+    private static ApiDocsIndexService CreateDistributedApplicationService()
+    {
+        var fetcher = new TestApiDocsFetcher(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.hosting/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.hosting/distributedapplication/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.hosting/distributedapplication/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.hosting/distributedapplicationbuilder/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.hosting/distributedapplicationbuilder/constructors/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.hosting/idistributedapplicationeventingsubscriber/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.hosting/idistributedapplicationeventingsubscriber/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.hosting.testing/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.hosting.testing/distributedapplicationfactory/</loc></url>
+            </urlset>
+            """,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["https://aspire.dev/reference/api/csharp/aspire.hosting/distributedapplication"] = """
+                    # DistributedApplication
+
+                    Represents a distributed application.
+
+                    ## Methods
+
+                    - [CreateBuilder(DistributedApplicationOptions)](/reference/api/csharp/aspire.hosting/distributedapplication/methods.md#createbuilder-distributedapplicationoptions) : `DistributedApplicationBuilder` -- Creates a builder.
+                    """,
+                ["https://aspire.dev/reference/api/csharp/aspire.hosting/distributedapplicationbuilder"] = """
+                    # DistributedApplicationBuilder
+
+                    Builds a distributed application.
+
+                    ## Constructors
+
+                    - [DistributedApplicationBuilder(DistributedApplicationOptions)](/reference/api/csharp/aspire.hosting/distributedapplicationbuilder/constructors.md#constructor-distributedapplicationoptions) : `DistributedApplicationBuilder` -- Creates a builder instance.
+                    """,
+                ["https://aspire.dev/reference/api/csharp/aspire.hosting/idistributedapplicationeventingsubscriber"] = """
+                    # IDistributedApplicationEventingSubscriber
+
+                    Subscribes to distributed application events.
+
+                    ## Methods
+
+                    - [SubscribeAsync(IDistributedApplicationEventing, DistributedApplicationExecutionContext, CancellationToken)](/reference/api/csharp/aspire.hosting/idistributedapplicationeventingsubscriber/methods.md#subscribeasync-idistributedapplicationeventing-distributedapplicationexecutioncontext-cancellationtoken) : `Task` -- Subscribes to events.
+                    """,
+                ["https://aspire.dev/reference/api/csharp/aspire.hosting.testing/distributedapplicationfactory"] = """
+                    # DistributedApplicationFactory
+
+                    Creates distributed application test hosts.
                     """
             });
 

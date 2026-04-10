@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -328,6 +329,9 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
     private const float ExactIdMatchBonus = 60.0f;
     private const float ExactNameMatchBonus = 45.0f;
     private const float PathSegmentMatchBonus = 20.0f;
+    private const float NamePrefixMatchBonus = 32.0f;
+    private const float PathPrefixMatchBonus = 18.0f;
+    private const int PrefixTightnessMaxBonus = 16;
     private const float IdWeight = 8.0f;
     private const float NameWeight = 10.0f;
     private const float SummaryWeight = 4.0f;
@@ -335,6 +339,7 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
     private const float MemberGroupWeight = 3.0f;
     private const int MinTokenLength = 2;
     private const int MemberSearchBatchSize = 8;
+    private const string MemberIndexFingerprintVersion = "v2";
 
     private readonly IApiDocsFetcher _fetcher = fetcher;
     private readonly IApiDocsCache _cache = cache;
@@ -599,7 +604,7 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
 
             if (cachedMemberItems is not null &&
                 currentFingerprint is not null &&
-                string.Equals(cachedMemberFingerprint, currentFingerprint, StringComparison.Ordinal))
+                string.Equals(cachedMemberFingerprint, GetMemberIndexFingerprint(currentFingerprint), StringComparison.Ordinal))
             {
                 MergeIndexItems(cachedMemberItems);
                 _indexedMemberContainerIds.Clear();
@@ -852,7 +857,7 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
 
         await _cache.SetMemberIndexAsync(cachedMemberItems, cancellationToken).ConfigureAwait(false);
         await _cache.SetIndexedMemberContainerIdsAsync([.. _indexedMemberContainerIds], cancellationToken).ConfigureAwait(false);
-        await _cache.SetMemberIndexSourceFingerprintAsync(currentFingerprint, cancellationToken).ConfigureAwait(false);
+        await _cache.SetMemberIndexSourceFingerprintAsync(GetMemberIndexFingerprint(currentFingerprint), cancellationToken).ConfigureAwait(false);
     }
 
     private static string? GetTopLevelScopeId(string id)
@@ -868,6 +873,9 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
         var lowerText = text.ToLowerInvariant();
         return queryTokens.Count(token => lowerText.Contains(token, StringComparison.Ordinal));
     }
+
+    private static string GetMemberIndexFingerprint(string currentFingerprint)
+        => $"{MemberIndexFingerprintVersion}:{currentFingerprint}";
 
     private sealed record LoadedMemberContainer(string ContainerId, ApiReferenceItem[] MemberItems);
 
@@ -1094,8 +1102,80 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
             }
         }
 
+        if (TryGetBroadQueryToken(normalizedQuery, queryTokens, out var broadQueryToken))
+        {
+            var prefixBonus = GetPrefixMatchBonus(item, broadQueryToken);
+            if (prefixBonus > 0)
+            {
+                score += prefixBonus;
+                score += GetBroadQueryKindBonus(item.Source.Kind);
+            }
+        }
+
         return score;
     }
+
+    private static bool TryGetBroadQueryToken(string normalizedQuery, string[] queryTokens, [NotNullWhen(true)] out string? broadQueryToken)
+    {
+        broadQueryToken = null;
+
+        if (queryTokens.Length is not 1)
+        {
+            return false;
+        }
+
+        var token = queryTokens[0];
+        if (token.Length < 5 ||
+            !string.Equals(normalizedQuery, token, StringComparison.Ordinal) ||
+            normalizedQuery.IndexOfAny(['/', '#', '.', '(', ')']) >= 0)
+        {
+            return false;
+        }
+
+        broadQueryToken = token;
+        return true;
+    }
+
+    private static float GetPrefixMatchBonus(IndexedApiReferenceItem item, string queryToken)
+    {
+        var score = 0.0f;
+        if (item.NameLower.StartsWith(queryToken, StringComparison.Ordinal))
+        {
+            score += NamePrefixMatchBonus;
+            score += GetPrefixTightnessBonus(item.NameLower.Length - queryToken.Length);
+        }
+
+        var bestPathSegmentLength = item.PathSegments
+            .Where(segment => segment.StartsWith(queryToken, StringComparison.Ordinal))
+            .Select(static segment => segment.Length)
+            .DefaultIfEmpty(int.MaxValue)
+            .Min();
+        if (bestPathSegmentLength != int.MaxValue)
+        {
+            score += PathPrefixMatchBonus;
+            score += GetPrefixTightnessBonus(bestPathSegmentLength - queryToken.Length);
+        }
+
+        return score;
+    }
+
+    private static float GetPrefixTightnessBonus(int extraLength)
+        => extraLength switch
+        {
+            < 0 => 0.0f,
+            >= PrefixTightnessMaxBonus => 0.0f,
+            _ => PrefixTightnessMaxBonus - extraLength
+        };
+
+    private static float GetBroadQueryKindBonus(string kind) => kind switch
+    {
+        ApiReferenceKinds.Type => 28.0f,
+        ApiReferenceKinds.Symbol => 28.0f,
+        ApiReferenceKinds.Package => 16.0f,
+        ApiReferenceKinds.Module => 16.0f,
+        ApiReferenceKinds.MemberGroup => 8.0f,
+        _ => 0.0f
+    };
 
     private static string[] Tokenize(string text)
         => LexicalScoring.Tokenize(text, TokenSplitRegex(), MinTokenLength);

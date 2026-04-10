@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.IO.Hashing;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Aspire.Cli.Documentation.ApiDocs;
@@ -30,7 +32,7 @@ internal static partial class ApiMemberMarkdownParser
         }
 
         var lines = markdown.Split('\n');
-        var items = new List<ApiReferenceItem>();
+        var candidates = new List<ParsedMemberCandidate>();
 
         foreach (var line in lines)
         {
@@ -53,16 +55,35 @@ internal static partial class ApiMemberMarkdownParser
                 continue;
             }
 
+            candidates.Add(new ParsedMemberCandidate(name, anchor, summary, memberGroupItem));
+        }
+
+        if (candidates.Count is 0)
+        {
+            return [];
+        }
+
+        var slugCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var candidate in candidates)
+        {
+            var key = BuildSlugKey(candidate.MemberGroupItem.Id, candidate.Name);
+            slugCounts[key] = slugCounts.TryGetValue(key, out var count) ? count + 1 : 1;
+        }
+
+        var items = new List<ApiReferenceItem>(candidates.Count);
+        foreach (var candidate in candidates)
+        {
+            var memberId = BuildMemberId(candidate, slugCounts);
             items.Add(new ApiReferenceItem
             {
-                Id = $"{memberGroupItem.Id}#{anchor}",
-                Name = name,
-                Language = memberGroupItem.Language,
+                Id = memberId,
+                Name = candidate.Name,
+                Language = candidate.MemberGroupItem.Language,
                 Kind = ApiReferenceKinds.Member,
-                PageUrl = $"{memberGroupItem.PageUrl}#{anchor}",
-                ParentId = memberGroupItem.Id,
-                MemberGroup = memberGroupItem.MemberGroup,
-                Summary = summary
+                PageUrl = $"{candidate.MemberGroupItem.PageUrl}#{candidate.Anchor}",
+                ParentId = candidate.MemberGroupItem.Id,
+                MemberGroup = candidate.MemberGroupItem.MemberGroup,
+                Summary = candidate.Summary
             });
         }
 
@@ -126,4 +147,65 @@ internal static partial class ApiMemberMarkdownParser
 
     [GeneratedRegex(@"^-\s+\[(?<name>[^\]]+)\]\((?<href>[^)]+)\)(?<tail>.*)$")]
     private static partial Regex MemberOverviewRegex();
+
+    private static string BuildMemberId(ParsedMemberCandidate candidate, IReadOnlyDictionary<string, int> slugCounts)
+    {
+        var baseSlug = CreateMemberSlug(candidate.Name);
+        var key = BuildSlugKey(candidate.MemberGroupItem.Id, candidate.Name);
+        if (!slugCounts.TryGetValue(key, out var count) || count <= 1)
+        {
+            return $"{candidate.MemberGroupItem.Id}#{baseSlug}";
+        }
+
+        return $"{candidate.MemberGroupItem.Id}#{baseSlug}-{CreateShortSuffix(candidate.Anchor)}";
+    }
+
+    private static string BuildSlugKey(string memberGroupId, string memberName)
+        => $"{memberGroupId}#{CreateMemberSlug(memberName)}";
+
+    private static string CreateMemberSlug(string memberName)
+    {
+        var signatureStart = memberName.IndexOf('(');
+        var baseName = signatureStart >= 0
+            ? memberName[..signatureStart]
+            : memberName;
+
+        var slug = Slugify(baseName);
+        return slug.Length is 0 ? "member" : slug;
+    }
+
+    private static string Slugify(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        var pendingSeparator = false;
+
+        foreach (var character in value)
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                if (pendingSeparator && builder.Length > 0)
+                {
+                    builder.Append('-');
+                }
+
+                builder.Append(char.ToLowerInvariant(character));
+                pendingSeparator = false;
+            }
+            else
+            {
+                pendingSeparator = builder.Length > 0;
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static string CreateShortSuffix(string anchor)
+    {
+        var xxHash = new XxHash3();
+        xxHash.Append(Encoding.UTF8.GetBytes(anchor));
+        return Convert.ToHexString(xxHash.GetCurrentHash()).ToLowerInvariant()[..8];
+    }
+
+    private sealed record ParsedMemberCandidate(string Name, string Anchor, string? Summary, ApiReferenceItem MemberGroupItem);
 }

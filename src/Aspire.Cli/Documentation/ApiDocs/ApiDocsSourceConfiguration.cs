@@ -210,6 +210,6 @@ internal static partial class ApiDocsSourceConfiguration
             : pageUrl;
     }
 
-    [GeneratedRegex(@"\[(?<text>[^\]]+)\]\((?<href>(?:/|#)[^)]*)\)")]
+    [GeneratedRegex(@"\[(?<text>(?:[^\[\]]|\[[^\[\]]*\])+)\]\((?<href>(?:/|#)[^)]*)\)")]
     private static partial Regex LocalMarkdownLinkRegex();
 }

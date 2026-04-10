@@ -54,4 +54,52 @@ public class ApiMemberMarkdownParserTests
         Assert.Equal(memberGroupItem.Id, item.ParentId);
         Assert.Equal("Runs the emulator.", item.Summary);
     }
+
+    [Fact]
+    public void Parse_ShortenOverloadIdsWhileKeepingThemDistinct()
+    {
+        var containerItem = new ApiReferenceItem
+        {
+            Id = "csharp/aspire.test.package/resourcebuilderextensions",
+            Name = "ResourceBuilderExtensions",
+            Language = ApiReferenceLanguages.CSharp,
+            Kind = ApiReferenceKinds.Type,
+            PageUrl = "https://aspire.dev/reference/api/csharp/aspire.test.package/resourcebuilderextensions"
+        };
+
+        var memberGroupItem = new ApiReferenceItem
+        {
+            Id = "csharp/aspire.test.package/resourcebuilderextensions/methods",
+            Name = "methods",
+            Language = ApiReferenceLanguages.CSharp,
+            Kind = ApiReferenceKinds.MemberGroup,
+            PageUrl = "https://aspire.dev/reference/api/csharp/aspire.test.package/resourcebuilderextensions/methods",
+            ParentId = containerItem.Id,
+            MemberGroup = "methods"
+        };
+
+        var items = ApiMemberMarkdownParser.Parse(
+            containerItem,
+            """
+            # ResourceBuilderExtensions
+
+            ## Methods
+
+            - [WithEnvironment(IResourceBuilder<T>, string, string?)](/reference/api/csharp/aspire.test.package/resourcebuilderextensions/methods.md#withenvironment-iresourcebuilder-t-string-string) : `IResourceBuilder<T>` -- Adds a string environment variable.
+            - [WithEnvironment(IResourceBuilder<T>, Action<EnvironmentCallbackContext>)](/reference/api/csharp/aspire.test.package/resourcebuilderextensions/methods.md#withenvironment-iresourcebuilder-t-action-environmentcallbackcontext) : `IResourceBuilder<T>` -- Adds environment variables from a callback.
+            """,
+            ApiDocsSourceConfiguration.DefaultSitemapUrl,
+            new Dictionary<string, ApiReferenceItem>(StringComparer.OrdinalIgnoreCase)
+            {
+                [memberGroupItem.PageUrl] = memberGroupItem
+            });
+
+        Assert.Equal(2, items.Count);
+        Assert.All(items, item =>
+        {
+            Assert.True(item.Id.StartsWith("csharp/aspire.test.package/resourcebuilderextensions/methods#withenvironment-", StringComparison.Ordinal), item.Id);
+            Assert.DoesNotContain("iresourcebuilder", item.Id, StringComparison.OrdinalIgnoreCase);
+        });
+        Assert.NotEqual(items[0].Id, items[1].Id);
+    }
 }
