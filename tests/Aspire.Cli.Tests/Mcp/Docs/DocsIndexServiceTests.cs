@@ -436,6 +436,29 @@ public class DocsIndexServiceTests
     }
 
     [Fact]
+    public async Task GetDocumentAsync_FormatsMinifiedSingleLineCodeBlocks()
+    {
+        var content = """
+            # Certificate configuration
+
+            Example:
+            ```csharp var builder = DistributedApplication.CreateBuilder(args); // Disable all automatic certificate configuration builder.AddPythonModule("api", "./api", "uvicorn") .WithoutHttpsCertificate() // No server cert config .WithCertificateTrustScope(CertificateTrustScope.None); // No client trust config builder.Build().Run(); ```
+            """;
+
+        var service = CreateService(CreateMockFetcher(content));
+
+        var doc = await service.GetDocumentAsync("certificate-configuration");
+
+        Assert.NotNull(doc);
+        Assert.Contains("```csharp", doc.Content, StringComparison.Ordinal);
+        Assert.Contains("var builder = DistributedApplication.CreateBuilder(args);", doc.Content, StringComparison.Ordinal);
+        Assert.Contains("// Disable all automatic certificate configuration\nbuilder.AddPythonModule(\"api\", \"./api\", \"uvicorn\")", doc.Content, StringComparison.Ordinal);
+        Assert.Contains(".WithoutHttpsCertificate()\n// No server cert config\n.WithCertificateTrustScope(CertificateTrustScope.None);", doc.Content, StringComparison.Ordinal);
+        Assert.Contains("// No client trust config\nbuilder.Build().Run();", doc.Content, StringComparison.Ordinal);
+        Assert.Contains("```", doc.Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task EnsureIndexedAsync_OnlyFetchesOnce()
     {
         var callCount = 0;
