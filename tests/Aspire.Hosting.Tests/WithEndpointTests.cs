@@ -773,6 +773,41 @@ public class WithEndpointTests
         Assert.Equal("PORT", endpoint.TargetPortEnvironmentVariable);
     }
 
+    [Fact]
+    public void WithHttpEndpointUpdatePreservesIsProxiedFalse()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("mycontainer", "myimage")
+            .WithHttpEndpoint(port: 8080, isProxied: false)
+            .WithHttpEndpoint(targetPort: 3000);
+
+        using var app = builder.Build();
+
+        var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "http");
+        Assert.Equal(8080, endpoint.Port);
+        Assert.Equal(3000, endpoint.TargetPort);
+        Assert.False(endpoint.IsProxied);
+    }
+
+    [Fact]
+    public void WithHttpEndpointUpdateDoesNotDuplicateEnvAnnotation()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("mycontainer", "myimage")
+            .WithHttpEndpoint(env: "PORT")
+            .WithHttpEndpoint(port: 3000, env: "PORT");
+
+        using var app = builder.Build();
+
+        var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
+        var envAnnotations = resource.Annotations.OfType<EnvironmentCallbackAnnotation>().ToList();
+        // Should have exactly one env callback for PORT, not two
+        Assert.Single(envAnnotations);
+    }
+
     private sealed class ProjectA : IProjectMetadata
     {
         public string ProjectPath => "projectA";
