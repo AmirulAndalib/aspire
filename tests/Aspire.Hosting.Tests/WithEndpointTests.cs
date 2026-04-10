@@ -829,6 +829,60 @@ public class WithEndpointTests
         Assert.False(config.ContainsKey("PORT"));
     }
 
+    [Fact]
+    public void WithEndpointUpdateDoesNotChangeScheme()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("mycontainer", "myimage")
+            .WithHttpEndpoint(name: "api")
+            .WithHttpsEndpoint(name: "api", port: 8443);
+
+        using var app = builder.Build();
+
+        var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "api");
+        // Scheme should remain "http" from the first call
+        Assert.Equal("http", endpoint.UriScheme);
+        Assert.Equal(8443, endpoint.Port);
+    }
+
+    [Fact]
+    public void WithEndpointUpdateDoesNotChangeIsProxied()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        // isProxied defaults to true in the method signature, so we can't
+        // distinguish "user passed true" from "default". Update path skips it.
+        builder.AddContainer("mycontainer", "myimage")
+            .WithHttpEndpoint(port: 8080, isProxied: false)
+            .WithHttpEndpoint(port: 9090, isProxied: true);
+
+        using var app = builder.Build();
+
+        var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "http");
+        Assert.Equal(9090, endpoint.Port);
+        // isProxied stays false from the original — update path doesn't touch it
+        Assert.False(endpoint.IsProxied);
+    }
+
+    [Fact]
+    public void WithEndpointUpdateChangesIsExternal()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("mycontainer", "myimage")
+            .WithEndpoint(scheme: "http", name: "http")
+            .WithEndpoint(name: "http", isExternal: true);
+
+        using var app = builder.Build();
+
+        var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "http");
+        Assert.True(endpoint.IsExternal);
+    }
+
     private sealed class ProjectA : IProjectMetadata
     {
         public string ProjectPath => "projectA";
