@@ -4850,14 +4850,6 @@ class AbstractResourceWithEndpoints(AbstractResource):
         """Adds an HTTPS endpoint"""
 
     @abc.abstractmethod
-    def with_http_port(self, *, port: int | None = None) -> typing.Self:
-        """Sets the host port for the HTTP endpoint"""
-
-    @abc.abstractmethod
-    def with_https_port(self, *, port: int | None = None) -> typing.Self:
-        """Sets the host port for the HTTPS endpoint"""
-
-    @abc.abstractmethod
     def with_external_http_endpoints(self) -> typing.Self:
         """Makes HTTP endpoints externally accessible"""
 
@@ -6142,8 +6134,6 @@ class ContainerResourceKwargs(_BaseResourceKwargs, total=False):
     endpoint: EndpointParameters | typing.Literal[True]
     http_endpoint: HttpEndpointParameters | typing.Literal[True]
     https_endpoint: HttpsEndpointParameters | typing.Literal[True]
-    http_port: int | typing.Literal[True]
-    https_port: int | typing.Literal[True]
     external_http_endpoints: typing.Literal[True]
     as_http2_service: typing.Literal[True]
     url_for_endpoint_factory: tuple[str, typing.Callable[[EndpointReference], ResourceUrlAnnotation]]
@@ -6597,30 +6587,6 @@ class ContainerResource(_BaseResource, AbstractResourceWithEnvironment, Abstract
             rpc_args['isProxied'] = is_proxied
         result = self._client.invoke_capability(
             'Aspire.Hosting/withHttpsEndpoint',
-            rpc_args,
-        )
-        self._handle = self._wrap_builder(result)
-        return self
-
-    def with_http_port(self, *, port: int | None = None) -> typing.Self:
-        """Sets the host port for the HTTP endpoint"""
-        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
-        if port is not None:
-            rpc_args['port'] = port
-        result = self._client.invoke_capability(
-            'Aspire.Hosting/withHttpPort',
-            rpc_args,
-        )
-        self._handle = self._wrap_builder(result)
-        return self
-
-    def with_https_port(self, *, port: int | None = None) -> typing.Self:
-        """Sets the host port for the HTTPS endpoint"""
-        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
-        if port is not None:
-            rpc_args['port'] = port
-        result = self._client.invoke_capability(
-            'Aspire.Hosting/withHttpsPort',
             rpc_args,
         )
         self._handle = self._wrap_builder(result)
@@ -7165,26 +7131,6 @@ class ContainerResource(_BaseResource, AbstractResourceWithEnvironment, Abstract
                 handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpsEndpoint', rpc_args))
             else:
                 raise TypeError("Invalid type for option 'https_endpoint'. Expected: HttpsEndpointParameters or Literal[True]")
-        if _http_port := kwargs.pop("http_port", None):
-            if _validate_type(_http_port, int):
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                rpc_args["port"] = typing.cast(int, _http_port)
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpPort', rpc_args))
-            elif _http_port is True:
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpPort', rpc_args))
-            else:
-                raise TypeError("Invalid type for option 'http_port'. Expected: int or Literal[True]")
-        if _https_port := kwargs.pop("https_port", None):
-            if _validate_type(_https_port, int):
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                rpc_args["port"] = typing.cast(int, _https_port)
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpsPort', rpc_args))
-            elif _https_port is True:
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpsPort', rpc_args))
-            else:
-                raise TypeError("Invalid type for option 'https_port'. Expected: int or Literal[True]")
         if _external_http_endpoints := kwargs.pop("external_http_endpoints", None):
             if _external_http_endpoints is True:
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
@@ -7375,8 +7321,6 @@ class ProjectResourceKwargs(_BaseResourceKwargs, total=False):
     endpoint: EndpointParameters | typing.Literal[True]
     http_endpoint: HttpEndpointParameters | typing.Literal[True]
     https_endpoint: HttpsEndpointParameters | typing.Literal[True]
-    http_port: int | typing.Literal[True]
-    https_port: int | typing.Literal[True]
     external_http_endpoints: typing.Literal[True]
     as_http2_service: typing.Literal[True]
     url_for_endpoint_factory: tuple[str, typing.Callable[[EndpointReference], ResourceUrlAnnotation]]
@@ -7667,30 +7611,6 @@ class ProjectResource(_BaseResource, AbstractResourceWithEnvironment, AbstractRe
             rpc_args['isProxied'] = is_proxied
         result = self._client.invoke_capability(
             'Aspire.Hosting/withHttpsEndpoint',
-            rpc_args,
-        )
-        self._handle = self._wrap_builder(result)
-        return self
-
-    def with_http_port(self, *, port: int | None = None) -> typing.Self:
-        """Sets the host port for the HTTP endpoint"""
-        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
-        if port is not None:
-            rpc_args['port'] = port
-        result = self._client.invoke_capability(
-            'Aspire.Hosting/withHttpPort',
-            rpc_args,
-        )
-        self._handle = self._wrap_builder(result)
-        return self
-
-    def with_https_port(self, *, port: int | None = None) -> typing.Self:
-        """Sets the host port for the HTTPS endpoint"""
-        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
-        if port is not None:
-            rpc_args['port'] = port
-        result = self._client.invoke_capability(
-            'Aspire.Hosting/withHttpsPort',
             rpc_args,
         )
         self._handle = self._wrap_builder(result)
@@ -8118,26 +8038,6 @@ class ProjectResource(_BaseResource, AbstractResourceWithEnvironment, AbstractRe
                 handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpsEndpoint', rpc_args))
             else:
                 raise TypeError("Invalid type for option 'https_endpoint'. Expected: HttpsEndpointParameters or Literal[True]")
-        if _http_port := kwargs.pop("http_port", None):
-            if _validate_type(_http_port, int):
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                rpc_args["port"] = typing.cast(int, _http_port)
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpPort', rpc_args))
-            elif _http_port is True:
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpPort', rpc_args))
-            else:
-                raise TypeError("Invalid type for option 'http_port'. Expected: int or Literal[True]")
-        if _https_port := kwargs.pop("https_port", None):
-            if _validate_type(_https_port, int):
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                rpc_args["port"] = typing.cast(int, _https_port)
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpsPort', rpc_args))
-            elif _https_port is True:
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpsPort', rpc_args))
-            else:
-                raise TypeError("Invalid type for option 'https_port'. Expected: int or Literal[True]")
         if _external_http_endpoints := kwargs.pop("external_http_endpoints", None):
             if _external_http_endpoints is True:
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
@@ -8337,8 +8237,6 @@ class ExecutableResourceKwargs(_BaseResourceKwargs, total=False):
     endpoint: EndpointParameters | typing.Literal[True]
     http_endpoint: HttpEndpointParameters | typing.Literal[True]
     https_endpoint: HttpsEndpointParameters | typing.Literal[True]
-    http_port: int | typing.Literal[True]
-    https_port: int | typing.Literal[True]
     external_http_endpoints: typing.Literal[True]
     as_http2_service: typing.Literal[True]
     url_for_endpoint_factory: tuple[str, typing.Callable[[EndpointReference], ResourceUrlAnnotation]]
@@ -8630,30 +8528,6 @@ class ExecutableResource(_BaseResource, AbstractResourceWithEnvironment, Abstrac
             rpc_args['isProxied'] = is_proxied
         result = self._client.invoke_capability(
             'Aspire.Hosting/withHttpsEndpoint',
-            rpc_args,
-        )
-        self._handle = self._wrap_builder(result)
-        return self
-
-    def with_http_port(self, *, port: int | None = None) -> typing.Self:
-        """Sets the host port for the HTTP endpoint"""
-        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
-        if port is not None:
-            rpc_args['port'] = port
-        result = self._client.invoke_capability(
-            'Aspire.Hosting/withHttpPort',
-            rpc_args,
-        )
-        self._handle = self._wrap_builder(result)
-        return self
-
-    def with_https_port(self, *, port: int | None = None) -> typing.Self:
-        """Sets the host port for the HTTPS endpoint"""
-        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
-        if port is not None:
-            rpc_args['port'] = port
-        result = self._client.invoke_capability(
-            'Aspire.Hosting/withHttpsPort',
             rpc_args,
         )
         self._handle = self._wrap_builder(result)
@@ -9070,26 +8944,6 @@ class ExecutableResource(_BaseResource, AbstractResourceWithEnvironment, Abstrac
                 handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpsEndpoint', rpc_args))
             else:
                 raise TypeError("Invalid type for option 'https_endpoint'. Expected: HttpsEndpointParameters or Literal[True]")
-        if _http_port := kwargs.pop("http_port", None):
-            if _validate_type(_http_port, int):
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                rpc_args["port"] = typing.cast(int, _http_port)
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpPort', rpc_args))
-            elif _http_port is True:
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpPort', rpc_args))
-            else:
-                raise TypeError("Invalid type for option 'http_port'. Expected: int or Literal[True]")
-        if _https_port := kwargs.pop("https_port", None):
-            if _validate_type(_https_port, int):
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                rpc_args["port"] = typing.cast(int, _https_port)
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpsPort', rpc_args))
-            elif _https_port is True:
-                rpc_args: dict[str, typing.Any] = {"builder": handle}
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withHttpsPort', rpc_args))
-            else:
-                raise TypeError("Invalid type for option 'https_port'. Expected: int or Literal[True]")
         if _external_http_endpoints := kwargs.pop("external_http_endpoints", None):
             if _external_http_endpoints is True:
                 rpc_args: dict[str, typing.Any] = {"builder": handle}

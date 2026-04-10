@@ -862,32 +862,6 @@ func (s *CSharpAppResource) WithHttpsEndpoint(port *float64, targetPort *float64
 	return result.(*IResourceWithEndpoints), nil
 }
 
-// WithHttpPort sets the host port for the HTTP endpoint
-func (s *CSharpAppResource) WithHttpPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpsPort sets the host port for the HTTPS endpoint
-func (s *CSharpAppResource) WithHttpsPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
 // WithExternalHttpEndpoints makes HTTP endpoints externally accessible
 func (s *CSharpAppResource) WithExternalHttpEndpoints() (*IResourceWithEndpoints, error) {
 	reqArgs := map[string]any{
@@ -4034,32 +4008,6 @@ func (s *ContainerResource) WithHttpsEndpoint(port *float64, targetPort *float64
 	return result.(*IResourceWithEndpoints), nil
 }
 
-// WithHttpPort sets the host port for the HTTP endpoint
-func (s *ContainerResource) WithHttpPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpsPort sets the host port for the HTTPS endpoint
-func (s *ContainerResource) WithHttpsPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
 // WithExternalHttpEndpoints makes HTTP endpoints externally accessible
 func (s *ContainerResource) WithExternalHttpEndpoints() (*IResourceWithEndpoints, error) {
 	reqArgs := map[string]any{
@@ -5660,32 +5608,6 @@ func (s *DotnetToolResource) WithHttpsEndpoint(port *float64, targetPort *float6
 		reqArgs["isProxied"] = SerializeValue(isProxied)
 	}
 	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsEndpoint", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpPort sets the host port for the HTTP endpoint
-func (s *DotnetToolResource) WithHttpPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpsPort sets the host port for the HTTPS endpoint
-func (s *DotnetToolResource) WithHttpsPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsPort", reqArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -7368,32 +7290,6 @@ func (s *ExecutableResource) WithHttpsEndpoint(port *float64, targetPort *float6
 		reqArgs["isProxied"] = SerializeValue(isProxied)
 	}
 	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsEndpoint", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpPort sets the host port for the HTTP endpoint
-func (s *ExecutableResource) WithHttpPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpsPort sets the host port for the HTTPS endpoint
-func (s *ExecutableResource) WithHttpsPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsPort", reqArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -12115,32 +12011,6 @@ func (s *ProjectResource) WithHttpsEndpoint(port *float64, targetPort *float64, 
 	return result.(*IResourceWithEndpoints), nil
 }
 
-// WithHttpPort sets the host port for the HTTP endpoint
-func (s *ProjectResource) WithHttpPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpsPort sets the host port for the HTTPS endpoint
-func (s *ProjectResource) WithHttpsPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
 // WithExternalHttpEndpoints makes HTTP endpoints externally accessible
 func (s *ProjectResource) WithExternalHttpEndpoints() (*IResourceWithEndpoints, error) {
 	reqArgs := map[string]any{
@@ -14257,32 +14127,6 @@ func (s *TestDatabaseResource) WithHttpsEndpoint(port *float64, targetPort *floa
 	return result.(*IResourceWithEndpoints), nil
 }
 
-// WithHttpPort sets the host port for the HTTP endpoint
-func (s *TestDatabaseResource) WithHttpPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpsPort sets the host port for the HTTPS endpoint
-func (s *TestDatabaseResource) WithHttpsPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
 // WithExternalHttpEndpoints makes HTTP endpoints externally accessible
 func (s *TestDatabaseResource) WithExternalHttpEndpoints() (*IResourceWithEndpoints, error) {
 	reqArgs := map[string]any{
@@ -15937,32 +15781,6 @@ func (s *TestRedisResource) WithHttpsEndpoint(port *float64, targetPort *float64
 		reqArgs["isProxied"] = SerializeValue(isProxied)
 	}
 	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsEndpoint", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpPort sets the host port for the HTTP endpoint
-func (s *TestRedisResource) WithHttpPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpsPort sets the host port for the HTTPS endpoint
-func (s *TestRedisResource) WithHttpsPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsPort", reqArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -17766,32 +17584,6 @@ func (s *TestVaultResource) WithHttpsEndpoint(port *float64, targetPort *float64
 		reqArgs["isProxied"] = SerializeValue(isProxied)
 	}
 	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsEndpoint", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpPort sets the host port for the HTTP endpoint
-func (s *TestVaultResource) WithHttpPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpPort", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithEndpoints), nil
-}
-
-// WithHttpsPort sets the host port for the HTTPS endpoint
-func (s *TestVaultResource) WithHttpsPort(port float64) (*IResourceWithEndpoints, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	reqArgs["port"] = SerializeValue(port)
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withHttpsPort", reqArgs)
 	if err != nil {
 		return nil, err
 	}

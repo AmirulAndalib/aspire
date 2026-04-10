@@ -1283,9 +1283,39 @@ public static class ResourceBuilderExtensions
             isProxied: isProxied,
             networkID: KnownNetworkIdentifiers.LocalhostNetwork);
 
-        if (builder.Resource.Annotations.OfType<EndpointAnnotation>().Any(sb => string.Equals(sb.Name, annotation.Name, StringComparisons.EndpointAnnotationName)))
+        var existing = builder.Resource.Annotations.OfType<EndpointAnnotation>()
+            .FirstOrDefault(sb => string.Equals(sb.Name, annotation.Name, StringComparisons.EndpointAnnotationName));
+
+        if (existing is not null)
         {
-            throw new DistributedApplicationException($"Endpoint with name '{annotation.Name}' already exists on resource '{builder.Resource.Name}'. Endpoint name may not have been explicitly specified and was derived automatically from scheme argument (e.g. 'http', 'https', or 'tcp'). Multiple calls to WithEndpoint (and related methods) may result in a conflict if name argument is not specified. Each endpoint must have a unique name. For more information on networking in Aspire see: https://aka.ms/dotnet/aspire/networking");
+            // Update the existing endpoint — null values mean "don't change"
+            if (port is not null)
+            {
+                existing.Port = port;
+            }
+            if (targetPort is not null)
+            {
+                existing.TargetPort = targetPort;
+            }
+            if (isExternal is not null)
+            {
+                existing.IsExternal = isExternal.Value;
+            }
+            existing.IsProxied = isProxied;
+
+            if (env is not null && builder.Resource is IResourceWithEndpoints existingResourceWithEndpoints and IResourceWithEnvironment)
+            {
+                existing.TargetPortEnvironmentVariable = env;
+
+                var endpointReference = new EndpointReference(existingResourceWithEndpoints, existing, KnownNetworkIdentifiers.LocalhostNetwork);
+
+                builder.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
+                {
+                    context.EnvironmentVariables[env] = endpointReference.Property(EndpointProperty.TargetPort);
+                }));
+            }
+
+            return builder;
         }
 
         // Set the environment variable on the resource
@@ -1319,7 +1349,10 @@ public static class ResourceBuilderExtensions
     /// <param name="isProxied">Specifies if the endpoint will be proxied by DCP. Defaults to true.</param>
     /// <returns>The <see cref="IResourceBuilder{T}"/>.</returns>
     /// <exception cref="DistributedApplicationException">Throws an exception if an endpoint with the same name already exists on the specified resource.</exception>
-    /// <remarks>This method is not available in polyglot app hosts. Use the overload with ProtocolType parameter instead.</remarks>
+    /// <remarks>
+    /// <para>This method is not available in polyglot app hosts. Use the overload with ProtocolType parameter instead.</para>
+    /// <para>If an endpoint with the same name already exists, the existing endpoint is updated with any non-null parameter values.</para>
+    /// </remarks>
     [AspireExportIgnore(Reason = "Subset of the full WithEndpoint overload which is already exported.")]
     public static IResourceBuilder<T> WithEndpoint<T>(this IResourceBuilder<T> builder, int? port, int? targetPort, string? scheme, [EndpointName] string? name, string? env, bool isProxied, bool? isExternal) where T : IResourceWithEndpoints
     {
@@ -1327,7 +1360,8 @@ public static class ResourceBuilderExtensions
     }
 
     /// <summary>
-    /// Exposes an HTTP endpoint on a resource. This endpoint reference can be retrieved using <see cref="ResourceBuilderExtensions.GetEndpoint{T}(IResourceBuilder{T}, string, NetworkIdentifier)"/>.
+    /// Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists.
+    /// This endpoint reference can be retrieved using <see cref="ResourceBuilderExtensions.GetEndpoint{T}(IResourceBuilder{T}, string, NetworkIdentifier)"/>.
     /// The endpoint name will be "http" if not specified.
     /// </summary>
     /// <typeparam name="T">The resource type.</typeparam>
@@ -1338,7 +1372,10 @@ public static class ResourceBuilderExtensions
     /// <param name="env">An optional name of the environment variable to inject.</param>
     /// <param name="isProxied">Specifies if the endpoint will be proxied by DCP. Defaults to true.</param>
     /// <returns>The <see cref="IResourceBuilder{T}"/>.</returns>
-    /// <exception cref="DistributedApplicationException">Throws an exception if an endpoint with the same name already exists on the specified resource.</exception>
+    /// <remarks>
+    /// If an endpoint with the same name already exists on the resource, the existing endpoint is updated
+    /// with any non-null parameter values. Parameters left as <see langword="null"/> will not modify the existing endpoint's values.
+    /// </remarks>
     [AspireExport(Description = "Adds an HTTP endpoint")]
     public static IResourceBuilder<T> WithHttpEndpoint<T>(this IResourceBuilder<T> builder, int? port = null, int? targetPort = null, [EndpointName] string? name = null, string? env = null, bool isProxied = true) where T : IResourceWithEndpoints
     {
@@ -1348,7 +1385,8 @@ public static class ResourceBuilderExtensions
     }
 
     /// <summary>
-    /// Exposes an HTTPS endpoint on a resource. This endpoint reference can be retrieved using <see cref="ResourceBuilderExtensions.GetEndpoint{T}(IResourceBuilder{T}, string, NetworkIdentifier)"/>.
+    /// Exposes an HTTPS endpoint on a resource, or updates the existing HTTPS endpoint if one with the same name already exists.
+    /// This endpoint reference can be retrieved using <see cref="ResourceBuilderExtensions.GetEndpoint{T}(IResourceBuilder{T}, string, NetworkIdentifier)"/>.
     /// The endpoint name will be "https" if not specified.
     /// </summary>
     /// <typeparam name="T">The resource type.</typeparam>
@@ -1359,79 +1397,16 @@ public static class ResourceBuilderExtensions
     /// <param name="env">An optional name of the environment variable to inject.</param>
     /// <param name="isProxied">Specifies if the endpoint will be proxied by DCP. Defaults to true.</param>
     /// <returns>The <see cref="IResourceBuilder{T}"/>.</returns>
-    /// <exception cref="DistributedApplicationException">Throws an exception if an endpoint with the same name already exists on the specified resource.</exception>
+    /// <remarks>
+    /// If an endpoint with the same name already exists on the resource, the existing endpoint is updated
+    /// with any non-null parameter values. Parameters left as <see langword="null"/> will not modify the existing endpoint's values.
+    /// </remarks>
     [AspireExport(Description = "Adds an HTTPS endpoint")]
     public static IResourceBuilder<T> WithHttpsEndpoint<T>(this IResourceBuilder<T> builder, int? port = null, int? targetPort = null, [EndpointName] string? name = null, string? env = null, bool isProxied = true) where T : IResourceWithEndpoints
     {
         ArgumentNullException.ThrowIfNull(builder);
 
         return builder.WithEndpoint(targetPort: targetPort, port: port, scheme: "https", name: name, env: env, isProxied: isProxied);
-    }
-
-    /// <summary>
-    /// Configures the host port for the default HTTP endpoint on a resource.
-    /// </summary>
-    /// <typeparam name="T">The resource type.</typeparam>
-    /// <param name="builder">The resource builder.</param>
-    /// <param name="port">The host port to bind for the <c>"http"</c> endpoint. If <see langword="null"/>, a random port will be assigned.</param>
-    /// <returns>The <see cref="IResourceBuilder{T}"/> for chaining.</returns>
-    /// <remarks>
-    /// <para>
-    /// This is a convenience method for setting the host port on the endpoint named <c>"http"</c>.
-    /// The endpoint must already exist on the resource, for example by calling
-    /// <see cref="WithHttpEndpoint{T}(IResourceBuilder{T}, int?, int?, string?, string?, bool)"/>,
-    /// or by using a resource type that creates it automatically (such as <c>AddViteApp</c> or <c>AddNextJsApp</c>).
-    /// </para>
-    /// </remarks>
-    /// <example>
-    /// Set the host port for a Vite application:
-    /// <code>
-    /// var frontend = builder.AddViteApp("frontend", "./frontend")
-    ///     .WithHttpPort(3000);
-    /// </code>
-    /// </example>
-    [AspireExport(Description = "Sets the host port for the HTTP endpoint")]
-    public static IResourceBuilder<T> WithHttpPort<T>(this IResourceBuilder<T> builder, int? port) where T : IResourceWithEndpoints
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-
-        return builder.WithEndpoint("http", endpoint =>
-        {
-            endpoint.Port = port;
-        }, createIfNotExists: false);
-    }
-
-    /// <summary>
-    /// Configures the host port for the default HTTPS endpoint on a resource.
-    /// </summary>
-    /// <typeparam name="T">The resource type.</typeparam>
-    /// <param name="builder">The resource builder.</param>
-    /// <param name="port">The host port to bind for the <c>"https"</c> endpoint. If <see langword="null"/>, a random port will be assigned.</param>
-    /// <returns>The <see cref="IResourceBuilder{T}"/> for chaining.</returns>
-    /// <remarks>
-    /// <para>
-    /// This is a convenience method for setting the host port on the endpoint named <c>"https"</c>.
-    /// The endpoint must already exist on the resource, for example by calling
-    /// <see cref="WithHttpsEndpoint{T}(IResourceBuilder{T}, int?, int?, string?, string?, bool)"/>.
-    /// </para>
-    /// </remarks>
-    /// <example>
-    /// Pin the HTTPS port on a container with an HTTPS endpoint:
-    /// <code>
-    /// var api = builder.AddContainer("api", "myimage")
-    ///     .WithHttpsEndpoint()
-    ///     .WithHttpsPort(8443);
-    /// </code>
-    /// </example>
-    [AspireExport(Description = "Sets the host port for the HTTPS endpoint")]
-    public static IResourceBuilder<T> WithHttpsPort<T>(this IResourceBuilder<T> builder, int? port) where T : IResourceWithEndpoints
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-
-        return builder.WithEndpoint("https", endpoint =>
-        {
-            endpoint.Port = port;
-        }, createIfNotExists: false);
     }
 
     /// <summary>

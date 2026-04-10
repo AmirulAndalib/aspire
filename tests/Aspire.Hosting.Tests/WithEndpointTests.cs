@@ -154,47 +154,46 @@ public class WithEndpointTests
     }
 
     [Fact]
-    public void EndpointsWithTwoPortsSameNameThrows()
+    public void EndpointsWithTwoPortsSameNameUpdatesExisting()
     {
-        var ex = Assert.Throws<DistributedApplicationException>(() =>
-        {
-            using var builder = TestDistributedApplicationBuilder.Create();
+        using var builder = TestDistributedApplicationBuilder.Create();
 
-            builder.AddProject<ProjectA>("projecta")
-                    .WithHttpsEndpoint(3000, 1000, name: "mybinding")
-                    .WithHttpsEndpoint(3000, 2000, name: "mybinding");
-        });
+        builder.AddProject<ProjectA>("projecta")
+                .WithHttpsEndpoint(3000, 1000, name: "mybinding")
+                .WithHttpsEndpoint(3000, 2000, name: "mybinding");
 
-        Assert.Equal("Endpoint with name 'mybinding' already exists on resource 'projecta'. Endpoint name may not have been explicitly specified and was derived automatically from scheme argument (e.g. 'http', 'https', or 'tcp'). Multiple calls to WithEndpoint (and related methods) may result in a conflict if name argument is not specified. Each endpoint must have a unique name. For more information on networking in Aspire see: https://aka.ms/dotnet/aspire/networking", ex.Message);
+        var resource = Assert.Single(builder.Resources.OfType<ProjectResource>());
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "mybinding");
+        Assert.Equal(3000, endpoint.Port);
+        Assert.Equal(2000, endpoint.TargetPort);
     }
 
     [Fact]
-    public void AddingTwoEndpointsWithDefaultNames()
+    public void AddingTwoEndpointsWithDefaultNamesUpdatesExisting()
     {
-        var ex = Assert.Throws<DistributedApplicationException>(() =>
-        {
-            using var builder = TestDistributedApplicationBuilder.Create();
+        using var builder = TestDistributedApplicationBuilder.Create();
 
-            builder.AddProject<ProjectA>("projecta")
-                    .WithHttpsEndpoint(3000, 1000)
-                    .WithHttpsEndpoint(3000, 2000);
-        });
+        builder.AddProject<ProjectA>("projecta")
+                .WithHttpsEndpoint(3000, 1000)
+                .WithHttpsEndpoint(3000, 2000);
 
-        Assert.Equal("Endpoint with name 'https' already exists on resource 'projecta'. Endpoint name may not have been explicitly specified and was derived automatically from scheme argument (e.g. 'http', 'https', or 'tcp'). Multiple calls to WithEndpoint (and related methods) may result in a conflict if name argument is not specified. Each endpoint must have a unique name. For more information on networking in Aspire see: https://aka.ms/dotnet/aspire/networking", ex.Message);
+        var resource = Assert.Single(builder.Resources.OfType<ProjectResource>());
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "https");
+        Assert.Equal(3000, endpoint.Port);
+        Assert.Equal(2000, endpoint.TargetPort);
     }
 
     [Fact]
-    public void EndpointsWithSinglePortSameNameThrows()
+    public void EndpointsWithSinglePortSameNameUpdatesExisting()
     {
-        var ex = Assert.Throws<DistributedApplicationException>(() =>
-        {
-            using var builder = TestDistributedApplicationBuilder.Create();
-            builder.AddProject<ProjectB>("projectb")
-                   .WithHttpsEndpoint(1000, name: "mybinding")
-                   .WithHttpsEndpoint(2000, name: "mybinding");
-        });
+        using var builder = TestDistributedApplicationBuilder.Create();
+        builder.AddProject<ProjectB>("projectb")
+               .WithHttpsEndpoint(1000, name: "mybinding")
+               .WithHttpsEndpoint(2000, name: "mybinding");
 
-        Assert.Equal("Endpoint with name 'mybinding' already exists on resource 'projectb'. Endpoint name may not have been explicitly specified and was derived automatically from scheme argument (e.g. 'http', 'https', or 'tcp'). Multiple calls to WithEndpoint (and related methods) may result in a conflict if name argument is not specified. Each endpoint must have a unique name. For more information on networking in Aspire see: https://aka.ms/dotnet/aspire/networking", ex.Message);
+        var resource = Assert.Single(builder.Resources.OfType<ProjectResource>());
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "mybinding");
+        Assert.Equal(2000, endpoint.Port);
     }
 
     [Fact]
@@ -709,83 +708,69 @@ public class WithEndpointTests
     }
 
     [Fact]
-    public void WithHttpPortSetsPortOnExistingHttpEndpoint()
+    public void WithHttpEndpointUpdatesPortOnExistingEndpoint()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         builder.AddContainer("mycontainer", "myimage")
             .WithHttpEndpoint()
-            .WithHttpPort(5000);
+            .WithHttpEndpoint(port: 5000);
 
         using var app = builder.Build();
 
         var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
-        var endpoint = resource.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "http");
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "http");
         Assert.Equal(5000, endpoint.Port);
     }
 
     [Fact]
-    public void WithHttpsPortSetsPortOnExistingHttpsEndpoint()
+    public void WithHttpsEndpointUpdatesPortOnExistingEndpoint()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         builder.AddContainer("mycontainer", "myimage")
             .WithHttpsEndpoint()
-            .WithHttpsPort(5001);
+            .WithHttpsEndpoint(port: 5001);
 
         using var app = builder.Build();
 
         var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
-        var endpoint = resource.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "https");
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "https");
         Assert.Equal(5001, endpoint.Port);
     }
 
     [Fact]
-    public void WithHttpPortAndHttpsPortSetsBothEndpoints()
+    public void WithHttpEndpointUpdatePreservesExistingTargetPort()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         builder.AddContainer("mycontainer", "myimage")
-            .WithHttpEndpoint()
-            .WithHttpsEndpoint()
-            .WithHttpPort(5000)
-            .WithHttpsPort(5001);
+            .WithHttpEndpoint(targetPort: 8080)
+            .WithHttpEndpoint(port: 5000);
 
         using var app = builder.Build();
 
         var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
-        var httpEndpoint = resource.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "http");
-        var httpsEndpoint = resource.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "https");
-        Assert.Equal(5000, httpEndpoint.Port);
-        Assert.Equal(5001, httpsEndpoint.Port);
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "http");
+        Assert.Equal(5000, endpoint.Port);
+        Assert.Equal(8080, endpoint.TargetPort);
     }
 
     [Fact]
-    public void WithHttpPortDoesNotCreateEndpointWhenMissing()
+    public void WithHttpEndpointUpdatePreservesExistingEnvVar()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         builder.AddContainer("mycontainer", "myimage")
-            .WithHttpPort(5000);
+            .WithHttpEndpoint(env: "PORT")
+            .WithHttpEndpoint(port: 3000);
 
         using var app = builder.Build();
 
         var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
-        Assert.DoesNotContain(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "http");
-    }
-
-    [Fact]
-    public void WithHttpsPortDoesNotCreateEndpointWhenMissing()
-    {
-        var builder = DistributedApplication.CreateBuilder();
-
-        builder.AddContainer("mycontainer", "myimage")
-            .WithHttpsPort(5001);
-
-        using var app = builder.Build();
-
-        var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
-        Assert.DoesNotContain(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "https");
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "http");
+        Assert.Equal(3000, endpoint.Port);
+        Assert.Equal("PORT", endpoint.TargetPortEnvironmentVariable);
     }
 
     private sealed class ProjectA : IProjectMetadata

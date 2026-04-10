@@ -1125,26 +1125,6 @@ impl CSharpAppResource {
         Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
     }
 
-    /// Sets the host port for the HTTP endpoint
-    pub fn with_http_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTPS endpoint
-    pub fn with_https_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpsPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
     /// Makes HTTP endpoints externally accessible
     pub fn with_external_http_endpoints(&self) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -3690,26 +3670,6 @@ impl ContainerResource {
         Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
     }
 
-    /// Sets the host port for the HTTP endpoint
-    pub fn with_http_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTPS endpoint
-    pub fn with_https_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpsPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
     /// Makes HTTP endpoints externally accessible
     pub fn with_external_http_endpoints(&self) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -5088,26 +5048,6 @@ impl DotnetToolResource {
         Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
     }
 
-    /// Sets the host port for the HTTP endpoint
-    pub fn with_http_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTPS endpoint
-    pub fn with_https_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpsPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
     /// Makes HTTP endpoints externally accessible
     pub fn with_external_http_endpoints(&self) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -6470,26 +6410,6 @@ impl ExecutableResource {
             args.insert("isProxied".to_string(), serde_json::to_value(v).unwrap_or(Value::Null));
         }
         let result = self.client.invoke_capability("Aspire.Hosting/withHttpsEndpoint", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTP endpoint
-    pub fn with_http_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTPS endpoint
-    pub fn with_https_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpsPort", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
     }
@@ -10795,26 +10715,6 @@ impl ProjectResource {
         Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
     }
 
-    /// Sets the host port for the HTTP endpoint
-    pub fn with_http_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTPS endpoint
-    pub fn with_https_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpsPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
     /// Makes HTTP endpoints externally accessible
     pub fn with_external_http_endpoints(&self) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -12654,26 +12554,6 @@ impl TestDatabaseResource {
         Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
     }
 
-    /// Sets the host port for the HTTP endpoint
-    pub fn with_http_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTPS endpoint
-    pub fn with_https_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpsPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
     /// Makes HTTP endpoints externally accessible
     pub fn with_external_http_endpoints(&self) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -14007,26 +13887,6 @@ impl TestRedisResource {
             args.insert("isProxied".to_string(), serde_json::to_value(v).unwrap_or(Value::Null));
         }
         let result = self.client.invoke_capability("Aspire.Hosting/withHttpsEndpoint", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTP endpoint
-    pub fn with_http_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTPS endpoint
-    pub fn with_https_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpsPort", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
     }
@@ -15475,26 +15335,6 @@ impl TestVaultResource {
             args.insert("isProxied".to_string(), serde_json::to_value(v).unwrap_or(Value::Null));
         }
         let result = self.client.invoke_capability("Aspire.Hosting/withHttpsEndpoint", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTP endpoint
-    pub fn with_http_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpPort", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
-    }
-
-    /// Sets the host port for the HTTPS endpoint
-    pub fn with_https_port(&self, port: f64) -> Result<IResourceWithEndpoints, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        args.insert("port".to_string(), serde_json::to_value(&port).unwrap_or(Value::Null));
-        let result = self.client.invoke_capability("Aspire.Hosting/withHttpsPort", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResourceWithEndpoints::new(handle, self.client.clone()))
     }
