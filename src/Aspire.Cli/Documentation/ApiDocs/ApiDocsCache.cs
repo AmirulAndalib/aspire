@@ -29,6 +29,7 @@ internal sealed class ApiDocsCache(
     private readonly string _indexCacheKey = ApiDocsSourceConfiguration.GetIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration));
     private readonly string _indexSourceFingerprintCacheKey = $"{ApiDocsSourceConfiguration.GetIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration))}:fingerprint";
     private readonly string _memberIndexCacheKey = ApiDocsSourceConfiguration.GetMemberIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration));
+    private readonly string _memberIndexContainerIdsCacheKey = $"{ApiDocsSourceConfiguration.GetMemberIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration))}:containers";
     private readonly string _memberIndexSourceFingerprintCacheKey = $"{ApiDocsSourceConfiguration.GetMemberIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration))}:fingerprint";
     private readonly string _legacyIndexCacheKey = ApiDocsSourceConfiguration.GetLegacyIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration));
     private readonly string _legacyIndexSourceFingerprintCacheKey = $"{ApiDocsSourceConfiguration.GetLegacyIndexCacheKey(ApiDocsSourceConfiguration.GetSitemapUrl(configuration))}:fingerprint";
@@ -192,6 +193,30 @@ internal sealed class ApiDocsCache(
     /// <param name="cancellationToken">The cancellation token.</param>
     public Task SetMemberIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
         => _contentCache.SetAsync(_memberIndexSourceFingerprintCacheKey, fingerprint, cancellationToken);
+
+    /// <summary>
+    /// Gets the container identifiers that have already been indexed into the cached member index.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The indexed container identifiers, or <c>null</c> if they are not available.</returns>
+    public async Task<string[]?> GetIndexedMemberContainerIdsAsync(CancellationToken cancellationToken = default)
+    {
+        var value = await _contentCache.GetAsync(_memberIndexContainerIdsCacheKey, cancellationToken).ConfigureAwait(false);
+        return value is null
+            ? null
+            :
+            [
+                .. value.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ];
+    }
+
+    /// <summary>
+    /// Stores the container identifiers that have already been indexed into the cached member index.
+    /// </summary>
+    /// <param name="containerIds">The container identifiers to cache.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public Task SetIndexedMemberContainerIdsAsync(string[] containerIds, CancellationToken cancellationToken = default)
+        => _contentCache.SetAsync(_memberIndexContainerIdsCacheKey, string.Join('\n', containerIds.OrderBy(static id => id, StringComparer.OrdinalIgnoreCase)), cancellationToken);
 
     private bool HasLegacyIndexCacheKey => !string.Equals(_legacyIndexCacheKey, _indexCacheKey, StringComparison.Ordinal);
 

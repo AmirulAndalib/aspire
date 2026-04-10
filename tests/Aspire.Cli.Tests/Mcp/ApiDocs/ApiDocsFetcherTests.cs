@@ -154,6 +154,7 @@ public class ApiDocsFetcherTests
         private string? _indexFingerprint;
         private ApiReferenceItem[]? _memberIndex;
         private string? _memberIndexFingerprint;
+        private string[]? _indexedMemberContainerIds;
 
         public Task<string?> GetAsync(string key, CancellationToken cancellationToken = default)
             => Task.FromResult(_content.TryGetValue(key, out var value) ? value : null);
@@ -220,6 +221,15 @@ public class ApiDocsFetcherTests
         public Task SetMemberIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
         {
             _memberIndexFingerprint = fingerprint;
+            return Task.CompletedTask;
+        }
+
+        public Task<string[]?> GetIndexedMemberContainerIdsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_indexedMemberContainerIds);
+
+        public Task SetIndexedMemberContainerIdsAsync(string[] containerIds, CancellationToken cancellationToken = default)
+        {
+            _indexedMemberContainerIds = containerIds;
             return Task.CompletedTask;
         }
     }

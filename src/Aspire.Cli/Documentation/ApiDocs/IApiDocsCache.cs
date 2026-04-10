@@ -47,4 +47,14 @@ internal interface IApiDocsCache : IDocumentContentCache
     /// Sets the fingerprint for the sitemap content used to build the cached member index.
     /// </summary>
     Task SetMemberIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the container identifiers that have already been indexed into the cached member index.
+    /// </summary>
+    Task<string[]?> GetIndexedMemberContainerIdsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sets the container identifiers that have already been indexed into the cached member index.
+    /// </summary>
+    Task SetIndexedMemberContainerIdsAsync(string[] containerIds, CancellationToken cancellationToken = default);
 }

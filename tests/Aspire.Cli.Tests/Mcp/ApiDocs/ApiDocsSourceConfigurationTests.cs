@@ -74,4 +74,19 @@ public class ApiDocsSourceConfigurationTests
 
         Assert.Equal("http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods", pageUrl);
     }
+
+    [Fact]
+    public void RewriteMarkdownLinks_RebasesConfiguredHostAndPreservesAnchors()
+    {
+        var rewritten = ApiDocsSourceConfiguration.RewriteMarkdownLinks(
+            """
+            See [Package](/reference/api/csharp/aspire.test.package.md), [Member](/reference/api/csharp/aspire.test.package/testtype/methods.md#dothing-string), and [This section](#remarks).
+            """,
+            "https://aspire.dev/reference/api/csharp/aspire.test.package/testtype",
+            "http://localhost:4321/sitemap-0.xml");
+
+        Assert.Equal(
+            "See [Package](http://localhost:4321/reference/api/csharp/aspire.test.package.md), [Member](http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods.md#dothing-string), and [This section](http://localhost:4321/reference/api/csharp/aspire.test.package/testtype#remarks).",
+            rewritten);
+    }
 }

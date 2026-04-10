@@ -133,6 +133,65 @@ public class ApiDocsIndexServiceTests
     }
 
     [Fact]
+    public async Task SearchAsync_LoadsOnlyNeededMemberContainers()
+    {
+        var fetcher = new TestApiDocsFetcher(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/alphatype/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/alphatype/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/betatype/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/betatype/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/deltatype/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/deltatype/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/epsilontype/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/epsilontype/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/etatype/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/etatype/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/gammatype/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/gammatype/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/iotatype/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/iotatype/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/kappatype/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/kappatype/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/thetatype/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/thetatype/methods/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/zetatype/</loc></url>
+              <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/zetatype/methods/</loc></url>
+            </urlset>
+            """,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["https://aspire.dev/reference/api/csharp/aspire.test.package/alphatype"] = """
+                    # AlphaType
+
+                    ## Methods
+
+                    - [FindMe()](/reference/api/csharp/aspire.test.package/alphatype/methods.md#findme) : `void` -- Finds the result immediately.
+                    """,
+                ["https://aspire.dev/reference/api/csharp/aspire.test.package/betatype"] = """
+                    # BetaType
+
+                    ## Methods
+
+                    - [DifferentThing()](/reference/api/csharp/aspire.test.package/betatype/methods.md#differentthing) : `void` -- Does something else.
+                    """
+            });
+
+        var service = new ApiDocsIndexService(fetcher, new TestApiDocsCache(), new ConfigurationBuilder().Build(), NullLogger<ApiDocsIndexService>.Instance);
+
+        var results = await service.SearchAsync("FindMe", ApiReferenceLanguages.CSharp, 1);
+
+        var result = Assert.Single(results);
+        Assert.Equal("csharp/aspire.test.package/alphatype/methods#findme", result.Id);
+        Assert.Contains("https://aspire.dev/reference/api/csharp/aspire.test.package/alphatype", fetcher.RequestedPageUrls);
+        Assert.DoesNotContain("https://aspire.dev/reference/api/csharp/aspire.test.package/thetatype", fetcher.RequestedPageUrls);
+        Assert.DoesNotContain("https://aspire.dev/reference/api/csharp/aspire.test.package/zetatype", fetcher.RequestedPageUrls);
+    }
+
+    [Fact]
     public async Task SearchAsync_FindsGenericItemsForModeledFutureLanguages()
     {
         var service = CreateService();
@@ -216,7 +275,14 @@ public class ApiDocsIndexServiceTests
             """,
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods.md"] = "# Methods\n\n## LocalOnly()"
+                ["http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods.md"] = """
+                    # Methods
+
+                    - [Package](/reference/api/csharp/aspire.test.package.md)
+                    - [Current](#localonly)
+
+                    ## LocalOnly() {#localonly}
+                    """
             });
 
         var service = new ApiDocsIndexService(fetcher, new TestApiDocsCache(), configuration, NullLogger<ApiDocsIndexService>.Instance);
@@ -227,6 +293,8 @@ public class ApiDocsIndexServiceTests
         Assert.Equal("http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods", item.Url);
         Assert.Equal(["http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods"], fetcher.RequestedPageUrls);
         Assert.Equal(["http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods.md"], fetcher.RequestedMarkdownUrls);
+        Assert.Contains("[Package](http://localhost:4321/reference/api/csharp/aspire.test.package.md)", item.Content, StringComparison.Ordinal);
+        Assert.Contains("[Current](http://localhost:4321/reference/api/csharp/aspire.test.package/testtype/methods#localonly)", item.Content, StringComparison.Ordinal);
         Assert.Contains("## LocalOnly()", item.Content, StringComparison.Ordinal);
     }
 
@@ -471,6 +539,7 @@ public class ApiDocsIndexServiceTests
         private readonly Dictionary<string, string?> _etags = new(StringComparer.OrdinalIgnoreCase);
         private string? _indexSourceFingerprint;
         private string? _memberIndexSourceFingerprint;
+        private string[]? _indexedMemberContainerIds;
 
         public ApiReferenceItem[]? Index { get; private set; }
         public ApiReferenceItem[]? MemberIndex { get; private set; }
@@ -540,6 +609,15 @@ public class ApiDocsIndexServiceTests
         public Task SetMemberIndexSourceFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
         {
             _memberIndexSourceFingerprint = fingerprint;
+            return Task.CompletedTask;
+        }
+
+        public Task<string[]?> GetIndexedMemberContainerIdsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_indexedMemberContainerIds);
+
+        public Task SetIndexedMemberContainerIdsAsync(string[] containerIds, CancellationToken cancellationToken = default)
+        {
+            _indexedMemberContainerIds = containerIds;
             return Task.CompletedTask;
         }
     }

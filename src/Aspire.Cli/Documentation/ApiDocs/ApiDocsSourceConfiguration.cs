@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 
 namespace Aspire.Cli.Documentation.ApiDocs;
@@ -8,7 +9,7 @@ namespace Aspire.Cli.Documentation.ApiDocs;
 /// <summary>
 /// Resolves configuration for Aspire API docs sources.
 /// </summary>
-internal static class ApiDocsSourceConfiguration
+internal static partial class ApiDocsSourceConfiguration
 {
     private const string IndexCacheKeyPrefix = "index:";
     private const string MemberIndexCacheKeyPrefix = "member-index:";
@@ -121,6 +122,41 @@ internal static class ApiDocsSourceConfiguration
         => DocumentationCacheKey.FromUrl(BuildMarkdownUrl(pageUrl, sitemapUrl), "page");
 
     /// <summary>
+    /// Rewrites site-relative markdown links to absolute URLs on the configured host so returned content is clickable.
+    /// </summary>
+    /// <param name="markdown">The markdown content to normalize.</param>
+    /// <param name="pageUrl">The canonical page URL that produced the markdown.</param>
+    /// <param name="sitemapUrl">The configured sitemap URL.</param>
+    /// <returns>The markdown with rewritten link targets.</returns>
+    public static string RewriteMarkdownLinks(string markdown, string pageUrl, string sitemapUrl)
+    {
+        if (string.IsNullOrWhiteSpace(markdown) ||
+            (!markdown.Contains("](/", StringComparison.Ordinal) && !markdown.Contains("](#", StringComparison.Ordinal)) ||
+            !Uri.TryCreate(sitemapUrl, UriKind.Absolute, out var sitemapUri))
+        {
+            return markdown;
+        }
+
+        var siteRoot = sitemapUri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
+        var currentPageUrl = RebasePageUrl(StripFragment(pageUrl), sitemapUrl);
+
+        return LocalMarkdownLinkRegex().Replace(markdown, match =>
+        {
+            var href = NormalizeMarkdownHref(match.Groups["href"].Value);
+            var rewrittenHref = href[0] switch
+            {
+                '/' => $"{siteRoot}{href}",
+                '#' => $"{currentPageUrl}{href}",
+                _ => null
+            };
+
+            return rewrittenHref is null
+                ? match.Value
+                : $"[{match.Groups["text"].Value}]({rewrittenHref})";
+        });
+    }
+
+    /// <summary>
     /// Resolves a markdown link from an API markdown page to its canonical non-markdown page URL.
     /// </summary>
     /// <param name="href">The markdown link target.</param>
@@ -133,9 +169,14 @@ internal static class ApiDocsSourceConfiguration
             return null;
         }
 
+        href = NormalizeMarkdownHref(href);
+
         if (!Uri.TryCreate(href, UriKind.Absolute, out var resolvedUri))
         {
-            resolvedUri = new Uri(sitemapUri, href);
+            if (!Uri.TryCreate(sitemapUri, href, out resolvedUri))
+            {
+                return null;
+            }
         }
 
         var pageUrl = StripFragment(resolvedUri.GetLeftPart(UriPartial.Path));
@@ -147,6 +188,20 @@ internal static class ApiDocsSourceConfiguration
         return RebasePageUrl(pageUrl, sitemapUrl);
     }
 
+    private static string NormalizeMarkdownHref(string href)
+    {
+        href = href.Trim();
+        if (href.Length > 1 && href[0] is '<' && href[^1] is '>')
+        {
+            href = href[1..^1];
+        }
+
+        var titleSeparatorIndex = href.IndexOf(' ');
+        return titleSeparatorIndex > 0
+            ? href[..titleSeparatorIndex]
+            : href;
+    }
+
     private static string StripFragment(string pageUrl)
     {
         var fragmentSeparatorIndex = pageUrl.IndexOf('#');
@@ -154,4 +209,7 @@ internal static class ApiDocsSourceConfiguration
             ? pageUrl[..fragmentSeparatorIndex]
             : pageUrl;
     }
+
+    [GeneratedRegex(@"\[(?<text>[^\]]+)\]\((?<href>(?:/|#)[^)]*)\)")]
+    private static partial Regex LocalMarkdownLinkRegex();
 }

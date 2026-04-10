@@ -334,6 +334,7 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
     private const float ParentWeight = 2.5f;
     private const float MemberGroupWeight = 3.0f;
     private const int MinTokenLength = 2;
+    private const int MemberSearchBatchSize = 8;
 
     private readonly IApiDocsFetcher _fetcher = fetcher;
     private readonly IApiDocsCache _cache = cache;
@@ -342,7 +343,8 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
     private volatile List<IndexedApiReferenceItem>? _indexedItems;
     private volatile Dictionary<string, ApiReferenceItem>? _itemsById;
     private volatile string? _indexSourceFingerprint;
-    private volatile bool _memberIndexLoaded;
+    private volatile bool _memberCacheLoaded;
+    private readonly HashSet<string> _indexedMemberContainerIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _indexLock = new(1, 1);
     private readonly SemaphoreSlim _memberIndexLock = new(1, 1);
 
@@ -436,9 +438,10 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
         }
 
         var normalizedScope = NormalizeId(scope);
-        if (ShouldLoadMemberIndexForScope(normalizedScope))
+        var memberContainerId = GetMemberContainerIdForScope(normalizedScope);
+        if (memberContainerId is not null)
         {
-            await EnsureMemberIndexAsync(cancellationToken).ConfigureAwait(false);
+            await EnsureMemberContainerIndexedAsync(memberContainerId, cancellationToken).ConfigureAwait(false);
         }
 
         return
@@ -489,11 +492,25 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
         }
 
         var normalizedQuery = NormalizeId(query).ToLowerInvariant();
-        var results = SearchIndexedItems(queryTokens, normalizedQuery, normalizedLanguage, topK);
+        var routeResults = SearchIndexedItems(queryTokens, normalizedQuery, normalizedLanguage, topK);
+        var results = routeResults;
         if (ShouldExpandSearchWithMemberIndex(results, normalizedQuery, normalizedLanguage))
         {
-            await EnsureMemberIndexAsync(cancellationToken).ConfigureAwait(false);
+            await EnsureCachedMemberItemsLoadedAsync(cancellationToken).ConfigureAwait(false);
             results = SearchIndexedItems(queryTokens, normalizedQuery, normalizedLanguage, topK);
+
+            if (ShouldExpandSearchWithMemberIndex(results, normalizedQuery, normalizedLanguage))
+            {
+                foreach (var candidateContainerIds in GetCandidateMemberContainerIds(routeResults, queryTokens, normalizedLanguage).Chunk(MemberSearchBatchSize))
+                {
+                    await EnsureMemberContainersIndexedAsync(candidateContainerIds, cancellationToken).ConfigureAwait(false);
+                    results = SearchIndexedItems(queryTokens, normalizedQuery, normalizedLanguage, topK);
+                    if (results.Count >= topK)
+                    {
+                        break;
+                    }
+                }
+            }
         }
 
         return results;
@@ -517,9 +534,10 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
         var normalizedId = NormalizeId(id);
         if (!_itemsById.TryGetValue(normalizedId, out var item))
         {
-            if (ShouldLoadMemberIndexForId(normalizedId))
+            var memberContainerId = GetMemberContainerIdForId(normalizedId);
+            if (memberContainerId is not null)
             {
-                await EnsureMemberIndexAsync(cancellationToken).ConfigureAwait(false);
+                await EnsureMemberContainerIndexedAsync(memberContainerId, cancellationToken).ConfigureAwait(false);
             }
 
             if (_itemsById is null || !_itemsById.TryGetValue(normalizedId, out item))
@@ -533,6 +551,8 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
         {
             return null;
         }
+
+        content = ApiDocsSourceConfiguration.RewriteMarkdownLinks(content, item.PageUrl, _sitemapUrl);
 
         return new ApiContent
         {
@@ -551,14 +571,15 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
     {
         _indexedItems = [.. items.Select(static item => new IndexedApiReferenceItem(item))];
         _itemsById = items.ToDictionary(static item => item.Id, StringComparer.OrdinalIgnoreCase);
-        _memberIndexLoaded = false;
+        _indexedMemberContainerIds.Clear();
+        _memberCacheLoaded = false;
     }
 
-    private async ValueTask EnsureMemberIndexAsync(CancellationToken cancellationToken)
+    private async ValueTask EnsureCachedMemberItemsLoadedAsync(CancellationToken cancellationToken)
     {
         await EnsureIndexedAsync(cancellationToken).ConfigureAwait(false);
 
-        if (_memberIndexLoaded || _indexedItems is null || _itemsById is null)
+        if (_memberCacheLoaded || _indexedItems is null || _itemsById is null)
         {
             return;
         }
@@ -567,7 +588,7 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
 
         try
         {
-            if (_memberIndexLoaded || _indexedItems is null || _itemsById is null)
+            if (_memberCacheLoaded || _indexedItems is null || _itemsById is null)
             {
                 return;
             }
@@ -581,61 +602,98 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
                 string.Equals(cachedMemberFingerprint, currentFingerprint, StringComparison.Ordinal))
             {
                 MergeIndexItems(cachedMemberItems);
-                _memberIndexLoaded = true;
+                _indexedMemberContainerIds.Clear();
+                foreach (var containerId in await _cache.GetIndexedMemberContainerIdsAsync(cancellationToken).ConfigureAwait(false) ?? [])
+                {
+                    _indexedMemberContainerIds.Add(containerId);
+                }
+            }
+            _memberCacheLoaded = true;
+        }
+        finally
+        {
+            _memberIndexLock.Release();
+        }
+    }
+
+    private async ValueTask EnsureMemberContainerIndexedAsync(string memberContainerId, CancellationToken cancellationToken)
+        => await EnsureMemberContainersIndexedAsync([memberContainerId], cancellationToken).ConfigureAwait(false);
+
+    private async ValueTask EnsureMemberContainersIndexedAsync(IReadOnlyList<string> memberContainerIds, CancellationToken cancellationToken)
+    {
+        await EnsureCachedMemberItemsLoadedAsync(cancellationToken).ConfigureAwait(false);
+
+        if (_itemsById is null || memberContainerIds.Count is 0)
+        {
+            return;
+        }
+
+        var containersToLoad = memberContainerIds
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(containerId => !_indexedMemberContainerIds.Contains(containerId))
+            .Select(containerId => _itemsById.TryGetValue(containerId, out var containerItem) ? containerItem : null)
+            .OfType<ApiReferenceItem>()
+            .ToArray();
+
+        if (containersToLoad.Length is 0)
+        {
+            return;
+        }
+
+        var memberGroupsByPageUrl = GetMemberGroupsByPageUrl();
+        var loadedContainers = new ConcurrentBag<LoadedMemberContainer>();
+
+        await Parallel.ForEachAsync(
+            containersToLoad,
+            new ParallelOptions
+            {
+                CancellationToken = cancellationToken,
+                MaxDegreeOfParallelism = MemberSearchBatchSize
+            },
+            async (containerItem, ct) =>
+            {
+                var content = await _fetcher.FetchPageAsync(containerItem.PageUrl, ct).ConfigureAwait(false);
+                if (content is null)
+                {
+                    return;
+                }
+
+                var memberItems = Deduplicate([.. ApiMemberMarkdownParser.Parse(containerItem, content, _sitemapUrl, memberGroupsByPageUrl)])
+                    .OrderBy(static item => item.Id, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                loadedContainers.Add(new LoadedMemberContainer(containerItem.Id, memberItems));
+            }).ConfigureAwait(false);
+
+        if (loadedContainers.IsEmpty)
+        {
+            return;
+        }
+
+        await _memberIndexLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            if (_itemsById is null)
+            {
                 return;
             }
 
-            var memberGroupsByPageUrl = _itemsById.Values
-                .Where(static item =>
-                    string.Equals(item.Kind, ApiReferenceKinds.MemberGroup, StringComparison.OrdinalIgnoreCase))
-                .ToDictionary(static item => item.PageUrl, StringComparer.OrdinalIgnoreCase);
-
-            var memberContainerIds = memberGroupsByPageUrl.Values
-                .Select(static item => item.ParentId)
-                .OfType<string>()
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            var memberContainerItems = _itemsById.Values
-                .Where(item => memberContainerIds.Contains(item.Id))
-                .OrderBy(static item => item.Id, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            var memberItems = new ConcurrentBag<ApiReferenceItem>();
-            var isComplete = 1;
-
-            await Parallel.ForEachAsync(
-                memberContainerItems,
-                new ParallelOptions
-                {
-                    CancellationToken = cancellationToken,
-                    MaxDegreeOfParallelism = 8
-                },
-                async (containerItem, ct) =>
-                {
-                    var content = await _fetcher.FetchPageAsync(containerItem.PageUrl, ct).ConfigureAwait(false);
-                    if (content is null)
-                    {
-                        Interlocked.Exchange(ref isComplete, 0);
-                        return;
-                    }
-
-                    foreach (var memberItem in ApiMemberMarkdownParser.Parse(containerItem, content, _sitemapUrl, memberGroupsByPageUrl))
-                    {
-                        memberItems.Add(memberItem);
-                    }
-                }).ConfigureAwait(false);
-
-            var itemArray = Deduplicate([.. memberItems])
-                .OrderBy(static item => item.Id, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            MergeIndexItems(itemArray);
-            _memberIndexLoaded = true;
-
-            if (isComplete is 1 && currentFingerprint is not null)
+            var didChange = false;
+            foreach (var loadedContainer in loadedContainers.OrderBy(static container => container.ContainerId, StringComparer.OrdinalIgnoreCase))
             {
-                await _cache.SetMemberIndexAsync(itemArray, cancellationToken).ConfigureAwait(false);
-                await _cache.SetMemberIndexSourceFingerprintAsync(currentFingerprint, cancellationToken).ConfigureAwait(false);
+                if (!_indexedMemberContainerIds.Add(loadedContainer.ContainerId))
+                {
+                    continue;
+                }
+
+                MergeIndexItems(loadedContainer.MemberItems);
+                didChange = true;
+            }
+
+            if (didChange)
+            {
+                await PersistIndexedMemberItemsAsync(cancellationToken).ConfigureAwait(false);
             }
         }
         finally
@@ -705,27 +763,19 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
         ];
     }
 
-    private bool ShouldLoadMemberIndexForScope(string normalizedScope)
+    private string? GetMemberContainerIdForScope(string normalizedScope)
         => _itemsById is not null &&
             _itemsById.TryGetValue(normalizedScope, out var scopeItem) &&
-            string.Equals(scopeItem.Kind, ApiReferenceKinds.MemberGroup, StringComparison.OrdinalIgnoreCase);
+            string.Equals(scopeItem.Kind, ApiReferenceKinds.MemberGroup, StringComparison.OrdinalIgnoreCase)
+            ? scopeItem.ParentId
+            : null;
 
-    private bool ShouldLoadMemberIndexForId(string normalizedId)
+    private string? GetMemberContainerIdForId(string normalizedId)
     {
-        if (_itemsById is null)
-        {
-            return false;
-        }
-
         var fragmentSeparatorIndex = normalizedId.IndexOf('#');
-        if (fragmentSeparatorIndex <= 0)
-        {
-            return false;
-        }
-
-        var parentId = normalizedId[..fragmentSeparatorIndex];
-        return _itemsById.TryGetValue(parentId, out var parentItem) &&
-            string.Equals(parentItem.Kind, ApiReferenceKinds.MemberGroup, StringComparison.OrdinalIgnoreCase);
+        return fragmentSeparatorIndex <= 0
+            ? null
+            : GetMemberContainerIdForScope(normalizedId[..fragmentSeparatorIndex]);
     }
 
     private bool ShouldExpandSearchWithMemberIndex(IReadOnlyList<ApiSearchResult> results, string normalizedQuery, string? normalizedLanguage)
@@ -744,6 +794,82 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
         => results.Any(result =>
             string.Equals(NormalizeId(result.Name), normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(NormalizeId(result.Id), normalizedQuery, StringComparison.OrdinalIgnoreCase));
+
+    private IReadOnlyList<string> GetCandidateMemberContainerIds(IReadOnlyList<ApiSearchResult> routeResults, string[] queryTokens, string? normalizedLanguage)
+    {
+        if (_itemsById is null)
+        {
+            return [];
+        }
+
+        var preferredTopLevelScopes = routeResults
+            .Select(static result => GetTopLevelScopeId(result.Id))
+            .OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return
+        [
+            .. _itemsById.Values
+                .Where(item =>
+                    item.ParentId is not null &&
+                    string.Equals(item.Kind, ApiReferenceKinds.MemberGroup, StringComparison.OrdinalIgnoreCase) &&
+                    (normalizedLanguage is null || string.Equals(item.Language, normalizedLanguage, StringComparison.OrdinalIgnoreCase)))
+                .Select(static item => item.ParentId!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(containerId => !_indexedMemberContainerIds.Contains(containerId))
+                .OrderBy(containerId => preferredTopLevelScopes.Contains(GetTopLevelScopeId(containerId) ?? string.Empty) ? 0 : 1)
+                .ThenByDescending(containerId => CountTokenMatches(containerId, queryTokens))
+                .ThenBy(static containerId => containerId, StringComparer.OrdinalIgnoreCase)
+        ];
+    }
+
+    private IReadOnlyDictionary<string, ApiReferenceItem> GetMemberGroupsByPageUrl()
+        => _itemsById is null
+            ? new Dictionary<string, ApiReferenceItem>(StringComparer.OrdinalIgnoreCase)
+            : _itemsById.Values
+                .Where(static item => string.Equals(item.Kind, ApiReferenceKinds.MemberGroup, StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(static item => item.PageUrl, StringComparer.OrdinalIgnoreCase);
+
+    private async Task PersistIndexedMemberItemsAsync(CancellationToken cancellationToken)
+    {
+        if (_itemsById is null)
+        {
+            return;
+        }
+
+        var currentFingerprint = _indexSourceFingerprint ?? await _cache.GetIndexSourceFingerprintAsync(cancellationToken).ConfigureAwait(false);
+        if (currentFingerprint is null)
+        {
+            return;
+        }
+
+        var cachedMemberItems = _itemsById.Values
+            .Where(static item =>
+                string.Equals(item.Kind, ApiReferenceKinds.Member, StringComparison.OrdinalIgnoreCase) &&
+                item.PageUrl.Contains('#', StringComparison.Ordinal))
+            .OrderBy(static item => item.Id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        await _cache.SetMemberIndexAsync(cachedMemberItems, cancellationToken).ConfigureAwait(false);
+        await _cache.SetIndexedMemberContainerIdsAsync([.. _indexedMemberContainerIds], cancellationToken).ConfigureAwait(false);
+        await _cache.SetMemberIndexSourceFingerprintAsync(currentFingerprint, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string? GetTopLevelScopeId(string id)
+    {
+        var segments = NormalizeId(id).Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Length >= 2
+            ? $"{segments[0]}/{segments[1]}"
+            : null;
+    }
+
+    private static int CountTokenMatches(string text, string[] queryTokens)
+    {
+        var lowerText = text.ToLowerInvariant();
+        return queryTokens.Count(token => lowerText.Contains(token, StringComparison.Ordinal));
+    }
+
+    private sealed record LoadedMemberContainer(string ContainerId, ApiReferenceItem[] MemberItems);
 
     private static List<ApiReferenceItem> BuildBaseItems(IReadOnlyList<ApiSitemapEntry> entries, string sitemapUrl)
     {
