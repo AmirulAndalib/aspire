@@ -13,9 +13,15 @@ namespace Aspire.Cli.EndToEnd.Tests;
 /// These tests run natively on the host (no Docker) using the Hex1b PTY proxy on Windows
 /// and bare bash on Linux. They replace the PowerShell-based cli-starter-validation.ps1 script.
 /// </summary>
+/// <remarks>
+/// These tests require:
+/// - The Aspire CLI to be installed (from PR build in CI, or GA release locally)
+/// - NuGet packages to be available for the starter templates (via --channel in CI)
+/// - Node.js for TypeScript templates
+/// </remarks>
 public sealed class StarterValidationTests(ITestOutputHelper output)
 {
-    [Fact]
+    [Fact(Skip = "Requires dedicated CI job with pre-installed CLI and NuGet packages — not yet wired into the test matrix")]
     public async Task CSharpStarter_NewStartStop()
     {
         var workspace = TemporaryWorkspace.Create(output);
@@ -91,7 +97,7 @@ public sealed class StarterValidationTests(ITestOutputHelper output)
         await pendingRun;
     }
 
-    [Fact]
+    [Fact(Skip = "Requires dedicated CI job with pre-installed CLI and NuGet packages — not yet wired into the test matrix")]
     public async Task TypeScriptStarter_NewStartStop()
     {
         var workspace = TemporaryWorkspace.Create(output);
