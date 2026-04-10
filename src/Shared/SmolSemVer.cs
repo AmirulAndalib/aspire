@@ -89,9 +89,51 @@ internal sealed class SemVersion : IEquatable<SemVersion>, IComparable<SemVersio
     /// <summary>
     /// Creates a <see cref="SemVersion"/> from explicit components.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="major"/>, <paramref name="minor"/>, or <paramref name="patch"/> is negative.</exception>
+    /// <exception cref="FormatException">Thrown when <paramref name="prerelease"/> or <paramref name="metadata"/> is not valid.</exception>
     public SemVersion(int major, int minor = 0, int patch = 0, string prerelease = "", string metadata = "")
-        : this(major, minor, patch, prerelease, SplitIdentifiers(prerelease), metadata)
+        : this(
+              major >= 0 ? major : throw new ArgumentOutOfRangeException(nameof(major), major, "Version component must not be negative."),
+              minor >= 0 ? minor : throw new ArgumentOutOfRangeException(nameof(minor), minor, "Version component must not be negative."),
+              patch >= 0 ? patch : throw new ArgumentOutOfRangeException(nameof(patch), patch, "Version component must not be negative."),
+              ValidatePrerelease(prerelease),
+              SplitIdentifiers(prerelease),
+              ValidateMetadata(metadata))
     {
+    }
+
+    private static string ValidatePrerelease(string prerelease)
+    {
+        if (string.IsNullOrEmpty(prerelease))
+        {
+            return string.Empty;
+        }
+
+        var span = prerelease.AsSpan();
+        var pos = 0;
+        if (!TryConsumePrerelease(span, ref pos, SemVersionStyles.Strict) || pos != span.Length)
+        {
+            throw new FormatException($"The prerelease string '{prerelease}' is not valid.");
+        }
+
+        return prerelease;
+    }
+
+    private static string ValidateMetadata(string metadata)
+    {
+        if (string.IsNullOrEmpty(metadata))
+        {
+            return string.Empty;
+        }
+
+        var span = metadata.AsSpan();
+        var pos = 0;
+        if (!TryConsumeMetadata(span, ref pos) || pos != span.Length)
+        {
+            throw new FormatException($"The metadata string '{metadata}' is not valid.");
+        }
+
+        return metadata;
     }
 
     /// <summary>

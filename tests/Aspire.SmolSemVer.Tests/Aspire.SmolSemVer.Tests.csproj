@@ -9,11 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Reference the original Semver package for compatibility validation -->
-    <PackageReference Include="Semver" />
-  </ItemGroup>
-
-  <ItemGroup>
     <!-- Include SmolSemVer as a shared source file, just like production code does -->
     <Compile Include="$(SharedDir)SmolSemVer.cs" Link="SmolSemVer.cs" />
   </ItemGroup>
