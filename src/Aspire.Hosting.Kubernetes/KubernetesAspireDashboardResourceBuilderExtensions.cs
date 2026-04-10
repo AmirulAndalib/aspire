@@ -46,13 +46,23 @@ public static class KubernetesAspireDashboardResourceBuilderExtensions
     }
 
     /// <summary>
-    /// Configures the port used to access the Aspire Dashboard from outside the cluster.
+    /// Sets the Kubernetes Service port for the Aspire Dashboard HTTP endpoint.
     /// </summary>
     /// <param name="builder">The <see cref="IResourceBuilder{KubernetesAspireDashboardResource}"/> instance to configure.</param>
-    /// <param name="port">The port to expose. If non-null, the dashboard will be exposed externally. If <c>null</c>, the dashboard will only be reachable within the cluster network.</param>
+    /// <param name="port">The Service port number. Cluster-internal clients will connect to this port,
+    /// which routes to the dashboard's container port (18888). If <c>null</c>, the Service port
+    /// defaults to the container port.</param>
     /// <returns>The <see cref="IResourceBuilder{KubernetesAspireDashboardResource}"/> instance for chaining.</returns>
-    [AspireExport(Description = "Sets the host port for the Aspire dashboard")]
-    public static IResourceBuilder<KubernetesAspireDashboardResource> WithHostPort(
+    /// <remarks>
+    /// This sets the <c>port</c> field on the generated Kubernetes Service while keeping the
+    /// <c>targetPort</c> as the original container port. This is useful when placing the dashboard
+    /// behind an ingress controller that expects a specific Service port (for example, port 80).
+    /// To access the dashboard from outside the cluster, use <c>kubectl port-forward</c> or
+    /// configure the environment's <see cref="KubernetesEnvironmentResource.DefaultServiceType"/>
+    /// to <c>NodePort</c> or <c>LoadBalancer</c>.
+    /// </remarks>
+    [AspireExport(Description = "Sets the Kubernetes Service port for the Aspire dashboard")]
+    public static IResourceBuilder<KubernetesAspireDashboardResource> WithServicePort(
         this IResourceBuilder<KubernetesAspireDashboardResource> builder,
         int? port = null)
     {
@@ -63,6 +73,42 @@ public static class KubernetesAspireDashboardResourceBuilderExtensions
             e.Port = port;
             e.IsExternal = port is not null;
         });
+    }
+
+    /// <summary>
+    /// Sets the Kubernetes Service ports for the Aspire Dashboard OTLP endpoints.
+    /// </summary>
+    /// <param name="builder">The <see cref="IResourceBuilder{KubernetesAspireDashboardResource}"/> instance to configure.</param>
+    /// <param name="grpcPort">The Service port for the OTLP gRPC endpoint. If <c>null</c>, the Service port
+    /// defaults to the container port (18889).</param>
+    /// <param name="httpPort">The Service port for the OTLP HTTP endpoint. If <c>null</c>, the Service port
+    /// defaults to the container port (18890).</param>
+    /// <returns>The <see cref="IResourceBuilder{KubernetesAspireDashboardResource}"/> instance for chaining.</returns>
+    /// <remarks>
+    /// This sets the <c>port</c> field on the generated Kubernetes Service for the OTLP endpoints
+    /// while keeping the <c>targetPort</c> as the original container port. Application resources
+    /// in the cluster send telemetry to these Service ports. Use standard OTLP ports (4317 for gRPC,
+    /// 4318 for HTTP) if your services are configured with those defaults.
+    /// </remarks>
+    [AspireExport(Description = "Sets the Kubernetes Service ports for the OTLP endpoints")]
+    public static IResourceBuilder<KubernetesAspireDashboardResource> WithOtlpServicePort(
+        this IResourceBuilder<KubernetesAspireDashboardResource> builder,
+        int? grpcPort = null,
+        int? httpPort = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        if (grpcPort is not null)
+        {
+            builder = builder.WithEndpoint("otlp-grpc", e => e.Port = grpcPort);
+        }
+
+        if (httpPort is not null)
+        {
+            builder = builder.WithEndpoint("otlp-http", e => e.Port = httpPort);
+        }
+
+        return builder;
     }
 
     /// <summary>

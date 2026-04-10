@@ -1186,7 +1186,7 @@ public class KubernetesDeployTests(ITestOutputHelper output)
     {
         using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
         var envBuilder = builder.AddKubernetesEnvironment("env")
-            .WithDashboard(dashboard => dashboard.WithHostPort(9999));
+            .WithDashboard(dashboard => dashboard.WithServicePort(9999));
 
         var env = envBuilder.Resource;
 

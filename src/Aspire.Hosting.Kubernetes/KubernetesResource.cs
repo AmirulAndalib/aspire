@@ -203,7 +203,7 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
             var portValue = resolved.TargetPort.Value.Value.ToString(CultureInfo.InvariantCulture);
 
             // Capture the exposed (service) port when it differs from the target (container) port.
-            // This allows WithHostPort to flow into the Kubernetes Service manifest.
+            // This allows WithServicePort to set a different Kubernetes Service port than the container port.
             HelmValue? servicePort = null;
             if (resolved.ExposedPort.Value is int exposedPortValue &&
                 exposedPortValue != resolved.TargetPort.Value.Value)
