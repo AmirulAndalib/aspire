@@ -141,15 +141,15 @@ public sealed class NspStorageKeyVaultDeploymentTests(ITestOutputHelper output)
 
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(180));
 
-            // Step 6a: Add Storage Blob client package to the ApiService project
-            output.WriteLine("Step 6a: Adding blob client package to ApiService project...");
-            await auto.TypeAsync($"dotnet add {projectName}.ApiService package Aspire.Azure.Storage.Blobs --prerelease");
+            // Step 6a: Add Storage Blob client package to the Server project
+            output.WriteLine("Step 6a: Adding blob client package to Server project...");
+            await auto.TypeAsync($"dotnet add {projectName}.Server package Aspire.Azure.Storage.Blobs --prerelease");
             await auto.EnterAsync();
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(120));
 
-            // Step 6b: Add Key Vault client package to the ApiService project
-            output.WriteLine("Step 6b: Adding Key Vault client package to ApiService project...");
-            await auto.TypeAsync($"dotnet add {projectName}.ApiService package Aspire.Azure.Security.KeyVault --prerelease");
+            // Step 6b: Add Key Vault client package to the Server project
+            output.WriteLine("Step 6b: Adding Key Vault client package to Server project...");
+            await auto.TypeAsync($"dotnet add {projectName}.Server package Aspire.Azure.Security.KeyVault --prerelease");
             await auto.EnterAsync();
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(120));
 
@@ -198,14 +198,14 @@ kv.WithNetworkSecurityPerimeter(nsp);
 #pragma warning restore ASPIREAZURE003
 """);
 
-                // Add .WithReference(blobs).WithReference(kv) to the apiservice
-                // The apiservice chain ends with .WithHttpHealthCheck("/health");
+                // Add .WithReference(blobs).WithReference(kv) to the server
+                // The server chain has .WithHttpHealthCheck("/health") followed by .WithExternalHttpEndpoints();
                 content = content.Replace(
-                    ".WithHttpHealthCheck(\"/health\");",
+                    ".WithHttpHealthCheck(\"/health\")",
                     """
 .WithHttpHealthCheck("/health")
     .WithReference(blobs)
-    .WithReference(kv);
+    .WithReference(kv)
 """);
 
                 File.WriteAllText(appHostFilePath, content);
@@ -214,14 +214,14 @@ kv.WithNetworkSecurityPerimeter(nsp);
                 output.WriteLine($"New content:\n{content}");
             }
 
-            // Step 8: Modify ApiService Program.cs to register Storage Blob and Key Vault clients
+            // Step 8: Modify Server Program.cs to register Storage Blob and Key Vault clients
             {
                 var projectDir = Path.Combine(workspace.WorkspaceRoot.FullName, projectName);
-                var apiServiceProgramPath = Path.Combine(projectDir, $"{projectName}.ApiService", "Program.cs");
+                var serverProgramPath = Path.Combine(projectDir, $"{projectName}.Server", "Program.cs");
 
-                output.WriteLine($"Looking for ApiService Program.cs at: {apiServiceProgramPath}");
+                output.WriteLine($"Looking for Server Program.cs at: {serverProgramPath}");
 
-                var content = File.ReadAllText(apiServiceProgramPath);
+                var content = File.ReadAllText(serverProgramPath);
 
                 content = content.Replace(
                     "builder.AddServiceDefaults();",
@@ -231,9 +231,9 @@ builder.AddAzureBlobServiceClient("blobs");
 builder.AddAzureKeyVaultClient("kv");
 """);
 
-                File.WriteAllText(apiServiceProgramPath, content);
+                File.WriteAllText(serverProgramPath, content);
 
-                output.WriteLine($"Modified ApiService Program.cs to add blob and key vault client registrations");
+                output.WriteLine($"Modified Server Program.cs to add blob and key vault client registrations");
             }
 
             // Step 9: Navigate to AppHost project directory
