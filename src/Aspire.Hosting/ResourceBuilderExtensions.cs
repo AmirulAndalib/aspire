@@ -1302,45 +1302,46 @@ public static class ResourceBuilderExtensions
                 existing.IsExternal = isExternal.Value;
             }
 
-            if (env is not null && builder.Resource is IResourceWithEndpoints existingResourceWithEndpoints and IResourceWithEnvironment)
-            {
-                var previousEnv = existing.TargetPortEnvironmentVariable;
-                existing.TargetPortEnvironmentVariable = env;
-
-                // Add a new callback only if there wasn't one before.
-                // When there was a previous env, the existing callback already captures
-                // the EndpointAnnotation and will read TargetPortEnvironmentVariable at
-                // evaluation time, so updating the property above is sufficient.
-                if (previousEnv is null)
-                {
-                    var endpointReference = new EndpointReference(existingResourceWithEndpoints, existing, KnownNetworkIdentifiers.LocalhostNetwork);
-                    var capturedAnnotation = existing;
-
-                    builder.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
-                    {
-                        context.EnvironmentVariables[capturedAnnotation.TargetPortEnvironmentVariable!] = endpointReference.Property(EndpointProperty.TargetPort);
-                    }));
-                }
-            }
+            ConfigureEndpointEnvironmentVariable(builder, existing, env);
 
             return builder;
         }
 
-        // Set the environment variable on the resource
-        if (env is not null && builder.Resource is IResourceWithEndpoints resourceWithEndpoints and IResourceWithEnvironment)
-        {
-            annotation.TargetPortEnvironmentVariable = env;
-
-            var endpointReference = new EndpointReference(resourceWithEndpoints, annotation, KnownNetworkIdentifiers.LocalhostNetwork);
-            var capturedAnnotation = annotation;
-
-            builder.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
-            {
-                context.EnvironmentVariables[capturedAnnotation.TargetPortEnvironmentVariable!] = endpointReference.Property(EndpointProperty.TargetPort);
-            }));
-        }
+        ConfigureEndpointEnvironmentVariable(builder, annotation, env);
 
         return builder.WithAnnotation(annotation);
+    }
+
+    /// <summary>
+    /// Configures the environment variable callback for an endpoint's target port.
+    /// If a callback already exists (from a prior call), the annotation's
+    /// <see cref="EndpointAnnotation.TargetPortEnvironmentVariable"/> is updated
+    /// and the existing callback will pick up the new name at evaluation time.
+    /// </summary>
+    private static void ConfigureEndpointEnvironmentVariable<T>(IResourceBuilder<T> builder, EndpointAnnotation endpointAnnotation, string? env) where T : IResourceWithEndpoints
+    {
+        if (env is null || builder.Resource is not IResourceWithEndpoints resourceWithEndpoints || builder.Resource is not IResourceWithEnvironment)
+        {
+            return;
+        }
+
+        var previousEnv = endpointAnnotation.TargetPortEnvironmentVariable;
+        endpointAnnotation.TargetPortEnvironmentVariable = env;
+
+        // Only add a new callback if there wasn't one before. When there was a
+        // previous env, the existing callback already captures the annotation and
+        // reads TargetPortEnvironmentVariable at evaluation time.
+        if (previousEnv is not null)
+        {
+            return;
+        }
+
+        var endpointReference = new EndpointReference(resourceWithEndpoints, endpointAnnotation, KnownNetworkIdentifiers.LocalhostNetwork);
+
+        builder.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
+        {
+            context.EnvironmentVariables[endpointAnnotation.TargetPortEnvironmentVariable!] = endpointReference.Property(EndpointProperty.TargetPort);
+        }));
     }
 
     /// <summary>
