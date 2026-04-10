@@ -249,8 +249,6 @@ internal sealed class FileBackedDocumentContentCache(
         }
     }
 
-    private static readonly char[] s_invalidFileNameChars = Path.GetInvalidFileNameChars();
-
     private string GetTextFilePath(string key) => Path.Combine(_diskCacheDirectory.FullName, $"{SanitizeFileName(key)}.txt");
 
     private string GetETagFilePath(string key) => Path.Combine(_diskCacheDirectory.FullName, $"{SanitizeFileName(key)}.etag.txt");
@@ -265,7 +263,7 @@ internal sealed class FileBackedDocumentContentCache(
         for (var i = 0; i < key.Length; i++)
         {
             var c = key[i];
-            result[i] = Array.IndexOf(s_invalidFileNameChars, c) >= 0 ? '_' : c;
+            result[i] = char.IsLetterOrDigit(c) || c is '.' or '-' or '_' ? c : '_';
         }
 
         return new string(result);

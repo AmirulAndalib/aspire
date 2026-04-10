@@ -163,12 +163,25 @@ internal static partial class ApiDocsSourceConfiguration
 
         href = NormalizeMarkdownHref(href);
 
-        if (!Uri.TryCreate(href, UriKind.Absolute, out var resolvedUri))
+        Uri? resolvedUri;
+        if (TryCreateHttpUri(href, out var httpUri))
         {
-            if (!Uri.TryCreate(sitemapUri, href, out resolvedUri))
+            resolvedUri = httpUri;
+        }
+        else
+        {
+            var siteRootUri = new Uri(sitemapUri.GetLeftPart(UriPartial.Authority));
+            if (!Uri.TryCreate(siteRootUri, href, out var relativeUri) || relativeUri is null)
             {
                 return null;
             }
+
+            resolvedUri = relativeUri;
+        }
+
+        if (resolvedUri is null)
+        {
+            return null;
         }
 
         var pageUrl = StripFragment(resolvedUri.GetLeftPart(UriPartial.Path));
@@ -178,6 +191,18 @@ internal static partial class ApiDocsSourceConfiguration
         }
 
         return RebasePageUrl(pageUrl, sitemapUrl);
+    }
+
+    private static bool TryCreateHttpUri(string href, out Uri? resolvedUri)
+    {
+        if (Uri.TryCreate(href, UriKind.Absolute, out resolvedUri) &&
+            (resolvedUri.Scheme == Uri.UriSchemeHttp || resolvedUri.Scheme == Uri.UriSchemeHttps))
+        {
+            return true;
+        }
+
+        resolvedUri = null;
+        return false;
     }
 
     private static string NormalizeMarkdownHref(string href)
