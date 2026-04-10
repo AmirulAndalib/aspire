@@ -1301,18 +1301,21 @@ public static class ResourceBuilderExtensions
             {
                 existing.IsExternal = isExternal.Value;
             }
-            existing.IsProxied = isProxied;
 
             if (env is not null && builder.Resource is IResourceWithEndpoints existingResourceWithEndpoints and IResourceWithEnvironment)
             {
-                existing.TargetPortEnvironmentVariable = env;
-
-                var endpointReference = new EndpointReference(existingResourceWithEndpoints, existing, KnownNetworkIdentifiers.LocalhostNetwork);
-
-                builder.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
+                // Only add the environment callback if env was not already configured
+                if (existing.TargetPortEnvironmentVariable is null)
                 {
-                    context.EnvironmentVariables[env] = endpointReference.Property(EndpointProperty.TargetPort);
-                }));
+                    var endpointReference = new EndpointReference(existingResourceWithEndpoints, existing, KnownNetworkIdentifiers.LocalhostNetwork);
+
+                    builder.WithAnnotation(new EnvironmentCallbackAnnotation(context =>
+                    {
+                        context.EnvironmentVariables[env] = endpointReference.Property(EndpointProperty.TargetPort);
+                    }));
+                }
+
+                existing.TargetPortEnvironmentVariable = env;
             }
 
             return builder;
