@@ -2,8 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Cli.Configuration;
+using Aspire.Cli.Documentation.ApiDocs;
+using Aspire.Cli.Documentation.Docs;
 using Aspire.Cli.Tests.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using System.Text.Json.Nodes;
 using Aspire.Cli.Tests.TestServices;
 using Microsoft.AspNetCore.InternalTesting;
@@ -75,6 +78,43 @@ public class ConfigCommandTests(ITestOutputHelper outputHelper)
         var settings = JsonNode.Parse(json)?.AsObject();
         Assert.NotNull(settings);
         Assert.Equal("bar", settings["foo"]?.ToString());
+    }
+
+    [Fact]
+    public async Task DocsSourceUrls_CanBeConfiguredViaAspireConfig()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<Aspire.Cli.Commands.RootCommand>();
+
+        var setLlmsResult = command.Parse("config set docs.llmsTxtUrl http://localhost:4321/llms-small.txt");
+        var setLlmsExitCode = await setLlmsResult.InvokeAsync().DefaultTimeout();
+        Assert.Equal(0, setLlmsExitCode);
+
+        var setSitemapResult = command.Parse("config set docs.api.sitemapUrl http://localhost:4321/sitemap-0.xml");
+        var setSitemapExitCode = await setSitemapResult.InvokeAsync().DefaultTimeout();
+        Assert.Equal(0, setSitemapExitCode);
+
+        var configurationService = provider.GetRequiredService<IConfigurationService>();
+        var settingsPath = configurationService.GetSettingsFilePath(isGlobal: false);
+        var settingsJson = await File.ReadAllTextAsync(settingsPath);
+        var settings = JsonNode.Parse(settingsJson)?.AsObject();
+
+        Assert.NotNull(settings);
+        Assert.True(settings["docs"] is JsonObject);
+        var docsObject = settings["docs"]!.AsObject();
+        Assert.Equal("http://localhost:4321/llms-small.txt", docsObject["llmsTxtUrl"]?.ToString());
+        Assert.True(docsObject["api"] is JsonObject);
+        Assert.Equal("http://localhost:4321/sitemap-0.xml", docsObject["api"]?["sitemapUrl"]?.ToString());
+
+        var reloadedServices = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
+        var reloadedProvider = reloadedServices.BuildServiceProvider();
+        var configuration = reloadedProvider.GetRequiredService<IConfiguration>();
+
+        Assert.Equal("http://localhost:4321/llms-small.txt", DocsSourceConfiguration.GetLlmsTxtUrl(configuration));
+        Assert.Equal("http://localhost:4321/sitemap-0.xml", ApiDocsSourceConfiguration.GetSitemapUrl(configuration));
     }
 
     [Fact]

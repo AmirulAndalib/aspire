@@ -13,9 +13,10 @@ internal static partial class ApiDocsSourceConfiguration
 {
     private const string IndexCacheKeyPrefix = "index:";
     private const string MemberIndexCacheKeyPrefix = "member-index:";
+    private const string DocsApiSitemapUrlConfigPath = "docs:api:sitemapUrl";
 
     /// <summary>
-    /// Configuration key for overriding the API sitemap URL.
+    /// Legacy configuration key for overriding the API sitemap URL.
     /// </summary>
     public const string SitemapUrlConfigKey = "Aspire:Cli:ApiDocs:SitemapUrl";
 
@@ -30,7 +31,7 @@ internal static partial class ApiDocsSourceConfiguration
     /// <param name="configuration">The configuration to read from.</param>
     /// <returns>The resolved sitemap URL.</returns>
     public static string GetSitemapUrl(IConfiguration configuration)
-        => configuration[SitemapUrlConfigKey] ?? DefaultSitemapUrl;
+        => configuration[DocsApiSitemapUrlConfigPath] ?? configuration[SitemapUrlConfigKey] ?? DefaultSitemapUrl;
 
     /// <summary>
     /// Gets a source-specific cache key for the parsed API index.

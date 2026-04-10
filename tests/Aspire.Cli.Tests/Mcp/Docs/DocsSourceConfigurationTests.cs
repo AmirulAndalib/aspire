@@ -2,11 +2,43 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Cli.Documentation.Docs;
+using Microsoft.Extensions.Configuration;
 
 namespace Aspire.Cli.Tests.Documentation.Docs;
 
 public class DocsSourceConfigurationTests
 {
+    [Fact]
+    public void GetLlmsTxtUrl_PrefersAspireConfigDocsPath()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["docs:llmsTxtUrl"] = "http://localhost:4321/llms-small.txt",
+                [DocsSourceConfiguration.LlmsTxtUrlConfigKey] = "http://legacy.example/llms-small.txt"
+            })
+            .Build();
+
+        var llmsTxtUrl = DocsSourceConfiguration.GetLlmsTxtUrl(configuration);
+
+        Assert.Equal("http://localhost:4321/llms-small.txt", llmsTxtUrl);
+    }
+
+    [Fact]
+    public void GetLlmsTxtUrl_FallsBackToLegacyConfigKey()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [DocsSourceConfiguration.LlmsTxtUrlConfigKey] = "http://legacy.example/llms-small.txt"
+            })
+            .Build();
+
+        var llmsTxtUrl = DocsSourceConfiguration.GetLlmsTxtUrl(configuration);
+
+        Assert.Equal("http://legacy.example/llms-small.txt", llmsTxtUrl);
+    }
+
     [Fact]
     public void GetContentCacheKey_DefaultSourceUsesFriendlyStem()
     {

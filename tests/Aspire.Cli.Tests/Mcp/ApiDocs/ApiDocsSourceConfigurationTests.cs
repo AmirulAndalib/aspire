@@ -2,11 +2,43 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Cli.Documentation.ApiDocs;
+using Microsoft.Extensions.Configuration;
 
 namespace Aspire.Cli.Tests.Documentation.ApiDocs;
 
 public class ApiDocsSourceConfigurationTests
 {
+    [Fact]
+    public void GetSitemapUrl_PrefersAspireConfigDocsApiPath()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["docs:api:sitemapUrl"] = "http://localhost:4321/sitemap-0.xml",
+                [ApiDocsSourceConfiguration.SitemapUrlConfigKey] = "http://legacy.example/sitemap-0.xml"
+            })
+            .Build();
+
+        var sitemapUrl = ApiDocsSourceConfiguration.GetSitemapUrl(configuration);
+
+        Assert.Equal("http://localhost:4321/sitemap-0.xml", sitemapUrl);
+    }
+
+    [Fact]
+    public void GetSitemapUrl_FallsBackToLegacyConfigKey()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [ApiDocsSourceConfiguration.SitemapUrlConfigKey] = "http://legacy.example/sitemap-0.xml"
+            })
+            .Build();
+
+        var sitemapUrl = ApiDocsSourceConfiguration.GetSitemapUrl(configuration);
+
+        Assert.Equal("http://legacy.example/sitemap-0.xml", sitemapUrl);
+    }
+
     [Fact]
     public void GetSitemapContentCacheKey_DefaultSourceUsesFriendlyStem()
     {

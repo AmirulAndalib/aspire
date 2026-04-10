@@ -96,6 +96,13 @@ internal sealed class AspireConfigFile
     public Dictionary<string, bool>? Features { get; set; }
 
     /// <summary>
+    /// Documentation source configuration for aspire docs and aspire docs api.
+    /// </summary>
+    [JsonPropertyName("docs")]
+    [Description("Documentation source configuration for aspire docs and aspire docs api.")]
+    public AspireConfigDocs? Docs { get; set; }
+
+    /// <summary>
     /// Launch profiles (ports, env vars). Replaces apphost.run.json.
     /// </summary>
     [JsonPropertyName("profiles")]
@@ -402,6 +409,7 @@ internal sealed class AspireConfigFile
 
             config.Channel = settings.Channel;
             config.Features = settings.Features;
+            config.Docs = settings.Docs;
             config.Packages = settings.Packages;
         }
 
@@ -442,6 +450,39 @@ internal sealed class AspireConfigSdk
     [JsonPropertyName("version")]
     [Description("The Aspire SDK version. Determines the version of Aspire.Hosting packages to use.")]
     public string? Version { get; set; }
+}
+
+/// <summary>
+/// Documentation source configuration within aspire.config.json.
+/// </summary>
+internal sealed class AspireConfigDocs
+{
+    /// <summary>
+    /// URL for the llms.txt documentation source consumed by aspire docs.
+    /// </summary>
+    [JsonPropertyName("llmsTxtUrl")]
+    [Description("URL for the llms.txt documentation source consumed by aspire docs.")]
+    public string? LlmsTxtUrl { get; set; }
+
+    /// <summary>
+    /// API reference source configuration consumed by aspire docs api.
+    /// </summary>
+    [JsonPropertyName("api")]
+    [Description("API reference source configuration consumed by aspire docs api.")]
+    public AspireConfigApiDocs? Api { get; set; }
+}
+
+/// <summary>
+/// API documentation source configuration within aspire.config.json.
+/// </summary>
+internal sealed class AspireConfigApiDocs
+{
+    /// <summary>
+    /// URL for the API sitemap consumed by aspire docs api.
+    /// </summary>
+    [JsonPropertyName("sitemapUrl")]
+    [Description("URL for the API sitemap consumed by aspire docs api.")]
+    public string? SitemapUrl { get; set; }
 }
 
 /// <summary>

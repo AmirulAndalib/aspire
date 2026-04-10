@@ -40,6 +40,30 @@ public class AspireConfigFileTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public void Load_ReturnsConfig_WhenFileContainsDocsSourceConfiguration()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var configPath = Path.Combine(workspace.WorkspaceRoot.FullName, AspireConfigFile.FileName);
+        File.WriteAllText(configPath, """
+            {
+              "docs": {
+                "llmsTxtUrl": "http://localhost:4321/llms-small.txt",
+                "api": {
+                  "sitemapUrl": "http://localhost:4321/sitemap-0.xml"
+                }
+              }
+            }
+            """);
+
+        var result = AspireConfigFile.Load(workspace.WorkspaceRoot.FullName);
+
+        Assert.NotNull(result);
+        Assert.Equal("http://localhost:4321/llms-small.txt", result.Docs?.LlmsTxtUrl);
+        Assert.Equal("http://localhost:4321/sitemap-0.xml", result.Docs?.Api?.SitemapUrl);
+    }
+
+    [Fact]
     public void Load_ReturnsConfig_WhenFileContainsJsonComments()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
@@ -203,6 +227,27 @@ public class AspireConfigFileTests(ITestOutputHelper outputHelper)
         var config = new AspireConfigFile();
 
         Assert.Null(config.SdkVersion);
+    }
+
+    [Fact]
+    public void FromLegacy_CopiesDocsSourceConfiguration()
+    {
+        var legacySettings = new AspireJsonConfiguration
+        {
+            Docs = new AspireConfigDocs
+            {
+                LlmsTxtUrl = "http://localhost:4321/llms-small.txt",
+                Api = new AspireConfigApiDocs
+                {
+                    SitemapUrl = "http://localhost:4321/sitemap-0.xml"
+                }
+            }
+        };
+
+        var config = AspireConfigFile.FromLegacy(legacySettings, profiles: null);
+
+        Assert.Equal("http://localhost:4321/llms-small.txt", config.Docs?.LlmsTxtUrl);
+        Assert.Equal("http://localhost:4321/sitemap-0.xml", config.Docs?.Api?.SitemapUrl);
     }
 
     [Fact]
