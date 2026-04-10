@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Cli.EndToEnd.Tests.Helpers;
+using Aspire.Cli.Tests.Utils;
 using Hex1b;
 using Hex1b.Automation;
 using Xunit;
@@ -9,9 +10,9 @@ using Xunit;
 namespace Aspire.Cli.EndToEnd.Tests;
 
 /// <summary>
-/// Minimal smoke test to validate that Hex1b's PTY proxy works on Windows.
-/// This test launches pwsh.exe via Hex1b, types a command, and verifies the output.
-/// No Aspire CLI, no prompt counting — just raw Hex1b on Windows.
+/// Smoke tests to validate that Hex1b's PTY proxy works on Windows.
+/// These tests launch pwsh.exe via Hex1b, interact with the terminal,
+/// and verify the prompt counting infrastructure works cross-platform.
 /// </summary>
 public sealed class WindowsPtySmokeTests(ITestOutputHelper output)
 {
@@ -66,5 +67,50 @@ public sealed class WindowsPtySmokeTests(ITestOutputHelper output)
         await pendingRun;
 
         output.WriteLine("pwsh terminal exited cleanly.");
+    }
+
+    [Fact]
+    public async Task PromptCounting_WorksOnWindows()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            output.WriteLine("Skipping: this test only runs on Windows.");
+            return;
+        }
+
+        var workspace = TemporaryWorkspace.Create(output);
+
+        using var terminal = CliE2ETestHelpers.CreateTestTerminal();
+        var pendingRun = terminal.RunAsync(TestContext.Current.CancellationToken);
+
+        var counter = new SequenceCounter();
+        var auto = new Hex1bTerminalAutomator(terminal, defaultTimeout: TimeSpan.FromSeconds(30));
+
+        // Use the infrastructure to set up prompt counting
+        await auto.PrepareEnvironmentAsync(workspace, counter);
+
+        output.WriteLine($"Prompt counting setup complete. Counter at {counter.Value}.");
+
+        // Run a simple command and verify prompt detection works
+        await auto.TypeAsync("Write-Output 'prompt-counting-works'");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
+
+        output.WriteLine($"First command succeeded. Counter at {counter.Value}.");
+
+        // Run another command to verify counter increments properly
+        await auto.TypeAsync("Write-Output 'second-command'");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
+
+        output.WriteLine($"Second command succeeded. Counter at {counter.Value}.");
+
+        // Exit cleanly
+        await auto.TypeAsync("exit");
+        await auto.EnterAsync();
+
+        await pendingRun;
+
+        output.WriteLine("Prompt counting test completed successfully.");
     }
 }
