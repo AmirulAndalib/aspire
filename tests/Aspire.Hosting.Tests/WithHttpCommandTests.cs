@@ -54,9 +54,8 @@ public class WithHttpCommandTests(ITestOutputHelper testOutputHelper)
         var result = await ResourceBuilderExtensions.GetDefaultHttpCommandResultAsync(response, new HttpCommandOptions(), CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
-        Assert.Null(result.Result);
-        Assert.Null(result.ResultFormat);
+        Assert.Null(result.Message);
+        Assert.Null(result.Data);
     }
 
     [Fact]
@@ -73,9 +72,9 @@ public class WithHttpCommandTests(ITestOutputHelper testOutputHelper)
         }, CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
-        Assert.Equal("""{"token":"abc123"}""", result.Result);
-        Assert.Equal(CommandResultFormat.Json, result.ResultFormat);
+        Assert.Null(result.Message);
+        Assert.Equal("""{"token":"abc123"}""", result.Data?.Value);
+        Assert.Equal(CommandResultFormat.Json, result.Data?.Format);
     }
 
     [Fact]
@@ -92,9 +91,9 @@ public class WithHttpCommandTests(ITestOutputHelper testOutputHelper)
         }, CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Equal("Request failed with status code BadRequest", result.ErrorMessage);
-        Assert.Equal("invalid request", result.Result);
-        Assert.Equal(CommandResultFormat.Text, result.ResultFormat);
+        Assert.Equal("Request failed with status code BadRequest", result.Message);
+        Assert.Equal("invalid request", result.Data?.Value);
+        Assert.Equal(CommandResultFormat.Text, result.Data?.Format);
     }
 
     [Fact]
@@ -516,8 +515,7 @@ public class WithHttpCommandTests(ITestOutputHelper testOutputHelper)
 
         // Assert
         Assert.True(result.Success);
-        Assert.Null(result.Result);
-        Assert.Null(result.ResultFormat);
+        Assert.Null(result.Data);
     }
 
     [Fact]
@@ -543,8 +541,8 @@ public class WithHttpCommandTests(ITestOutputHelper testOutputHelper)
 
         // Assert
         Assert.True(result.Success);
-        Assert.Equal("""{"token":"abc123"}""", result.Result);
-        Assert.Equal(CommandResultFormat.Json, result.ResultFormat);
+        Assert.Equal("""{"token":"abc123"}""", result.Data?.Value);
+        Assert.Equal(CommandResultFormat.Json, result.Data?.Format);
     }
 
     [Fact]
@@ -570,9 +568,9 @@ public class WithHttpCommandTests(ITestOutputHelper testOutputHelper)
 
         // Assert
         Assert.False(result.Success);
-        Assert.Equal("Request failed with status code BadRequest", result.ErrorMessage);
-        Assert.Equal("invalid request", result.Result);
-        Assert.Equal(CommandResultFormat.Text, result.ResultFormat);
+        Assert.Equal("Request failed with status code BadRequest", result.Message);
+        Assert.Equal("invalid request", result.Data?.Value);
+        Assert.Equal(CommandResultFormat.Text, result.Data?.Format);
     }
 
     [Fact]
@@ -598,8 +596,8 @@ public class WithHttpCommandTests(ITestOutputHelper testOutputHelper)
 
         // Assert
         Assert.True(result.Success);
-        Assert.Equal("""{"token":"abc123"}""", result.Result);
-        Assert.Equal(CommandResultFormat.Json, result.ResultFormat);
+        Assert.Equal("""{"token":"abc123"}""", result.Data?.Value);
+        Assert.Equal(CommandResultFormat.Json, result.Data?.Format);
     }
 
     [Fact]
@@ -625,9 +623,9 @@ public class WithHttpCommandTests(ITestOutputHelper testOutputHelper)
 
         // Assert
         Assert.False(result.Success);
-        Assert.Equal("Request failed with status code BadRequest", result.ErrorMessage);
-        Assert.Equal("invalid request", result.Result);
-        Assert.Equal(CommandResultFormat.Text, result.ResultFormat);
+        Assert.Equal("Request failed with status code BadRequest", result.Message);
+        Assert.Equal("invalid request", result.Data?.Value);
+        Assert.Equal(CommandResultFormat.Text, result.Data?.Format);
     }
 
     [Fact]

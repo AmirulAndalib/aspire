@@ -1,4 +1,4 @@
-// aspire.go - Capability-based Aspire SDK
+﻿// aspire.go - Capability-based Aspire SDK
 // GENERATED CODE - DO NOT EDIT
 
 package aspire
@@ -281,32 +281,6 @@ func (d *CommandOptions) ToMap() map[string]any {
 	}
 }
 
-// GenerateParameterDefault represents GenerateParameterDefault.
-type GenerateParameterDefault struct {
-	MinLength float64 `json:"MinLength,omitempty"`
-	Lower bool `json:"Lower,omitempty"`
-	Upper bool `json:"Upper,omitempty"`
-	Numeric bool `json:"Numeric,omitempty"`
-	Special bool `json:"Special,omitempty"`
-	MinLower float64 `json:"MinLower,omitempty"`
-	MinUpper float64 `json:"MinUpper,omitempty"`
-	MinNumeric float64 `json:"MinNumeric,omitempty"`
-	MinSpecial float64 `json:"MinSpecial,omitempty"`
-}
-
-// ToMap converts the DTO to a map for JSON serialization.
-func (d *GenerateParameterDefault) ToMap() map[string]any {
-	return map[string]any{
-		"MinLength": SerializeValue(d.MinLength),
-		"Lower": SerializeValue(d.Lower),
-		"Upper": SerializeValue(d.Upper),
-		"Numeric": SerializeValue(d.Numeric),
-		"Special": SerializeValue(d.Special),
-		"MinLower": SerializeValue(d.MinLower),
-		"MinUpper": SerializeValue(d.MinUpper),
-		"MinNumeric": SerializeValue(d.MinNumeric),
-		"MinSpecial": SerializeValue(d.MinSpecial),
-
 // HttpCommandExportOptions represents HttpCommandExportOptions.
 type HttpCommandExportOptions struct {
 	Description string `json:"Description,omitempty"`
@@ -332,6 +306,34 @@ func (d *HttpCommandExportOptions) ToMap() map[string]any {
 		"EndpointName": SerializeValue(d.EndpointName),
 		"MethodName": SerializeValue(d.MethodName),
 		"ResultMode": SerializeValue(d.ResultMode),
+	}
+}
+
+// GenerateParameterDefault represents GenerateParameterDefault.
+type GenerateParameterDefault struct {
+	MinLength float64 `json:"MinLength,omitempty"`
+	Lower bool `json:"Lower,omitempty"`
+	Upper bool `json:"Upper,omitempty"`
+	Numeric bool `json:"Numeric,omitempty"`
+	Special bool `json:"Special,omitempty"`
+	MinLower float64 `json:"MinLower,omitempty"`
+	MinUpper float64 `json:"MinUpper,omitempty"`
+	MinNumeric float64 `json:"MinNumeric,omitempty"`
+	MinSpecial float64 `json:"MinSpecial,omitempty"`
+}
+
+// ToMap converts the DTO to a map for JSON serialization.
+func (d *GenerateParameterDefault) ToMap() map[string]any {
+	return map[string]any{
+		"MinLength": SerializeValue(d.MinLength),
+		"Lower": SerializeValue(d.Lower),
+		"Upper": SerializeValue(d.Upper),
+		"Numeric": SerializeValue(d.Numeric),
+		"Special": SerializeValue(d.Special),
+		"MinLower": SerializeValue(d.MinLower),
+		"MinUpper": SerializeValue(d.MinUpper),
+		"MinNumeric": SerializeValue(d.MinNumeric),
+		"MinSpecial": SerializeValue(d.MinSpecial),
 	}
 }
 

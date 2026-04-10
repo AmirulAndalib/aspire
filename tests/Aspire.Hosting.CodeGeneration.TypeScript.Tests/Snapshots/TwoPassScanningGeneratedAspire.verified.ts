@@ -443,14 +443,6 @@ export interface GenerateParameterDefault {
     minSpecial?: number;
 }
 
-/** DTO interface for ReferenceEnvironmentInjectionOptions */
-export interface ReferenceEnvironmentInjectionOptions {
-    connectionString?: boolean;
-    connectionProperties?: boolean;
-    serviceDiscovery?: boolean;
-    endpoints?: boolean;
-}
-
 /** DTO interface for HttpCommandExportOptions */
 export interface HttpCommandExportOptions {
     description?: string;
@@ -462,6 +454,14 @@ export interface HttpCommandExportOptions {
     endpointName?: string;
     methodName?: string;
     resultMode?: HttpCommandResultMode;
+}
+
+/** DTO interface for ReferenceEnvironmentInjectionOptions */
+export interface ReferenceEnvironmentInjectionOptions {
+    connectionString?: boolean;
+    connectionProperties?: boolean;
+    serviceDiscovery?: boolean;
+    endpoints?: boolean;
 }
 
 /** DTO interface for ResourceEventDto */
@@ -9486,7 +9486,7 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ContainerResourcePromise {
-        return new ContainerResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options));
+        return new ContainerResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options), this._client);
     }
 
     /** @internal */
@@ -10586,7 +10586,7 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ContainerResourcePromise {
-        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)), this._client);
     }
 
     /** Configures developer certificate trust */
@@ -11809,7 +11809,7 @@ class CSharpAppResourceImpl extends ResourceBuilderBase<CSharpAppResourceHandle>
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): CSharpAppResourcePromise {
-        return new CSharpAppResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options));
+        return new CSharpAppResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options), this._client);
     }
 
     /** @internal */
@@ -12820,7 +12820,7 @@ class CSharpAppResourcePromiseImpl implements CSharpAppResourcePromise {
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): CSharpAppResourcePromise {
-        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)), this._client);
     }
 
     /** Configures developer certificate trust */
@@ -14137,7 +14137,7 @@ class DotnetToolResourceImpl extends ResourceBuilderBase<DotnetToolResourceHandl
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): DotnetToolResourcePromise {
-        return new DotnetToolResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options));
+        return new DotnetToolResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options), this._client);
     }
 
     /** @internal */
@@ -15178,7 +15178,7 @@ class DotnetToolResourcePromiseImpl implements DotnetToolResourcePromise {
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): DotnetToolResourcePromise {
-        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)), this._client);
     }
 
     /** Configures developer certificate trust */
@@ -16393,7 +16393,7 @@ class ExecutableResourceImpl extends ResourceBuilderBase<ExecutableResourceHandl
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ExecutableResourcePromise {
-        return new ExecutableResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options));
+        return new ExecutableResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options), this._client);
     }
 
     /** @internal */
@@ -17404,7 +17404,7 @@ class ExecutableResourcePromiseImpl implements ExecutableResourcePromise {
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ExecutableResourcePromise {
-        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)), this._client);
     }
 
     /** Configures developer certificate trust */
@@ -20924,7 +20924,7 @@ class ProjectResourceImpl extends ResourceBuilderBase<ProjectResourceHandle> imp
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ProjectResourcePromise {
-        return new ProjectResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options));
+        return new ProjectResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options), this._client);
     }
 
     /** @internal */
@@ -21935,7 +21935,7 @@ class ProjectResourcePromiseImpl implements ProjectResourcePromise {
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ProjectResourcePromise {
-        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)), this._client);
     }
 
     /** Configures developer certificate trust */
@@ -23401,7 +23401,7 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options));
+        return new TestDatabaseResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options), this._client);
     }
 
     /** @internal */
@@ -24501,7 +24501,7 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)), this._client);
     }
 
     /** Configures developer certificate trust */
@@ -26043,7 +26043,7 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestRedisResourcePromise {
-        return new TestRedisResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options));
+        return new TestRedisResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options), this._client);
     }
 
     /** @internal */
@@ -27347,7 +27347,7 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestRedisResourcePromise {
-        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)), this._client);
     }
 
     /** Configures developer certificate trust */
@@ -28885,7 +28885,7 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestVaultResourcePromise {
-        return new TestVaultResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options));
+        return new TestVaultResourcePromiseImpl(this._withHttpCommandInternal(path, displayName, options), this._client);
     }
 
     /** @internal */
@@ -30000,7 +30000,7 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestVaultResourcePromise {
-        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)), this._client);
     }
 
     /** Configures developer certificate trust */
@@ -32094,7 +32094,7 @@ class ResourceWithEndpointsImpl extends ResourceBuilderBase<IResourceWithEndpoin
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ResourceWithEndpointsPromise {
-        return new ResourceWithEndpointsPromiseImpl(this._withHttpCommandInternal(path, displayName, options));
+        return new ResourceWithEndpointsPromiseImpl(this._withHttpCommandInternal(path, displayName, options), this._client);
     }
 
     /** @internal */
@@ -32212,7 +32212,7 @@ class ResourceWithEndpointsPromiseImpl implements ResourceWithEndpointsPromise {
 
     /** Adds an HTTP resource command */
     withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ResourceWithEndpointsPromise {
-        return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)));
+        return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withHttpCommand(path, displayName, options)), this._client);
     }
 
     /** Adds an HTTP health probe to the resource */

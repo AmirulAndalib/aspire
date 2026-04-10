@@ -1,4 +1,4 @@
-//! aspire.rs - Capability-based Aspire SDK
+﻿//! aspire.rs - Capability-based Aspire SDK
 //! GENERATED CODE - DO NOT EDIT
 
 use std::collections::HashMap;
@@ -573,42 +573,6 @@ impl CommandOptions {
     }
 }
 
-/// GenerateParameterDefault
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct GenerateParameterDefault {
-    #[serde(rename = "MinLength")]
-    pub min_length: f64,
-    #[serde(rename = "Lower")]
-    pub lower: bool,
-    #[serde(rename = "Upper")]
-    pub upper: bool,
-    #[serde(rename = "Numeric")]
-    pub numeric: bool,
-    #[serde(rename = "Special")]
-    pub special: bool,
-    #[serde(rename = "MinLower")]
-    pub min_lower: f64,
-    #[serde(rename = "MinUpper")]
-    pub min_upper: f64,
-    #[serde(rename = "MinNumeric")]
-    pub min_numeric: f64,
-    #[serde(rename = "MinSpecial")]
-    pub min_special: f64,
-}
-
-impl GenerateParameterDefault {
-    pub fn to_map(&self) -> HashMap<String, Value> {
-        let mut map = HashMap::new();
-        map.insert("MinLength".to_string(), serde_json::to_value(&self.min_length).unwrap_or(Value::Null));
-        map.insert("Lower".to_string(), serde_json::to_value(&self.lower).unwrap_or(Value::Null));
-        map.insert("Upper".to_string(), serde_json::to_value(&self.upper).unwrap_or(Value::Null));
-        map.insert("Numeric".to_string(), serde_json::to_value(&self.numeric).unwrap_or(Value::Null));
-        map.insert("Special".to_string(), serde_json::to_value(&self.special).unwrap_or(Value::Null));
-        map.insert("MinLower".to_string(), serde_json::to_value(&self.min_lower).unwrap_or(Value::Null));
-        map.insert("MinUpper".to_string(), serde_json::to_value(&self.min_upper).unwrap_or(Value::Null));
-        map.insert("MinNumeric".to_string(), serde_json::to_value(&self.min_numeric).unwrap_or(Value::Null));
-        map.insert("MinSpecial".to_string(), serde_json::to_value(&self.min_special).unwrap_or(Value::Null));
-
 /// HttpCommandExportOptions
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct HttpCommandExportOptions {
@@ -644,6 +608,45 @@ impl HttpCommandExportOptions {
         map.insert("EndpointName".to_string(), serde_json::to_value(&self.endpoint_name).unwrap_or(Value::Null));
         map.insert("MethodName".to_string(), serde_json::to_value(&self.method_name).unwrap_or(Value::Null));
         map.insert("ResultMode".to_string(), serde_json::to_value(&self.result_mode).unwrap_or(Value::Null));
+        map
+    }
+}
+
+/// GenerateParameterDefault
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct GenerateParameterDefault {
+    #[serde(rename = "MinLength")]
+    pub min_length: f64,
+    #[serde(rename = "Lower")]
+    pub lower: bool,
+    #[serde(rename = "Upper")]
+    pub upper: bool,
+    #[serde(rename = "Numeric")]
+    pub numeric: bool,
+    #[serde(rename = "Special")]
+    pub special: bool,
+    #[serde(rename = "MinLower")]
+    pub min_lower: f64,
+    #[serde(rename = "MinUpper")]
+    pub min_upper: f64,
+    #[serde(rename = "MinNumeric")]
+    pub min_numeric: f64,
+    #[serde(rename = "MinSpecial")]
+    pub min_special: f64,
+}
+
+impl GenerateParameterDefault {
+    pub fn to_map(&self) -> HashMap<String, Value> {
+        let mut map = HashMap::new();
+        map.insert("MinLength".to_string(), serde_json::to_value(&self.min_length).unwrap_or(Value::Null));
+        map.insert("Lower".to_string(), serde_json::to_value(&self.lower).unwrap_or(Value::Null));
+        map.insert("Upper".to_string(), serde_json::to_value(&self.upper).unwrap_or(Value::Null));
+        map.insert("Numeric".to_string(), serde_json::to_value(&self.numeric).unwrap_or(Value::Null));
+        map.insert("Special".to_string(), serde_json::to_value(&self.special).unwrap_or(Value::Null));
+        map.insert("MinLower".to_string(), serde_json::to_value(&self.min_lower).unwrap_or(Value::Null));
+        map.insert("MinUpper".to_string(), serde_json::to_value(&self.min_upper).unwrap_or(Value::Null));
+        map.insert("MinNumeric".to_string(), serde_json::to_value(&self.min_numeric).unwrap_or(Value::Null));
+        map.insert("MinSpecial".to_string(), serde_json::to_value(&self.min_special).unwrap_or(Value::Null));
         map
     }
 }

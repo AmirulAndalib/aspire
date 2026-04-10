@@ -2810,7 +2810,7 @@ public static class ResourceBuilderExtensions
             if (!string.IsNullOrEmpty(result))
             {
                 return errorMessage is null
-                    ? CommandResults.Success(result, resultFormat)
+                    ? new ExecuteCommandResult { Success = true, Data = new CommandResultData { Value = result, Format = resultFormat } }
                     : CommandResults.Failure(errorMessage, result, resultFormat);
             }
         }
