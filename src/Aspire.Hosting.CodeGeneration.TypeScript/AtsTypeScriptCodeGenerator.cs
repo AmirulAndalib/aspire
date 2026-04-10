@@ -1244,7 +1244,8 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
         {
             var (requiredParams, optionalParams) = SeparateParameters(capability.Parameters);
             var hasOptionals = optionalParams.Count > 0;
-            var optionsInterfaceName = ResolveOptionsInterfaceName(capability);
+            var hasDirectOptionsParameter = TryGetDirectOptionsParameter(optionalParams, out var directOptionsParam);
+            var optionsInterfaceName = hasDirectOptionsParameter ? MapParameterToTypeScript(directOptionsParam!) : ResolveOptionsInterfaceName(capability);
             var publicParamsString = BuildPublicParameterList(requiredParams, hasOptionals, optionsInterfaceName);
             var hasNonBuilderReturn = !capability.ReturnsBuilder && capability.ReturnType != null;
 
@@ -1283,7 +1284,8 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
         {
             var (requiredParams, optionalParams) = SeparateParameters(capability.Parameters);
             var hasOptionals = optionalParams.Count > 0;
-            var optionsInterfaceName = ResolveOptionsInterfaceName(capability);
+            var hasDirectOptionsParameter = TryGetDirectOptionsParameter(optionalParams, out var directOptionsParam);
+            var optionsInterfaceName = hasDirectOptionsParameter ? MapParameterToTypeScript(directOptionsParam!) : ResolveOptionsInterfaceName(capability);
             var paramsString = BuildPublicParameterList(requiredParams, hasOptionals, optionsInterfaceName);
             var hasNonBuilderReturn = !capability.ReturnsBuilder && capability.ReturnType != null;
 
@@ -1311,7 +1313,8 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
         var userParams = capability.Parameters.Where(p => p.Name != targetParamName).ToList();
         var (requiredParams, optionalParams) = SeparateParameters(userParams);
         var hasOptionals = optionalParams.Count > 0;
-        var optionsInterfaceName = ResolveOptionsInterfaceName(capability);
+        var hasDirectOptionsParameter = TryGetDirectOptionsParameter(optionalParams, out var directOptionsParam);
+        var optionsInterfaceName = hasDirectOptionsParameter ? MapParameterToTypeScript(directOptionsParam!) : ResolveOptionsInterfaceName(capability);
         var paramsString = BuildPublicParameterList(requiredParams, hasOptionals, optionsInterfaceName);
         var isVoid = capability.ReturnType == null || capability.ReturnType.TypeId == AtsConstants.Void;
 
@@ -2838,7 +2841,8 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
         // Separate required and optional parameters
         var (requiredParams, optionalParams) = SeparateParameters(userParams);
         var hasOptionals = optionalParams.Count > 0;
-        var optionsInterfaceName = ResolveOptionsInterfaceName(method);
+        var hasDirectOptionsParameter = TryGetDirectOptionsParameter(optionalParams, out var directOptionsParam);
+        var optionsInterfaceName = hasDirectOptionsParameter ? MapParameterToTypeScript(directOptionsParam!) : ResolveOptionsInterfaceName(method);
 
         // Build parameter list using options pattern
         var paramDefs = new List<string>();
@@ -2867,7 +2871,7 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
         WriteLine($"): Promise<{returnType}> {{");
 
         // Extract optional params from options object
-        foreach (var param in optionalParams)
+        foreach (var param in hasDirectOptionsParameter ? [] : optionalParams)
         {
             WriteLine($"        {(IsWidenedHandleType(param.Type) ? "let" : "const")} {param.Name} = options?.{param.Name};");
         }
@@ -2929,7 +2933,8 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
         // Separate required and optional parameters
         var (requiredParams, optionalParams) = SeparateParameters(userParams);
         var hasOptionals = optionalParams.Count > 0;
-        var optionsInterfaceName = ResolveOptionsInterfaceName(capability);
+        var hasDirectOptionsParameter = TryGetDirectOptionsParameter(optionalParams, out var directOptionsParam);
+        var optionsInterfaceName = hasDirectOptionsParameter ? MapParameterToTypeScript(directOptionsParam!) : ResolveOptionsInterfaceName(capability);
 
         // Build parameter list using options pattern
         var paramDefs = new List<string>();
@@ -2956,7 +2961,7 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
         WriteLine($"): Promise<{returnType}> {{");
 
         // Extract optional params from options object
-        foreach (var param in optionalParams)
+        foreach (var param in hasDirectOptionsParameter ? [] : optionalParams)
         {
             WriteLine($"        {(IsWidenedHandleType(param.Type) ? "let" : "const")} {param.Name} = options?.{param.Name};");
         }
@@ -3023,7 +3028,8 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
         // Separate required and optional parameters
         var (requiredParams, optionalParams) = SeparateParameters(userParams);
         var hasOptionals = optionalParams.Count > 0;
-        var optionsInterfaceName = ResolveOptionsInterfaceName(capability);
+        var hasDirectOptionsParameter = TryGetDirectOptionsParameter(optionalParams, out var directOptionsParam);
+        var optionsInterfaceName = hasDirectOptionsParameter ? MapParameterToTypeScript(directOptionsParam!) : ResolveOptionsInterfaceName(capability);
 
         // Build parameter list for public method
         var publicParamDefs = new List<string>();
@@ -3098,7 +3104,7 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
             WriteLine($"): {returnPromiseWrapper} {{");
 
             // Extract optional params and forward
-            foreach (var param in optionalParams)
+            foreach (var param in hasDirectOptionsParameter ? [] : optionalParams)
             {
                 WriteLine($"        {(IsWidenedHandleType(param.Type) ? "let" : "const")} {param.Name} = options?.{param.Name};");
             }
@@ -3268,7 +3274,8 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
             // Separate required and optional parameters
             var (requiredParams, optionalParams) = SeparateParameters(userParams);
             var hasOptionals = optionalParams.Count > 0;
-            var optionsInterfaceName = ResolveOptionsInterfaceName(capability);
+            var hasDirectOptionsParameter = TryGetDirectOptionsParameter(optionalParams, out var directOptionsParam);
+            var optionsInterfaceName = hasDirectOptionsParameter ? MapParameterToTypeScript(directOptionsParam!) : ResolveOptionsInterfaceName(capability);
 
             // Build parameter list using options pattern
             var publicParamDefs = new List<string>();

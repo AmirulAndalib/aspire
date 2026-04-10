@@ -8309,7 +8309,7 @@ export interface ContainerResource {
     withHealthCheck(key: string): ContainerResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): ContainerResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ContainerResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): ContainerResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ContainerResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): ContainerResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): ContainerResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ContainerResourcePromise;
@@ -8416,7 +8416,7 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
     withHealthCheck(key: string): ContainerResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): ContainerResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ContainerResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): ContainerResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ContainerResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): ContainerResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): ContainerResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ContainerResourcePromise;
@@ -10866,7 +10866,7 @@ export interface CSharpAppResource {
     withHealthCheck(key: string): CSharpAppResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): CSharpAppResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): CSharpAppResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): CSharpAppResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): CSharpAppResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): CSharpAppResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): CSharpAppResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): CSharpAppResourcePromise;
@@ -10958,7 +10958,7 @@ export interface CSharpAppResourcePromise extends PromiseLike<CSharpAppResource>
     withHealthCheck(key: string): CSharpAppResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): CSharpAppResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): CSharpAppResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): CSharpAppResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): CSharpAppResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): CSharpAppResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): CSharpAppResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): CSharpAppResourcePromise;
@@ -13101,7 +13101,7 @@ export interface DotnetToolResource {
     withHealthCheck(key: string): DotnetToolResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): DotnetToolResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): DotnetToolResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): DotnetToolResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): DotnetToolResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): DotnetToolResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): DotnetToolResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): DotnetToolResourcePromise;
@@ -13199,7 +13199,7 @@ export interface DotnetToolResourcePromise extends PromiseLike<DotnetToolResourc
     withHealthCheck(key: string): DotnetToolResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): DotnetToolResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): DotnetToolResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): DotnetToolResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): DotnetToolResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): DotnetToolResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): DotnetToolResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): DotnetToolResourcePromise;
@@ -15453,7 +15453,7 @@ export interface ExecutableResource {
     withHealthCheck(key: string): ExecutableResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): ExecutableResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ExecutableResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): ExecutableResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ExecutableResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): ExecutableResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): ExecutableResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ExecutableResourcePromise;
@@ -15545,7 +15545,7 @@ export interface ExecutableResourcePromise extends PromiseLike<ExecutableResourc
     withHealthCheck(key: string): ExecutableResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): ExecutableResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ExecutableResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): ExecutableResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ExecutableResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): ExecutableResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): ExecutableResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ExecutableResourcePromise;
@@ -19981,7 +19981,7 @@ export interface ProjectResource {
     withHealthCheck(key: string): ProjectResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): ProjectResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ProjectResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): ProjectResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ProjectResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): ProjectResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): ProjectResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ProjectResourcePromise;
@@ -20073,7 +20073,7 @@ export interface ProjectResourcePromise extends PromiseLike<ProjectResource> {
     withHealthCheck(key: string): ProjectResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): ProjectResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ProjectResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): ProjectResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ProjectResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): ProjectResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): ProjectResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ProjectResourcePromise;
@@ -22224,7 +22224,7 @@ export interface TestDatabaseResource {
     withHealthCheck(key: string): TestDatabaseResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): TestDatabaseResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): TestDatabaseResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): TestDatabaseResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestDatabaseResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): TestDatabaseResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): TestDatabaseResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestDatabaseResourcePromise;
@@ -22331,7 +22331,7 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
     withHealthCheck(key: string): TestDatabaseResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): TestDatabaseResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): TestDatabaseResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): TestDatabaseResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestDatabaseResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): TestDatabaseResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): TestDatabaseResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestDatabaseResourcePromise;
@@ -24798,7 +24798,7 @@ export interface TestRedisResource {
     withHealthCheck(key: string): TestRedisResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): TestRedisResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): TestRedisResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): TestRedisResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestRedisResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): TestRedisResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): TestRedisResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestRedisResourcePromise;
@@ -24921,7 +24921,7 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
     withHealthCheck(key: string): TestRedisResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): TestRedisResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): TestRedisResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): TestRedisResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestRedisResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): TestRedisResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): TestRedisResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestRedisResourcePromise;
@@ -27706,7 +27706,7 @@ export interface TestVaultResource {
     withHealthCheck(key: string): TestVaultResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): TestVaultResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): TestVaultResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): TestVaultResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestVaultResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): TestVaultResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): TestVaultResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestVaultResourcePromise;
@@ -27814,7 +27814,7 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
     withHealthCheck(key: string): TestVaultResourcePromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): TestVaultResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): TestVaultResourcePromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): TestVaultResourcePromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): TestVaultResourcePromise;
     withDeveloperCertificateTrust(trust: boolean): TestVaultResourcePromise;
     withCertificateTrustScope(scope: CertificateTrustScope): TestVaultResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestVaultResourcePromise;
@@ -31872,7 +31872,7 @@ export interface ResourceWithEndpoints {
     asHttp2Service(): ResourceWithEndpointsPromise;
     withUrlForEndpointFactory(endpointName: string, callback: (arg: EndpointReference) => Promise<ResourceUrlAnnotation>): ResourceWithEndpointsPromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): ResourceWithEndpointsPromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): ResourceWithEndpointsPromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ResourceWithEndpointsPromise;
     withHttpProbe(probeType: ProbeType, options?: WithHttpProbeOptions): ResourceWithEndpointsPromise;
     onResourceEndpointsAllocated(callback: (arg: ResourceEndpointsAllocatedEvent) => Promise<void>): ResourceWithEndpointsPromise;
 }
@@ -31887,7 +31887,7 @@ export interface ResourceWithEndpointsPromise extends PromiseLike<ResourceWithEn
     asHttp2Service(): ResourceWithEndpointsPromise;
     withUrlForEndpointFactory(endpointName: string, callback: (arg: EndpointReference) => Promise<ResourceUrlAnnotation>): ResourceWithEndpointsPromise;
     withHttpHealthCheck(options?: WithHttpHealthCheckOptions): ResourceWithEndpointsPromise;
-    withHttpCommand(path: string, displayName: string, options?: WithHttpCommandOptions): ResourceWithEndpointsPromise;
+    withHttpCommand(path: string, displayName: string, options?: HttpCommandExportOptions): ResourceWithEndpointsPromise;
     withHttpProbe(probeType: ProbeType, options?: WithHttpProbeOptions): ResourceWithEndpointsPromise;
     onResourceEndpointsAllocated(callback: (arg: ResourceEndpointsAllocatedEvent) => Promise<void>): ResourceWithEndpointsPromise;
 }
