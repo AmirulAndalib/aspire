@@ -1412,14 +1412,14 @@ public static class ResourceBuilderExtensions
     /// <para>
     /// This is a convenience method for setting the host port on the endpoint named <c>"https"</c>.
     /// The endpoint must already exist on the resource, for example by calling
-    /// <see cref="WithHttpsEndpoint{T}(IResourceBuilder{T}, int?, int?, string?, string?, bool)"/>,
-    /// or by using a resource type that creates it automatically (such as <c>AddKeycloak</c>).
+    /// <see cref="WithHttpsEndpoint{T}(IResourceBuilder{T}, int?, int?, string?, string?, bool)"/>.
     /// </para>
     /// </remarks>
     /// <example>
-    /// Pin the HTTPS port for a Keycloak resource:
+    /// Pin the HTTPS port on a container with an HTTPS endpoint:
     /// <code>
-    /// var keycloak = builder.AddKeycloak("keycloak")
+    /// var api = builder.AddContainer("api", "myimage")
+    ///     .WithHttpsEndpoint()
     ///     .WithHttpsPort(8443);
     /// </code>
     /// </example>
