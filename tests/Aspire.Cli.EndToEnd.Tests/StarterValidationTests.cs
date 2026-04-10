@@ -40,7 +40,11 @@ public sealed class StarterValidationTests(ITestOutputHelper output)
         output.WriteLine("Creating C# starter app...");
 
         // aspire new with non-interactive mode
-        await auto.TypeAsync("aspire new aspire-starter --name StarterCsSmoke --non-interactive --nologo");
+        // In CI, use --channel to pick up NuGet packages from the PR dogfood feed
+        var channelArg = CliE2ETestHelpers.IsRunningInCI
+            ? $"--channel pr-{CliE2ETestHelpers.GetRequiredPrNumber()}"
+            : "";
+        await auto.TypeAsync($"aspire new aspire-starter --name StarterCsSmoke {channelArg} --non-interactive --nologo");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptFailFastAsync(counter, TimeSpan.FromMinutes(3));
 
@@ -112,7 +116,10 @@ public sealed class StarterValidationTests(ITestOutputHelper output)
         output.WriteLine("Creating TypeScript starter app...");
 
         // aspire new with non-interactive mode
-        await auto.TypeAsync("aspire new aspire-ts-starter --name StarterTsSmoke --non-interactive --nologo");
+        var channelArg = CliE2ETestHelpers.IsRunningInCI
+            ? $"--channel pr-{CliE2ETestHelpers.GetRequiredPrNumber()}"
+            : "";
+        await auto.TypeAsync($"aspire new aspire-ts-starter --name StarterTsSmoke {channelArg} --non-interactive --nologo");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptFailFastAsync(counter, TimeSpan.FromMinutes(3));
 
