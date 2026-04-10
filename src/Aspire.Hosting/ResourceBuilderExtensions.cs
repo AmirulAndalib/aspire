@@ -1302,6 +1302,13 @@ public static class ResourceBuilderExtensions
                 existing.IsExternal = isExternal.Value;
             }
 
+            // Only apply isProxied when explicitly set to false — the default is true,
+            // so false is always intentional and safe to apply.
+            if (!isProxied)
+            {
+                existing.IsProxied = false;
+            }
+
             ConfigureEndpointEnvironmentVariable(builder, existing, env);
 
             return builder;

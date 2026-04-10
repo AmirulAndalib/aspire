@@ -848,12 +848,12 @@ public class WithEndpointTests
     }
 
     [Fact]
-    public void WithEndpointUpdateDoesNotChangeIsProxied()
+    public void WithEndpointUpdateDoesNotChangeIsProxiedBackToTrue()
     {
         var builder = DistributedApplication.CreateBuilder();
 
-        // isProxied defaults to true in the method signature, so we can't
-        // distinguish "user passed true" from "default". Update path skips it.
+        // isProxied defaults to true in the method signature, so passing true
+        // on update can't be distinguished from the default — it's a no-op.
         builder.AddContainer("mycontainer", "myimage")
             .WithHttpEndpoint(port: 8080, isProxied: false)
             .WithHttpEndpoint(port: 9090, isProxied: true);
@@ -863,7 +863,23 @@ public class WithEndpointTests
         var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
         var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "http");
         Assert.Equal(9090, endpoint.Port);
-        // isProxied stays false from the original — update path doesn't touch it
+        Assert.False(endpoint.IsProxied);
+    }
+
+    [Fact]
+    public void WithEndpointUpdateCanSetIsProxiedToFalse()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("mycontainer", "myimage")
+            .WithHttpEndpoint(port: 8080)
+            .WithHttpEndpoint(isProxied: false);
+
+        using var app = builder.Build();
+
+        var resource = Assert.Single(builder.Resources.OfType<ContainerResource>());
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>(), e => e.Name == "http");
+        Assert.Equal(8080, endpoint.Port);
         Assert.False(endpoint.IsProxied);
     }
 
