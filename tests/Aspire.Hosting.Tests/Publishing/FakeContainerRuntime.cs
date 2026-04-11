@@ -103,4 +103,27 @@ public sealed class FakeContainerRuntime(bool shouldFail = false, bool isRunning
         }
         return Task.CompletedTask;
     }
+
+    public Task ComposeUpAsync(ComposeOperationContext context, CancellationToken cancellationToken)
+    {
+        if (shouldFail)
+        {
+            throw new DistributedApplicationException("Fake container runtime is configured to fail");
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task ComposeDownAsync(ComposeOperationContext context, CancellationToken cancellationToken)
+    {
+        if (shouldFail)
+        {
+            throw new DistributedApplicationException("Fake container runtime is configured to fail");
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<ComposeServiceInfo>?> ComposeListServicesAsync(ComposeOperationContext context, CancellationToken cancellationToken)
+    {
+        return Task.FromResult<IReadOnlyList<ComposeServiceInfo>?>(null);
+    }
 }
