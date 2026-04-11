@@ -185,11 +185,7 @@ jobs:
           any_failed=false
           while IFS= read -r test_name; do
             args=("${base_args[@]}" --test "$test_name")
-            if dotnet run --no-build --project tools/CreateFailingTestIssue -- "${args[@]}" --output "$RUNNER_TEMP/failing-test-result-$index.json"; then
-              true
-            else
-              any_failed=true
-            fi
+            dotnet run --no-build --project tools/CreateFailingTestIssue -- "${args[@]}" --output "$RUNNER_TEMP/failing-test-result-$index.json" || any_failed=true
             index=$((index + 1))
           done < <(echo "$TEST_QUERIES" | jq -r '.[]')
           echo "result_count=$index" >> "$GITHUB_OUTPUT"
@@ -374,7 +370,7 @@ jobs:
             const testName = result.match?.canonicalTestName ?? result.match?.displayTestName ?? '';
             let disableHint = '';
             if (testName) {
-              disableHint = `\nTo disable this test on your PR, comment:\n\`\`\`\n/disable-test ${testName} ${issueUrl}\n\`\`\``;
+              disableHint = `\n\nTo disable this test on your PR, comment:\n\`\`\`\n/disable-test ${testName} ${issueUrl}\n\`\`\``;
             }
 
             summaryLines.push(`✅ ${action[0].toUpperCase()}${action.slice(1)} failing-test issue #${issueNumber}: ${issueUrl}${disableHint}`);
