@@ -43,18 +43,28 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+# Load CI test property definitions from the single source of truth
+$script:CITestsPropertiesPath = Join-Path $PSScriptRoot '../testing/CITestsProperties.props'
+[xml]$ciTestsPropsXml = Get-Content $script:CITestsPropertiesPath
+$script:ciTestsPropertyDefs = @{}
+foreach ($item in $ciTestsPropsXml.Project.ItemGroup.CITestsProperty) {
+  $script:ciTestsPropertyDefs[$item.Include] = @{
+    Default = ($item.Default -eq 'true')
+  }
+}
+
 # Default values applied to all entries
 $script:defaults = @{
   extraTestArgs = ''
-  properties = @{
-    requiresNugets = $false
-    requiresTestSdk = $false
-    requiresCliArchive = $false
-    enablePlaywrightInstall = $false
-  }
+  properties = [ordered]@{}
   testSessionTimeout = '20m'
   testHangTimeout = '10m'
   supportedOSes = @('windows', 'linux', 'macos')
+}
+
+# Populate default property values from CITestsProperties.props
+foreach ($propName in $script:ciTestsPropertyDefs.Keys) {
+  $script:defaults.properties[$propName] = $script:ciTestsPropertyDefs[$propName].Default
 }
 
 Write-Host "Building canonical test matrix"
@@ -64,6 +74,23 @@ Write-Host "Artifacts directory: $ArtifactsDir"
 function ConvertTo-Boolean {
   param($Value)
   return ($Value -eq 'true' -or $Value -eq $true)
+}
+
+# Helper function to copy CI test properties from metadata into an entry's properties sub-object.
+# Reads from the 'properties' sub-object (new format) or top-level keys (legacy format).
+function Copy-CITestProperties {
+  param(
+    [Parameter(Mandatory=$true)]$Entry,
+    [Parameter(Mandatory=$true)]$Metadata
+  )
+
+  $propsSource = if ($Metadata.PSObject.Properties['properties'] -and $Metadata.properties) { $Metadata.properties } else { $Metadata }
+  $Entry['properties'] = [ordered]@{}
+  foreach ($propName in $script:ciTestsPropertyDefs.Keys) {
+    if ($propsSource.PSObject.Properties[$propName]) {
+      $Entry['properties'][$propName] = $propsSource.$propName
+    }
+  }
 }
 
 # Helper function to apply defaults and normalize an entry
@@ -94,14 +121,14 @@ function Complete-EntryWithDefaults {
     $Entry['properties'] = $props
   }
 
-  # Normalize boolean values within properties
-  $props['requiresNugets'] = if ($props.Contains('requiresNugets')) { ConvertTo-Boolean $props['requiresNugets'] } else { $false }
-  $props['requiresTestSdk'] = if ($props.Contains('requiresTestSdk')) { ConvertTo-Boolean $props['requiresTestSdk'] } else { $false }
-  $props['requiresCliArchive'] = if ($props.Contains('requiresCliArchive')) { ConvertTo-Boolean $props['requiresCliArchive'] } else { $false }
-  $props['enablePlaywrightInstall'] = if ($props.Contains('enablePlaywrightInstall')) { ConvertTo-Boolean $props['enablePlaywrightInstall'] } else { $false }
+  # Normalize boolean values within properties using CITestsProperties.props definitions
+  foreach ($propName in $script:ciTestsPropertyDefs.Keys) {
+    $propDefault = $script:ciTestsPropertyDefs[$propName].Default
+    $props[$propName] = if ($props.Contains($propName)) { ConvertTo-Boolean $props[$propName] } else { $propDefault }
+  }
 
-  # Remove any legacy top-level boolean keys
-  foreach ($key in @('requiresNugets', 'requiresTestSdk', 'requiresCliArchive', 'enablePlaywrightInstall')) {
+  # Remove any legacy top-level boolean keys (property names that belong in the properties sub-object)
+  foreach ($key in $script:ciTestsPropertyDefs.Keys) {
     if ($Entry.Contains($key)) { $Entry.Remove($key) }
   }
 
@@ -131,13 +158,7 @@ function New-RegularTestEntry {
     if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
     if ($Metadata.PSObject.Properties['extraTestArgs'] -and $Metadata.extraTestArgs) { $entry['extraTestArgs'] = $Metadata.extraTestArgs }
 
-    # Read boolean flags from properties sub-object (new format) or top-level (legacy)
-    $propsSource = if ($Metadata.PSObject.Properties['properties'] -and $Metadata.properties) { $Metadata.properties } else { $Metadata }
-    $entry['properties'] = [ordered]@{}
-    if ($propsSource.PSObject.Properties['requiresNugets']) { $entry['properties']['requiresNugets'] = $propsSource.requiresNugets }
-    if ($propsSource.PSObject.Properties['requiresTestSdk']) { $entry['properties']['requiresTestSdk'] = $propsSource.requiresTestSdk }
-    if ($propsSource.PSObject.Properties['requiresCliArchive']) { $entry['properties']['requiresCliArchive'] = $propsSource.requiresCliArchive }
-    if ($propsSource.PSObject.Properties['enablePlaywrightInstall']) { $entry['properties']['enablePlaywrightInstall'] = $propsSource.enablePlaywrightInstall }
+    Copy-CITestProperties -Entry $entry -Metadata $Metadata
   }
 
   # Add supported OSes
@@ -194,13 +215,7 @@ function New-CollectionTestEntry {
     if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
   }
 
-  # Read boolean flags from properties sub-object (new format) or top-level (legacy)
-  $propsSource = if ($Metadata.PSObject.Properties['properties'] -and $Metadata.properties) { $Metadata.properties } else { $Metadata }
-  $entry['properties'] = [ordered]@{}
-  if ($propsSource.PSObject.Properties['requiresNugets']) { $entry['properties']['requiresNugets'] = $propsSource.requiresNugets }
-  if ($propsSource.PSObject.Properties['requiresTestSdk']) { $entry['properties']['requiresTestSdk'] = $propsSource.requiresTestSdk }
-  if ($propsSource.PSObject.Properties['requiresCliArchive']) { $entry['properties']['requiresCliArchive'] = $propsSource.requiresCliArchive }
-  if ($propsSource.PSObject.Properties['enablePlaywrightInstall']) { $entry['properties']['enablePlaywrightInstall'] = $propsSource.enablePlaywrightInstall }
+  Copy-CITestProperties -Entry $entry -Metadata $Metadata
 
   # Add test filter for collection-based splitting
   if ($IsUncollected) {
@@ -249,13 +264,7 @@ function New-ClassTestEntry {
   if ($Metadata.PSObject.Properties['testSessionTimeout']) { $entry['testSessionTimeout'] = $Metadata.testSessionTimeout }
   if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
 
-  # Read boolean flags from properties sub-object (new format) or top-level (legacy)
-  $propsSource = if ($Metadata.PSObject.Properties['properties'] -and $Metadata.properties) { $Metadata.properties } else { $Metadata }
-  $entry['properties'] = [ordered]@{}
-  if ($propsSource.PSObject.Properties['requiresNugets']) { $entry['properties']['requiresNugets'] = $propsSource.requiresNugets }
-  if ($propsSource.PSObject.Properties['requiresTestSdk']) { $entry['properties']['requiresTestSdk'] = $propsSource.requiresTestSdk }
-  if ($propsSource.PSObject.Properties['requiresCliArchive']) { $entry['properties']['requiresCliArchive'] = $propsSource.requiresCliArchive }
-  if ($propsSource.PSObject.Properties['enablePlaywrightInstall']) { $entry['properties']['enablePlaywrightInstall'] = $propsSource.enablePlaywrightInstall }
+  Copy-CITestProperties -Entry $entry -Metadata $Metadata
 
   # Add test filter for class-based splitting
   $entry['extraTestArgs'] = "--filter-class `"$ClassName`""
