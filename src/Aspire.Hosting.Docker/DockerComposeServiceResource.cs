@@ -335,7 +335,7 @@ public class DockerComposeServiceResource : Resource, IResourceWithParent<Docker
         }
 
         // Query the running containers for published ports
-        var runtime = context.Services.GetRequiredService<IContainerRuntime>();
+        var runtime = await context.Services.GetRequiredService<IContainerRuntimeResolver>().ResolveAsync(context.CancellationToken).ConfigureAwait(false);
         var composeContext = environment.CreateComposeOperationContext(context);
         var services = await runtime.ComposeListServicesAsync(composeContext, context.CancellationToken).ConfigureAwait(false);
 

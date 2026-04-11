@@ -11,7 +11,7 @@ namespace Aspire.Hosting.Tests.Publishing;
 
 using Aspire.Hosting.ApplicationModel;
 
-public sealed class FakeContainerRuntime(bool shouldFail = false, bool isRunning = true) : IContainerRuntime
+public sealed class FakeContainerRuntime(bool shouldFail = false, bool isRunning = true) : IContainerRuntime, IContainerRuntimeResolver
 {
     public string Name => "fake-runtime";
     public bool WasHealthCheckCalled { get; private set; }
@@ -125,5 +125,10 @@ public sealed class FakeContainerRuntime(bool shouldFail = false, bool isRunning
     public Task<IReadOnlyList<ComposeServiceInfo>?> ComposeListServicesAsync(ComposeOperationContext context, CancellationToken cancellationToken)
     {
         return Task.FromResult<IReadOnlyList<ComposeServiceInfo>?>(null);
+    }
+
+    public Task<IContainerRuntime> ResolveAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<IContainerRuntime>(this);
     }
 }

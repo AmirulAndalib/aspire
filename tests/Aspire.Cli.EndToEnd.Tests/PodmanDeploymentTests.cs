@@ -19,6 +19,7 @@ public sealed class PodmanDeploymentTests(ITestOutputHelper output)
     private const string ProjectName = "AspirePodmanDeployTest";
 
     [Fact]
+    [ActiveIssue("https://github.com/mitchdenny/hex1b/pull/270")]
     [OuterloopTest("Requires Podman and docker-compose v2 installed on the host")]
     public async Task CreateAndDeployToDockerComposeWithPodman()
     {

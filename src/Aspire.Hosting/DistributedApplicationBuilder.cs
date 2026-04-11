@@ -511,38 +511,7 @@ public class DistributedApplicationBuilder : IDistributedApplicationBuilder
         Eventing.Subscribe<BeforeStartEvent>(BuiltInDistributedApplicationEventSubscriptionHandlers.MutateHttp2TransportAsync);
         _innerBuilder.Services.AddKeyedSingleton<IContainerRuntime, DockerContainerRuntime>("docker");
         _innerBuilder.Services.AddKeyedSingleton<IContainerRuntime, PodmanContainerRuntime>("podman");
-        _innerBuilder.Services.AddSingleton(sp =>
-        {
-            var dcpOptions = sp.GetRequiredService<IOptions<DcpOptions>>();
-            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Aspire.Hosting.ContainerRuntime");
-            var configuredRuntime = dcpOptions.Value.ContainerRuntime;
-
-            if (configuredRuntime is not null)
-            {
-                logger.LogInformation("Container runtime '{RuntimeKey}' configured via ASPIRE_CONTAINER_RUNTIME.", configuredRuntime);
-                return sp.GetRequiredKeyedService<IContainerRuntime>(configuredRuntime);
-            }
-
-            // Auto-detect: probe available runtimes, matching DCP's detection logic.
-            // See https://github.com/microsoft/dcp/blob/main/internal/containers/runtimes/runtime.go
-            var detected = ContainerRuntimeDetector.FindAvailableRuntimeAsync().GetAwaiter().GetResult();
-            var runtimeKey = detected?.Executable ?? "docker";
-
-            if (detected is { IsHealthy: true })
-            {
-                logger.LogInformation("Container runtime auto-detected: {RuntimeName} ({Executable}).", detected.Name, detected.Executable);
-            }
-            else if (detected is { IsInstalled: true })
-            {
-                logger.LogWarning("Container runtime '{RuntimeName}' is installed but not running. {Error}", detected.Name, detected.Error);
-            }
-            else
-            {
-                logger.LogWarning("No container runtime detected, defaulting to 'docker'. Install Docker or Podman to use container features.");
-            }
-
-            return sp.GetRequiredKeyedService<IContainerRuntime>(runtimeKey);
-        });
+        _innerBuilder.Services.AddSingleton<IContainerRuntimeResolver, ContainerRuntimeResolver>();
         _innerBuilder.Services.AddSingleton<IResourceContainerImageManager, ResourceContainerImageManager>();
         _innerBuilder.Services.AddSingleton<PipelineActivityReporter>();
         _innerBuilder.Services.AddSingleton<IPipelineActivityReporter, PipelineActivityReporter>(sp => sp.GetRequiredService<PipelineActivityReporter>());

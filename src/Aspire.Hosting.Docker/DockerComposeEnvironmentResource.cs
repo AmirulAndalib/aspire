@@ -223,7 +223,7 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
             throw new InvalidOperationException($"Docker Compose file not found at {dockerComposeFilePath}");
         }
 
-        var runtime = context.Services.GetRequiredService<IContainerRuntime>();
+        var runtime = await context.Services.GetRequiredService<IContainerRuntimeResolver>().ResolveAsync(context.CancellationToken).ConfigureAwait(false);
 
         var deployTask = await context.ReportingStep.CreateTaskAsync(
             new MarkdownString($"Running compose up for **{Name}** using **{runtime.Name}**"),
@@ -259,7 +259,7 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
             throw new InvalidOperationException($"Docker Compose file not found at {dockerComposeFilePath}");
         }
 
-        var runtime = context.Services.GetRequiredService<IContainerRuntime>();
+        var runtime = await context.Services.GetRequiredService<IContainerRuntimeResolver>().ResolveAsync(context.CancellationToken).ConfigureAwait(false);
 
         var deployTask = await context.ReportingStep.CreateTaskAsync(
             new MarkdownString($"Running compose down for **{Name}** using **{runtime.Name}**"),

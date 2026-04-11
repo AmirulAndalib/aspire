@@ -12,8 +12,11 @@
 //   4. When runtimes are equally available, prefer the default (Docker).
 
 using System.Diagnostics;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 
-namespace Aspire.Hosting;
+namespace Aspire.Shared;
 
 /// <summary>
 /// Describes the availability of a single container runtime (e.g., Docker or Podman).
@@ -51,6 +54,26 @@ internal sealed class ContainerRuntimeInfo
     public string? Error { get; init; }
 
     /// <summary>
+    /// The client (CLI) version, if detected.
+    /// </summary>
+    public Version? ClientVersion { get; init; }
+
+    /// <summary>
+    /// The server (daemon/engine) version, if detected.
+    /// </summary>
+    public Version? ServerVersion { get; init; }
+
+    /// <summary>
+    /// Whether this is Docker Desktop (vs Docker Engine).
+    /// </summary>
+    public bool IsDockerDesktop { get; init; }
+
+    /// <summary>
+    /// The server OS (e.g., "linux", "windows"). Relevant for Docker's Windows container mode.
+    /// </summary>
+    public string? ServerOs { get; init; }
+
+    /// <summary>
     /// Whether the runtime is fully operational.
     /// </summary>
     public bool IsHealthy => IsInstalled && IsRunning;
@@ -77,12 +100,13 @@ internal static class ContainerRuntimeDetector
     /// An explicitly configured runtime name (e.g., "docker" or "podman" from ASPIRE_CONTAINER_RUNTIME).
     /// When set, only that runtime is checked. When null, all known runtimes are probed in parallel.
     /// </param>
+    /// <param name="logger">Optional logger for diagnostic output during detection.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
     /// The best available runtime, or null if no runtime was found.
     /// When a runtime is configured but not available, returns its info with <see cref="ContainerRuntimeInfo.IsInstalled"/> = false.
     /// </returns>
-    public static async Task<ContainerRuntimeInfo?> FindAvailableRuntimeAsync(string? configuredRuntime = null, CancellationToken cancellationToken = default)
+    public static async Task<ContainerRuntimeInfo?> FindAvailableRuntimeAsync(string? configuredRuntime = null, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
         if (configuredRuntime is not null)
         {
@@ -90,54 +114,28 @@ internal static class ContainerRuntimeDetector
             var known = s_knownRuntimes.FirstOrDefault(r => string.Equals(r.Executable, configuredRuntime, StringComparison.OrdinalIgnoreCase));
             var name = known.Name ?? configuredRuntime;
             var isDefault = known.IsDefault;
-            return await CheckRuntimeAsync(configuredRuntime, name, isDefault, cancellationToken).ConfigureAwait(false);
+            logger?.LogDebug("Checking explicitly configured runtime: {Runtime}", configuredRuntime);
+            return await CheckRuntimeAsync(configuredRuntime, name, isDefault, logger, cancellationToken).ConfigureAwait(false);
         }
 
         // Auto-detect: probe all runtimes in parallel (matches DCP behavior)
+        logger?.LogDebug("Auto-detecting container runtime, probing {Count} known runtimes...", s_knownRuntimes.Length);
         var tasks = s_knownRuntimes.Select(r =>
-            CheckRuntimeAsync(r.Executable, r.Name, r.IsDefault, cancellationToken)).ToArray();
+            CheckRuntimeAsync(r.Executable, r.Name, r.IsDefault, logger, cancellationToken)).ToArray();
 
         var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-        // Pick the best runtime using DCP's priority:
-        // 1. Prefer installed over not-installed
-        // 2. Prefer running over not-running
-        // 3. Prefer the default runtime when all else is equal
-        ContainerRuntimeInfo? best = null;
-        foreach (var candidate in results)
-        {
-            if (best is null)
-            {
-                best = candidate;
-                continue;
-            }
-
-            if (!best.IsInstalled && candidate.IsInstalled)
-            {
-                best = candidate;
-            }
-            else if (!best.IsRunning && candidate.IsRunning)
-            {
-                best = candidate;
-            }
-            else if (candidate.IsDefault
-                && candidate.IsInstalled == best.IsInstalled
-                && candidate.IsRunning == best.IsRunning)
-            {
-                best = candidate;
-            }
-        }
-
-        return best;
+        return FindBestRuntime(results);
     }
 
     /// <summary>
     /// Checks the availability of a specific container runtime.
     /// </summary>
-    public static async Task<ContainerRuntimeInfo> CheckRuntimeAsync(string executable, string name, bool isDefault, CancellationToken cancellationToken = default)
+    public static async Task<ContainerRuntimeInfo> CheckRuntimeAsync(string executable, string name, bool isDefault, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
         try
         {
+            logger?.LogDebug("Probing container runtime '{Name}' ({Executable})...", name, executable);
             // Check if the CLI is installed by running `<runtime> container ls -n 1`
             // This matches DCP's check and also validates the daemon is running.
             var startInfo = new ProcessStartInfo
@@ -187,19 +185,37 @@ internal static class ContainerRuntimeDetector
 
             if (process.ExitCode == 0)
             {
+                // Runtime is running — gather version metadata
+                logger?.LogDebug("{Name} is running, gathering version info...", name);
+                var versionInfo = await GetVersionInfoAsync(executable, cancellationToken).ConfigureAwait(false);
+                logger?.LogDebug("{Name}: client={ClientVersion}, server={ServerVersion}, desktop={IsDesktop}", name, versionInfo.ClientVersion, versionInfo.ServerVersion, versionInfo.IsDockerDesktop);
+
                 return new ContainerRuntimeInfo
                 {
                     Executable = executable,
                     Name = name,
                     IsInstalled = true,
                     IsRunning = true,
-                    IsDefault = isDefault
+                    IsDefault = isDefault,
+                    ClientVersion = versionInfo.ClientVersion,
+                    ServerVersion = versionInfo.ServerVersion,
+                    IsDockerDesktop = versionInfo.IsDockerDesktop,
+                    ServerOs = versionInfo.ServerOs
                 };
             }
 
             // Non-zero exit code: CLI exists (we started it) but daemon may not be running.
-            // Try a simpler check to distinguish "not installed" from "not running"
             var isInstalled = await IsCliInstalledAsync(executable, cancellationToken).ConfigureAwait(false);
+            logger?.LogDebug("{Name}: exit code {ExitCode}, installed={IsInstalled}", name, process.ExitCode, isInstalled);
+
+            var partialVersionInfo = isInstalled
+                ? await GetVersionInfoAsync(executable, cancellationToken).ConfigureAwait(false)
+                : default;
+
+            var error = isInstalled
+                ? $"{name} is installed but the daemon is not running."
+                : $"{name} CLI not found on PATH.";
+            logger?.LogDebug("{Name}: {Error}", name, error);
 
             return new ContainerRuntimeInfo
             {
@@ -208,14 +224,14 @@ internal static class ContainerRuntimeDetector
                 IsInstalled = isInstalled,
                 IsRunning = false,
                 IsDefault = isDefault,
-                Error = isInstalled
-                    ? $"{name} is installed but the daemon is not running."
-                    : $"{name} CLI not found on PATH."
+                ClientVersion = partialVersionInfo.ClientVersion,
+                IsDockerDesktop = partialVersionInfo.IsDockerDesktop,
+                Error = error
             };
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or FileNotFoundException)
         {
-            // Process.Start throws Win32Exception when the executable is not found
+            logger?.LogDebug("{Name}: not found on PATH ({ExceptionMessage})", name, ex.Message);
             return new ContainerRuntimeInfo
             {
                 Executable = executable,
@@ -267,4 +283,152 @@ internal static class ContainerRuntimeDetector
             return false;
         }
     }
+
+    /// <summary>
+    /// Selects the best runtime from pre-probed results using DCP's priority logic.
+    /// Use this when you've already probed runtimes and want to determine which one to use.
+    /// </summary>
+    public static ContainerRuntimeInfo? FindBestRuntime(IEnumerable<ContainerRuntimeInfo> results)
+    {
+        ContainerRuntimeInfo? best = null;
+        foreach (var candidate in results)
+        {
+            if (best is null)
+            {
+                best = candidate;
+                continue;
+            }
+
+            if (!best.IsInstalled && candidate.IsInstalled)
+            {
+                best = candidate;
+            }
+            else if (!best.IsRunning && candidate.IsRunning)
+            {
+                best = candidate;
+            }
+            else if (candidate.IsDefault
+                && candidate.IsInstalled == best.IsInstalled
+                && candidate.IsRunning == best.IsRunning)
+            {
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Gathers version metadata from <c>&lt;runtime&gt; version -f json</c>.
+    /// </summary>
+    private static async Task<RuntimeVersionInfo> GetVersionInfoAsync(string executable, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = executable,
+                Arguments = "version -f json",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(startInfo);
+            if (process is null)
+            {
+                return default;
+            }
+
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(s_processTimeout);
+
+            string output;
+            try
+            {
+                output = await process.StandardOutput.ReadToEndAsync(timeoutCts.Token).ConfigureAwait(false);
+                await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                try { process.Kill(); } catch { /* best effort */ }
+                return default;
+            }
+
+            return ParseVersionOutput(output);
+        }
+        catch
+        {
+            return default;
+        }
+    }
+
+    /// <summary>
+    /// Parses the JSON output from <c>docker/podman version -f json</c> using AOT-compatible JsonDocument.
+    /// </summary>
+    internal static RuntimeVersionInfo ParseVersionOutput(string? output)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            return default;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(output);
+            var root = doc.RootElement;
+
+            Version? clientVersion = null;
+            Version? serverVersion = null;
+            string? context = null;
+            string? serverOs = null;
+
+            if (root.TryGetProperty("Client", out var client))
+            {
+                if (client.TryGetProperty("Version", out var cv))
+                {
+                    Version.TryParse(cv.GetString(), out clientVersion);
+                }
+                if (client.TryGetProperty("Context", out var ctx))
+                {
+                    context = ctx.GetString();
+                }
+            }
+
+            if (root.TryGetProperty("Server", out var server))
+            {
+                if (server.TryGetProperty("Version", out var sv))
+                {
+                    Version.TryParse(sv.GetString(), out serverVersion);
+                }
+                if (server.TryGetProperty("Os", out var os))
+                {
+                    serverOs = os.GetString();
+                }
+            }
+
+            var isDockerDesktop = context is not null &&
+                context.Contains("desktop", StringComparison.OrdinalIgnoreCase);
+
+            return new RuntimeVersionInfo(clientVersion, serverVersion, isDockerDesktop, serverOs);
+        }
+        catch (JsonException)
+        {
+            // Fall back to regex parsing for non-JSON output
+            var match = Regex.Match(output, @"[Vv]ersion\s*:?\s*(\d+\.\d+(?:\.\d+)?)", RegexOptions.IgnoreCase);
+            if (match.Success && Version.TryParse(match.Groups[1].Value, out var version))
+            {
+                return new RuntimeVersionInfo(version, null, false, null);
+            }
+
+            return default;
+        }
+    }
+
+    internal readonly record struct RuntimeVersionInfo(
+        Version? ClientVersion,
+        Version? ServerVersion,
+        bool IsDockerDesktop,
+        string? ServerOs);
 }

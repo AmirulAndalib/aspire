@@ -158,14 +158,15 @@ public interface IResourceContainerImageManager
 
 internal sealed class ResourceContainerImageManager(
     ILogger<ResourceContainerImageManager> logger,
-    IContainerRuntime containerRuntime,
+    IContainerRuntimeResolver containerRuntimeResolver,
     IServiceProvider serviceProvider,
     DistributedApplicationExecutionContext? executionContext = null) : IResourceContainerImageManager
 {
     // Disable concurrent builds for project resources to avoid issues with overlapping msbuild projects
     private readonly SemaphoreSlim _throttle = new(1);
 
-    private IContainerRuntime ContainerRuntime { get; } = containerRuntime;
+    private async Task<IContainerRuntime> GetContainerRuntimeAsync(CancellationToken cancellationToken)
+        => await containerRuntimeResolver.ResolveAsync(cancellationToken).ConfigureAwait(false);
 
     private sealed class ResolvedContainerBuildOptions
     {
@@ -205,6 +206,7 @@ internal sealed class ResourceContainerImageManager(
 
     public async Task BuildImagesAsync(IEnumerable<IResource> resources, CancellationToken cancellationToken = default)
     {
+        var ContainerRuntime = await GetContainerRuntimeAsync(cancellationToken).ConfigureAwait(false);
         logger.LogInformation("Starting to build container images");
 
         // Only check container runtime health if there are resources that need it
@@ -234,6 +236,7 @@ internal sealed class ResourceContainerImageManager(
 
     public async Task BuildImageAsync(IResource resource, CancellationToken cancellationToken = default)
     {
+        var ContainerRuntime = await GetContainerRuntimeAsync(cancellationToken).ConfigureAwait(false);
         logger.LogInformation("Building container image for resource {ResourceName}", resource.Name);
 
         var options = await ResolveContainerBuildOptionsAsync(resource, cancellationToken).ConfigureAwait(false);
@@ -418,6 +421,7 @@ internal sealed class ResourceContainerImageManager(
 
     private async Task BuildContainerImageFromDockerfileAsync(IResource resource, DockerfileBuildAnnotation dockerfileBuildAnnotation, string imageName, ResolvedContainerBuildOptions options, CancellationToken cancellationToken)
     {
+        var ContainerRuntime = await GetContainerRuntimeAsync(cancellationToken).ConfigureAwait(false);
         logger.LogInformation("Building image: {ResourceName}", resource.Name);
 
         // If there's a factory, generate the Dockerfile content and write it to the specified path
@@ -514,6 +518,7 @@ internal sealed class ResourceContainerImageManager(
 
     public async Task PushImageAsync(IResource resource, CancellationToken cancellationToken)
     {
+        var ContainerRuntime = await GetContainerRuntimeAsync(cancellationToken).ConfigureAwait(false);
         await ContainerRuntime.PushImageAsync(resource, cancellationToken).ConfigureAwait(false);
     }
 
