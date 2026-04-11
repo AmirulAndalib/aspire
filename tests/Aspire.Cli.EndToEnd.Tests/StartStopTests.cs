@@ -56,6 +56,12 @@ public sealed class StartStopTests(ITestOutputHelper output)
         await auto.WaitUntilTextAsync(StopCommandStrings.AppHostStoppedSuccessfully, timeout: TimeSpan.FromMinutes(1));
         await auto.WaitForSuccessPromptAsync(counter);
 
+        await auto.ClearScreenAsync(counter);
+
+        // Ensure application container is cleaned up (zero containers running)
+        // We expect one container left because the test is running in a container itself
+        await auto.ExecuteCommandUntilOutputAsync(counter, "docker ps --all --format json | wc -l", "1", timeout: TimeSpan.FromMinutes(2));
+
         // Exit the shell
         await auto.TypeAsync("exit");
         await auto.EnterAsync();
