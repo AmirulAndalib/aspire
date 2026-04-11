@@ -40,9 +40,11 @@ public class PipedInstallTests : IClassFixture<ScriptHostFixture>
         cmd.WithEnvironmentVariable("USERPROFILE", env.MockHome);
         cmd.WithTimeout(TimeSpan.FromSeconds(60));
 
+        // Wrap the entire command in quotes so .NET's argument parser keeps it
+        // as a single argv entry for bash -c (otherwise spaces split the arg).
         var result = await cmd.ExecuteAsync(
             "-c",
-            $"curl -fsSL {_host.BaseUrl}/get-aspire-cli.sh | bash -s -- --help");
+            $"\"curl -fsSL {_host.BaseUrl}/get-aspire-cli.sh | bash -s -- --help\"");
 
         result.EnsureSuccessful();
         Assert.Contains("Aspire CLI", result.Output);
@@ -63,7 +65,7 @@ public class PipedInstallTests : IClassFixture<ScriptHostFixture>
 
         var result = await cmd.ExecuteAsync(
             "-c",
-            $"curl -fsSL {_host.BaseUrl}/get-aspire-cli-pr.sh | bash -s -- --help");
+            $"\"curl -fsSL {_host.BaseUrl}/get-aspire-cli-pr.sh | bash -s -- --help\"");
 
         result.EnsureSuccessful();
         Assert.Contains("Usage", result.Output, StringComparison.OrdinalIgnoreCase);
@@ -81,7 +83,7 @@ public class PipedInstallTests : IClassFixture<ScriptHostFixture>
 
         var result = await cmd.ExecuteAsync(
             "-c",
-            $"curl -fsSL {_host.BaseUrl}/get-aspire-cli.sh | bash -s -- --quality bogus");
+            $"\"curl -fsSL {_host.BaseUrl}/get-aspire-cli.sh | bash -s -- --quality bogus\"");
 
         Assert.NotEqual(0, result.ExitCode);
     }
@@ -102,7 +104,7 @@ public class PipedInstallTests : IClassFixture<ScriptHostFixture>
         // Use --dry-run if available, or --help with --install-path to verify argument parsing
         var result = await cmd.ExecuteAsync(
             "-c",
-            $"curl -fsSL {_host.BaseUrl}/get-aspire-cli.sh | bash -s -- --install-path \"{installPath}\" --help");
+            $"\"curl -fsSL {_host.BaseUrl}/get-aspire-cli.sh | bash -s -- --install-path '{installPath}' --help\"");
 
         // --help should still succeed even with --install-path set
         result.EnsureSuccessful();
@@ -131,7 +133,7 @@ public class PipedInstallTests : IClassFixture<ScriptHostFixture>
 
         var result = await cmd.ExecuteAsync(
             "-c",
-            $"cat \"{scriptPath}\" | bash -s -- --help");
+            $"\"cat '{scriptPath}' | bash -s -- --help\"");
 
         result.EnsureSuccessful();
         Assert.Contains("Usage", result.Output, StringComparison.OrdinalIgnoreCase);
@@ -153,7 +155,7 @@ public class PipedInstallTests : IClassFixture<ScriptHostFixture>
 
         var result = await cmd.ExecuteAsync(
             "-c",
-            $"cat \"{scriptPath}\" | bash -s -- --help");
+            $"\"cat '{scriptPath}' | bash -s -- --help\"");
 
         result.EnsureSuccessful();
         Assert.Contains("Usage", result.Output, StringComparison.OrdinalIgnoreCase);
