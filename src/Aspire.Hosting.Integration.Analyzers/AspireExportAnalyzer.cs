@@ -448,6 +448,16 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
                     continue;
                 }
 
+                // Skip types with no public instance members worth exporting
+                var hasPublicMembers = contextNamedType.GetMembers()
+                    .Any(m => m.DeclaredAccessibility == Accessibility.Public &&
+                              !m.IsStatic &&
+                              m is IMethodSymbol { MethodKind: MethodKind.Ordinary } or IPropertySymbol);
+                if (!hasPublicMembers)
+                {
+                    continue;
+                }
+
                 // Check if the type has [AspireExport] (ExposeProperties or ExposeMethods)
                 var hasExport = false;
                 foreach (var attr in contextNamedType.GetAttributes())

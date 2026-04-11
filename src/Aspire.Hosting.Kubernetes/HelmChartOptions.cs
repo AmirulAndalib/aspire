@@ -3,7 +3,6 @@
 
 using System.Text.RegularExpressions;
 using Aspire.Hosting.ApplicationModel;
-using Semver;
 
 namespace Aspire.Hosting.Kubernetes;
 
@@ -130,7 +129,7 @@ public sealed partial class HelmChartOptions
 
     private static void ValidateChartVersion(string version)
     {
-        if (!SemVersion.TryParse(version, SemVersionStyles.Strict, out _))
+        if (!SemVerPattern().IsMatch(version))
         {
             throw new ArgumentException($"Helm chart version '{version}' is invalid. Use a semantic version such as '1.0.0' or '1.0.0-beta.1'.", nameof(version));
         }
@@ -138,4 +137,7 @@ public sealed partial class HelmChartOptions
 
     [GeneratedRegex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")]
     private static partial Regex DnsLabelPattern();
+
+    [GeneratedRegex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*)?(\+[0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*)?$")]
+    private static partial Regex SemVerPattern();
 }
