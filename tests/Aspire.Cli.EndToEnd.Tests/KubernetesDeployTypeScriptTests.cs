@@ -20,29 +20,34 @@ public sealed class KubernetesDeployTypeScriptTests(ITestOutputHelper output)
     [CaptureWorkspaceOnFailure]
     public async Task DeployTypeScriptAppToKubernetes()
     {
-        var repoRoot = CliE2ETestHelpers.GetRepoRoot();
-        var installMode = CliE2ETestHelpers.DetectDockerInstallMode(repoRoot);
         using var workspace = TemporaryWorkspace.Create(output);
 
+        var prNumber = CliE2ETestHelpers.GetRequiredPrNumber();
+        var commitSha = CliE2ETestHelpers.GetRequiredCommitSha();
+        var isCI = CliE2ETestHelpers.IsRunningInCI;
         var clusterName = KubernetesDeployTestHelpers.GenerateUniqueClusterName();
         var k8sNamespace = $"test-{clusterName[..16]}";
 
         output.WriteLine($"Cluster name: {clusterName}");
         output.WriteLine($"Namespace: {k8sNamespace}");
 
-        using var terminal = CliE2ETestHelpers.CreateDockerTestTerminal(
-            repoRoot, installMode, output,
-            variant: CliE2ETestHelpers.DockerfileVariant.DotNet,
-            mountDockerSocket: true,
-            workspace: workspace);
-
+        using var terminal = CliE2ETestHelpers.CreateTestTerminal();
         var pendingRun = terminal.RunAsync(TestContext.Current.CancellationToken);
 
         var counter = new SequenceCounter();
         var auto = new Hex1bTerminalAutomator(terminal, defaultTimeout: TimeSpan.FromSeconds(500));
 
-        await auto.PrepareDockerEnvironmentAsync(counter, workspace);
-        await auto.InstallAspireCliInDockerAsync(installMode, counter);
+        // Prepare environment
+        await auto.PrepareEnvironmentAsync(workspace, counter);
+
+        if (isCI)
+        {
+            await auto.InstallAspireCliFromPullRequestAsync(prNumber, counter);
+            await auto.SourceAspireCliEnvironmentAsync(counter);
+            await auto.VerifyAspireCliVersionAsync(commitSha, counter);
+        }
+
+        await auto.AssertAspireVersionAsync(counter, output);
 
         try
         {
