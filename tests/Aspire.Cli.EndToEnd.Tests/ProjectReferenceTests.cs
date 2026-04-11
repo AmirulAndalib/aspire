@@ -8,7 +8,6 @@ using Aspire.Cli.Resources;
 using Aspire.Cli.Tests.Utils;
 using Hex1b.Automation;
 using Xunit;
-using Aspire.TestUtilities;
 
 namespace Aspire.Cli.EndToEnd.Tests;
 
