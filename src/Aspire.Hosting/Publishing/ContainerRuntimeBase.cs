@@ -299,9 +299,12 @@ internal abstract class ContainerRuntimeBase<TLogger> : IContainerRuntime where 
 
     public virtual async Task ComposeUpAsync(ComposeOperationContext context, CancellationToken cancellationToken)
     {
+        EnsureRuntimeAvailable();
+
         var arguments = BuildComposeArguments(context);
         arguments += " up -d --remove-orphans";
 
+        _logger.LogInformation("Using container runtime '{Runtime}' for compose operations.", RuntimeExecutable);
         _logger.LogDebug("Running {Runtime} compose up with arguments: {Arguments}", RuntimeExecutable, arguments);
 
         var spec = new ProcessSpec(RuntimeExecutable)
@@ -330,13 +333,18 @@ internal abstract class ContainerRuntimeBase<TLogger> : IContainerRuntime where 
 
             if (processResult.ExitCode != 0)
             {
-                throw new DistributedApplicationException($"{Name} compose up failed with exit code {processResult.ExitCode}.");
+                throw new DistributedApplicationException(
+                    $"'{RuntimeExecutable} compose up' failed with exit code {processResult.ExitCode}. " +
+                    $"Ensure '{RuntimeExecutable}' is installed and available on PATH. " +
+                    $"The container runtime is configured via the ASPIRE_CONTAINER_RUNTIME environment variable (current: '{RuntimeExecutable}').");
             }
         }
     }
 
     public virtual async Task ComposeDownAsync(ComposeOperationContext context, CancellationToken cancellationToken)
     {
+        EnsureRuntimeAvailable();
+
         var arguments = BuildComposeArguments(context);
         arguments += " down";
 
@@ -368,13 +376,17 @@ internal abstract class ContainerRuntimeBase<TLogger> : IContainerRuntime where 
 
             if (processResult.ExitCode != 0)
             {
-                throw new DistributedApplicationException($"{Name} compose down failed with exit code {processResult.ExitCode}.");
+                throw new DistributedApplicationException(
+                    $"'{RuntimeExecutable} compose down' failed with exit code {processResult.ExitCode}. " +
+                    $"Ensure '{RuntimeExecutable}' is installed and available on PATH.");
             }
         }
     }
 
     public virtual async Task<IReadOnlyList<ComposeServiceInfo>?> ComposeListServicesAsync(ComposeOperationContext context, CancellationToken cancellationToken)
     {
+        EnsureRuntimeAvailable();
+
         var arguments = BuildComposeArguments(context);
         arguments += " ps --format json";
 
@@ -503,6 +515,44 @@ internal abstract class ContainerRuntimeBase<TLogger> : IContainerRuntime where 
         }
 
         return arguments;
+    }
+
+    /// <summary>
+    /// Validates that the container runtime binary is available on the system PATH.
+    /// Fails fast with an actionable error message instead of a cryptic exit code.
+    /// </summary>
+    private void EnsureRuntimeAvailable()
+    {
+        try
+        {
+            var whichCommand = OperatingSystem.IsWindows() ? "where" : "which";
+            var spec = new ProcessSpec(whichCommand)
+            {
+                Arguments = RuntimeExecutable,
+                ThrowOnNonZeroReturnCode = false,
+                InheritEnv = true
+            };
+
+            var (pendingResult, disposable) = ProcessUtil.Run(spec);
+            using (disposable as IDisposable)
+            {
+                var result = pendingResult.GetAwaiter().GetResult();
+                if (result.ExitCode != 0)
+                {
+                    throw new DistributedApplicationException(
+                        $"Container runtime '{RuntimeExecutable}' was not found on PATH. " +
+                        $"Install {Name} or set ASPIRE_CONTAINER_RUNTIME to a different runtime (e.g., 'docker' or 'podman').");
+                }
+            }
+        }
+        catch (DistributedApplicationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to check if {Runtime} is available on PATH", RuntimeExecutable);
+        }
     }
 }
 

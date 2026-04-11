@@ -223,26 +223,27 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
             throw new InvalidOperationException($"Docker Compose file not found at {dockerComposeFilePath}");
         }
 
+        var runtime = context.Services.GetRequiredService<IContainerRuntime>();
+
         var deployTask = await context.ReportingStep.CreateTaskAsync(
-            new MarkdownString($"Running docker compose up for **{Name}**"),
+            new MarkdownString($"Running compose up for **{Name}** using **{runtime.Name}**"),
             context.CancellationToken).ConfigureAwait(false);
         await using (deployTask.ConfigureAwait(false))
         {
             try
             {
-                var runtime = context.Services.GetRequiredService<IContainerRuntime>();
                 var composeContext = CreateComposeOperationContext(context);
 
                 await runtime.ComposeUpAsync(composeContext, context.CancellationToken).ConfigureAwait(false);
 
                 await deployTask.CompleteAsync(
-                    new MarkdownString($"Service **{Name}** is now running with Docker Compose locally"),
+                    new MarkdownString($"Service **{Name}** is now running with Docker Compose locally (runtime: {runtime.Name})"),
                     CompletionState.Completed,
                     context.CancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                await deployTask.CompleteAsync($"Docker Compose deployment failed: {ex.Message}", CompletionState.CompletedWithError, context.CancellationToken).ConfigureAwait(false);
+                await deployTask.CompleteAsync($"Compose deployment failed ({runtime.Name}): {ex.Message}", CompletionState.CompletedWithError, context.CancellationToken).ConfigureAwait(false);
                 throw;
             }
         }
@@ -258,26 +259,27 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
             throw new InvalidOperationException($"Docker Compose file not found at {dockerComposeFilePath}");
         }
 
+        var runtime = context.Services.GetRequiredService<IContainerRuntime>();
+
         var deployTask = await context.ReportingStep.CreateTaskAsync(
-            new MarkdownString($"Running docker compose down for **{Name}**"),
+            new MarkdownString($"Running compose down for **{Name}** using **{runtime.Name}**"),
             context.CancellationToken).ConfigureAwait(false);
         await using (deployTask.ConfigureAwait(false))
         {
             try
             {
-                var runtime = context.Services.GetRequiredService<IContainerRuntime>();
                 var composeContext = CreateComposeOperationContext(context);
 
                 await runtime.ComposeDownAsync(composeContext, context.CancellationToken).ConfigureAwait(false);
 
                 await deployTask.CompleteAsync(
-                    new MarkdownString($"Docker Compose shutdown complete for **{Name}**"),
+                    new MarkdownString($"Compose shutdown complete for **{Name}** ({runtime.Name})"),
                     CompletionState.Completed,
                     context.CancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                await deployTask.CompleteAsync($"Docker Compose shutdown failed: {ex.Message}", CompletionState.CompletedWithError, context.CancellationToken).ConfigureAwait(false);
+                await deployTask.CompleteAsync($"Compose shutdown failed ({runtime.Name}): {ex.Message}", CompletionState.CompletedWithError, context.CancellationToken).ConfigureAwait(false);
                 throw;
             }
         }

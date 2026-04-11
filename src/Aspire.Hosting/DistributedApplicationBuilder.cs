@@ -514,11 +514,11 @@ public class DistributedApplicationBuilder : IDistributedApplicationBuilder
         _innerBuilder.Services.AddSingleton(sp =>
         {
             var dcpOptions = sp.GetRequiredService<IOptions<DcpOptions>>();
-            return dcpOptions.Value.ContainerRuntime switch
-            {
-                string rt => sp.GetRequiredKeyedService<IContainerRuntime>(rt),
-                null => sp.GetRequiredKeyedService<IContainerRuntime>("docker")
-            };
+            var runtimeKey = dcpOptions.Value.ContainerRuntime ?? "docker";
+            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Aspire.Hosting.ContainerRuntime");
+            var runtime = sp.GetRequiredKeyedService<IContainerRuntime>(runtimeKey);
+            logger.LogInformation("Container runtime resolved: {RuntimeName} (configured via ASPIRE_CONTAINER_RUNTIME={RuntimeKey})", runtime.Name, runtimeKey);
+            return runtime;
         });
         _innerBuilder.Services.AddSingleton<IResourceContainerImageManager, ResourceContainerImageManager>();
         _innerBuilder.Services.AddSingleton<PipelineActivityReporter>();
