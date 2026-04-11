@@ -603,6 +603,37 @@ public class AzureAppServiceTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public async Task CanPreserveHttpSchemeUsingWithHttpsUpgrade()
+    {
+        var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);
+
+        builder.AddAzureAppServiceEnvironment("env")
+               .WithHttpsUpgrade(false);
+
+        var project1 = builder.AddProject<Project>("project1", launchProfileName: null)
+            .WithHttpsEndpoint(targetPort: 8000)
+            .WithHttpEndpoint(targetPort: 8000)
+            .WithExternalHttpEndpoints();
+
+        using var app = builder.Build();
+
+        await ExecuteBeforeStartHooksAsync(app, default);
+
+        var model = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        project1.Resource.TryGetLastAnnotation<DeploymentTargetAnnotation>(out var target);
+
+        var resource = target?.DeploymentTarget as AzureProvisioningResource;
+
+        Assert.NotNull(resource);
+
+        var (manifest, bicep) = await GetManifestWithBicep(resource);
+
+        await Verify(manifest.ToString(), "json")
+                .AppendContentAsFile(bicep, "bicep");
+    }
+
+    [Fact]
     public async Task AddAppServiceWithTargetPortMultipleEndpoints()
     {
         var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish);

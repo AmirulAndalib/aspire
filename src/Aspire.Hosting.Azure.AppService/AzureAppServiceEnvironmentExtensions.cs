@@ -227,6 +227,20 @@ public static partial class AzureAppServiceEnvironmentExtensions
     }
 
     /// <summary>
+    /// Configures whether HTTP endpoints should be automatically upgraded to HTTPS for the Azure App Service environment.
+    /// By default, HTTP endpoints are upgraded to HTTPS (port 443). Use this method to opt out.
+    /// </summary>
+    /// <param name="builder">The <see cref="IResourceBuilder{AzureAppServiceEnvironmentResource}"/> to configure.</param>
+    /// <param name="upgrade">Whether to upgrade HTTP endpoints to HTTPS. Default is true.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{T}"/> for chaining additional configuration.</returns>
+    [AspireExport(Description = "Configures whether HTTP endpoints are automatically upgraded to HTTPS in Azure App Service")]
+    public static IResourceBuilder<AzureAppServiceEnvironmentResource> WithHttpsUpgrade(this IResourceBuilder<AzureAppServiceEnvironmentResource> builder, bool upgrade = true)
+    {
+        builder.Resource.PreserveHttpEndpoints = !upgrade;
+        return builder;
+    }
+
+    /// <summary>
     /// Configures whether the Aspire dashboard should be included in the Azure App Service environment.
     /// </summary>
     /// <param name="builder">The <see cref="IResourceBuilder{AzureAppServiceEnvironmentResource}"/> to configure.</param>
