@@ -27,7 +27,7 @@
 
   Output format:
   {
-    "tests": [ { entry with supportedOSes array and requiresNugets boolean }, ... ]
+    "tests": [ { entry with supportedOSes array and properties sub-object }, ... ]
   }
 #>
 
@@ -46,8 +46,12 @@ Set-StrictMode -Version Latest
 # Default values applied to all entries
 $script:defaults = @{
   extraTestArgs = ''
-  requiresNugets = $false
-  requiresTestSdk = $false
+  properties = @{
+    requiresNugets = $false
+    requiresTestSdk = $false
+    requiresCliArchive = $false
+    enablePlaywrightInstall = $false
+  }
   testSessionTimeout = '20m'
   testHangTimeout = '10m'
   supportedOSes = @('windows', 'linux', 'macos')
@@ -74,10 +78,32 @@ function Complete-EntryWithDefaults {
     $Entry['supportedOSes'] = $script:defaults.supportedOSes
   }
 
-  # Normalize boolean values
-  $Entry['requiresNugets'] = if ($Entry.Contains('requiresNugets')) { ConvertTo-Boolean $Entry['requiresNugets'] } else { $false }
-  $Entry['requiresTestSdk'] = if ($Entry.Contains('requiresTestSdk')) { ConvertTo-Boolean $Entry['requiresTestSdk'] } else { $false }
-  $Entry['requiresCliArchive'] = if ($Entry.Contains('requiresCliArchive')) { ConvertTo-Boolean $Entry['requiresCliArchive'] } else { $false }
+  # Ensure properties sub-object exists
+  if (-not $Entry.Contains('properties') -or -not $Entry['properties']) {
+    $Entry['properties'] = [ordered]@{}
+  }
+
+  # If properties is a PSCustomObject (from JSON), convert to ordered hashtable
+  $props = $Entry['properties']
+  if ($props -is [PSCustomObject]) {
+    $converted = [ordered]@{}
+    foreach ($p in $props.PSObject.Properties) {
+      $converted[$p.Name] = $p.Value
+    }
+    $props = $converted
+    $Entry['properties'] = $props
+  }
+
+  # Normalize boolean values within properties
+  $props['requiresNugets'] = if ($props.Contains('requiresNugets')) { ConvertTo-Boolean $props['requiresNugets'] } else { $false }
+  $props['requiresTestSdk'] = if ($props.Contains('requiresTestSdk')) { ConvertTo-Boolean $props['requiresTestSdk'] } else { $false }
+  $props['requiresCliArchive'] = if ($props.Contains('requiresCliArchive')) { ConvertTo-Boolean $props['requiresCliArchive'] } else { $false }
+  $props['enablePlaywrightInstall'] = if ($props.Contains('enablePlaywrightInstall')) { ConvertTo-Boolean $props['enablePlaywrightInstall'] } else { $false }
+
+  # Remove any legacy top-level boolean keys
+  foreach ($key in @('requiresNugets', 'requiresTestSdk', 'requiresCliArchive', 'enablePlaywrightInstall')) {
+    if ($Entry.Contains($key)) { $Entry.Remove($key) }
+  }
 
   return $Entry
 }
@@ -103,10 +129,15 @@ function New-RegularTestEntry {
   if ($Metadata) {
     if ($Metadata.PSObject.Properties['testSessionTimeout']) { $entry['testSessionTimeout'] = $Metadata.testSessionTimeout }
     if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
-    if ($Metadata.PSObject.Properties['requiresNugets']) { $entry['requiresNugets'] = $Metadata.requiresNugets }
-    if ($Metadata.PSObject.Properties['requiresTestSdk']) { $entry['requiresTestSdk'] = $Metadata.requiresTestSdk }
-    if ($Metadata.PSObject.Properties['requiresCliArchive']) { $entry['requiresCliArchive'] = $Metadata.requiresCliArchive }
     if ($Metadata.PSObject.Properties['extraTestArgs'] -and $Metadata.extraTestArgs) { $entry['extraTestArgs'] = $Metadata.extraTestArgs }
+
+    # Read boolean flags from properties sub-object (new format) or top-level (legacy)
+    $propsSource = if ($Metadata.PSObject.Properties['properties'] -and $Metadata.properties) { $Metadata.properties } else { $Metadata }
+    $entry['properties'] = [ordered]@{}
+    if ($propsSource.PSObject.Properties['requiresNugets']) { $entry['properties']['requiresNugets'] = $propsSource.requiresNugets }
+    if ($propsSource.PSObject.Properties['requiresTestSdk']) { $entry['properties']['requiresTestSdk'] = $propsSource.requiresTestSdk }
+    if ($propsSource.PSObject.Properties['requiresCliArchive']) { $entry['properties']['requiresCliArchive'] = $propsSource.requiresCliArchive }
+    if ($propsSource.PSObject.Properties['enablePlaywrightInstall']) { $entry['properties']['enablePlaywrightInstall'] = $propsSource.enablePlaywrightInstall }
   }
 
   # Add supported OSes
@@ -163,9 +194,13 @@ function New-CollectionTestEntry {
     if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
   }
 
-  if ($Metadata.PSObject.Properties['requiresNugets']) { $entry['requiresNugets'] = $Metadata.requiresNugets }
-  if ($Metadata.PSObject.Properties['requiresTestSdk']) { $entry['requiresTestSdk'] = $Metadata.requiresTestSdk }
-  if ($Metadata.PSObject.Properties['requiresCliArchive']) { $entry['requiresCliArchive'] = $Metadata.requiresCliArchive }
+  # Read boolean flags from properties sub-object (new format) or top-level (legacy)
+  $propsSource = if ($Metadata.PSObject.Properties['properties'] -and $Metadata.properties) { $Metadata.properties } else { $Metadata }
+  $entry['properties'] = [ordered]@{}
+  if ($propsSource.PSObject.Properties['requiresNugets']) { $entry['properties']['requiresNugets'] = $propsSource.requiresNugets }
+  if ($propsSource.PSObject.Properties['requiresTestSdk']) { $entry['properties']['requiresTestSdk'] = $propsSource.requiresTestSdk }
+  if ($propsSource.PSObject.Properties['requiresCliArchive']) { $entry['properties']['requiresCliArchive'] = $propsSource.requiresCliArchive }
+  if ($propsSource.PSObject.Properties['enablePlaywrightInstall']) { $entry['properties']['enablePlaywrightInstall'] = $propsSource.enablePlaywrightInstall }
 
   # Add test filter for collection-based splitting
   if ($IsUncollected) {
@@ -213,9 +248,14 @@ function New-ClassTestEntry {
 
   if ($Metadata.PSObject.Properties['testSessionTimeout']) { $entry['testSessionTimeout'] = $Metadata.testSessionTimeout }
   if ($Metadata.PSObject.Properties['testHangTimeout']) { $entry['testHangTimeout'] = $Metadata.testHangTimeout }
-  if ($Metadata.PSObject.Properties['requiresNugets']) { $entry['requiresNugets'] = $Metadata.requiresNugets }
-  if ($Metadata.PSObject.Properties['requiresTestSdk']) { $entry['requiresTestSdk'] = $Metadata.requiresTestSdk }
-  if ($Metadata.PSObject.Properties['requiresCliArchive']) { $entry['requiresCliArchive'] = $Metadata.requiresCliArchive }
+
+  # Read boolean flags from properties sub-object (new format) or top-level (legacy)
+  $propsSource = if ($Metadata.PSObject.Properties['properties'] -and $Metadata.properties) { $Metadata.properties } else { $Metadata }
+  $entry['properties'] = [ordered]@{}
+  if ($propsSource.PSObject.Properties['requiresNugets']) { $entry['properties']['requiresNugets'] = $propsSource.requiresNugets }
+  if ($propsSource.PSObject.Properties['requiresTestSdk']) { $entry['properties']['requiresTestSdk'] = $propsSource.requiresTestSdk }
+  if ($propsSource.PSObject.Properties['requiresCliArchive']) { $entry['properties']['requiresCliArchive'] = $propsSource.requiresCliArchive }
+  if ($propsSource.PSObject.Properties['enablePlaywrightInstall']) { $entry['properties']['enablePlaywrightInstall'] = $propsSource.enablePlaywrightInstall }
 
   # Add test filter for class-based splitting
   $entry['extraTestArgs'] = "--filter-class `"$ClassName`""
@@ -321,8 +361,8 @@ Write-Host "Generated $($matrixEntries.Count) total matrix entries"
 
 $sortedEntries = @($matrixEntries | Sort-Object -Property projectName, name)
 
-$requiresNugetsCount = @($sortedEntries | Where-Object { $_.requiresNugets -eq $true }).Count
-$noNugetsCount = @($sortedEntries | Where-Object { $_.requiresNugets -ne $true }).Count
+$requiresNugetsCount = @($sortedEntries | Where-Object { $_.properties.requiresNugets -eq $true }).Count
+$noNugetsCount = @($sortedEntries | Where-Object { $_.properties.requiresNugets -ne $true }).Count
 
 Write-Host "  - Requiring NuGets: $requiresNugetsCount"
 Write-Host "  - Not requiring NuGets: $noNugetsCount"

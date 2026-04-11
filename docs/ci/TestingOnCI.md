@@ -56,8 +56,7 @@ This invokes `eng/TestEnumerationRunsheetBuilder/TestEnumerationRunsheetBuilder.
 - Writes a `.tests-metadata.json` file to `artifacts/helix/` containing:
   - `projectName`, `shortName`, `testProjectPath`
   - `supportedOSes` array (e.g., `["windows", "linux", "macos"]`)
-  - `requiresNugets`, `requiresTestSdk`, `requiresCliArchive` flags
-  - `enablePlaywrightInstall` flag
+  - `properties` object with boolean flags: `requiresNugets`, `requiresTestSdk`, `requiresCliArchive`, `enablePlaywrightInstall`
   - `testSessionTimeout`, `testHangTimeout` values
   - `uncollectedTestsSessionTimeout`, `uncollectedTestsHangTimeout` values
   - `splitTests` flag
@@ -85,7 +84,7 @@ After all projects build, `eng/AfterSolutionBuild.targets` runs `eng/scripts/bui
    - **Regular tests**: One entry per project
    - **Partition-based splits**: One entry per partition + one for `uncollected:*`
    - **Class-based splits**: One entry per test class
-6. Outputs `artifacts/canonical-test-matrix.json` in canonical format (flat array with `requiresNugets`, `requiresCliArchive` booleans per entry)
+6. Outputs `artifacts/canonical-test-matrix.json` in canonical format (entries with a `properties` sub-object containing boolean flags like `requiresNugets`, `requiresCliArchive`)
 
 **Canonical format:**
 ```json
@@ -96,8 +95,12 @@ After all projects build, `eng/AfterSolutionBuild.targets` runs `eng/scripts/bui
       "shortname": "Templates-StarterTests",
       "testProjectPath": "tests/Aspire.Templates.Tests/...",
       "supportedOSes": ["windows", "linux", "macos"],
-      "requiresNugets": true,
-      "requiresTestSdk": true,
+      "properties": {
+        "requiresNugets": true,
+        "requiresTestSdk": true,
+        "requiresCliArchive": false,
+        "enablePlaywrightInstall": false
+      },
       "testSessionTimeout": "20m",
       "testHangTimeout": "10m",
       "extraTestArgs": "--filter-class \"...\""
@@ -107,7 +110,12 @@ After all projects build, `eng/AfterSolutionBuild.targets` runs `eng/scripts/bui
       "shortname": "Hosting-Docker",
       "testProjectPath": "tests/Aspire.Hosting.Tests/...",
       "supportedOSes": ["linux"],
-      "requiresNugets": false,
+      "properties": {
+        "requiresNugets": false,
+        "requiresTestSdk": false,
+        "requiresCliArchive": false,
+        "enablePlaywrightInstall": false
+      },
       "testSessionTimeout": "30m",
       "extraTestArgs": "--filter-trait \"Partition=Docker\"",
       "runners": { "macos": "macos-latest-xlarge" }
@@ -123,7 +131,7 @@ Each CI platform has a thin script that transforms the canonical matrix:
 **GitHub Actions** (`eng/scripts/expand-test-matrix-github.ps1`):
 - Expands each entry for every OS in its `supportedOSes` array
 - Maps OS names to GitHub runners (`linux` → `ubuntu-latest`, etc.)
-- Preserves dependency metadata such as `requiresNugets`, `requiresCliArchive`, and custom runner overrides on each expanded entry
+- Preserves dependency metadata within the `properties` sub-object (including `requiresNugets`, `requiresCliArchive`), and custom runner overrides on each expanded entry
 - Applies overflow splitting for the `no_nugets` category (threshold: 250 entries) to stay under the GitHub Actions 256-job-per-matrix limit
 - Outputs a single `all_tests` matrix, which `.github/workflows/tests.yml` further splits by dependency type and OS using `eng/scripts/split-test-matrix-by-deps.ps1`
 

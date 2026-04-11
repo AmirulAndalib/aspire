@@ -51,7 +51,7 @@ public class BuildTestMatrixTests : IDisposable
         Assert.Equal("MyProject", entry.ProjectName);
         Assert.Equal("MyProj", entry.Name);
         Assert.Equal("regular", entry.Type);
-        Assert.False(entry.RequiresNugets);
+        Assert.False(entry.Properties.GetValueOrDefault("requiresNugets"));
     }
 
     [Fact]
@@ -250,8 +250,8 @@ public class BuildTestMatrixTests : IDisposable
 
         var matrix = ParseCanonicalMatrix(outputFile);
         Assert.Equal(2, matrix.Tests.Length);
-        Assert.Contains(matrix.Tests, e => e.ProjectName == "NeedsNugets" && e.RequiresNugets == true);
-        Assert.Contains(matrix.Tests, e => e.ProjectName == "NoNugets" && e.RequiresNugets == false);
+        Assert.Contains(matrix.Tests, e => e.ProjectName == "NeedsNugets" && e.Properties.GetValueOrDefault("requiresNugets") == true);
+        Assert.Contains(matrix.Tests, e => e.ProjectName == "NoNugets" && e.Properties.GetValueOrDefault("requiresNugets") == false);
     }
 
     [Fact]
@@ -373,7 +373,7 @@ public class BuildTestMatrixTests : IDisposable
 
         var matrix = ParseCanonicalMatrix(outputFile);
         var entry = Assert.Single(matrix.Tests);
-        Assert.True(entry.RequiresTestSdk);
+        Assert.True(entry.Properties.GetValueOrDefault("requiresTestSdk"));
     }
 
     [Fact]

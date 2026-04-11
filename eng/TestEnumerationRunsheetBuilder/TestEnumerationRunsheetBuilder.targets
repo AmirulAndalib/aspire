@@ -103,10 +103,12 @@
   "shortName": "$(_ShortName)",
   "testClassNamesPrefix": "$(MSBuildProjectName)",
   "testProjectPath": "$(_RelativeProjectPath)",
-  "requiresNugets": "$(_RequiresNugets.ToLowerInvariant())",
-  "requiresTestSdk": "$(_RequiresTestSdk.ToLowerInvariant())",
-  "requiresCliArchive": "$(_RequiresCliArchive.ToLowerInvariant())",
-  "enablePlaywrightInstall": "$(_EnablePlaywrightInstall.ToLowerInvariant())",
+  "properties": {
+    "requiresNugets": $(_RequiresNugets.ToLowerInvariant()),
+    "requiresTestSdk": $(_RequiresTestSdk.ToLowerInvariant()),
+    "requiresCliArchive": $(_RequiresCliArchive.ToLowerInvariant()),
+    "enablePlaywrightInstall": $(_EnablePlaywrightInstall.ToLowerInvariant())
+  },
   "splitTests": "$(SplitTestsOnCI)",
   "supportedOSes": [$(_SupportedOSesJson)],
   "testSessionTimeout": "$(_TestSessionTimeout)",
