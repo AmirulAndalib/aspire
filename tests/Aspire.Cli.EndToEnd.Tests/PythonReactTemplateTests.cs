@@ -52,3 +52,4 @@ public sealed class PythonReactTemplateTests(ITestOutputHelper output)
         await pendingRun;
     }
 }
+
