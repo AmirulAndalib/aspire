@@ -10,7 +10,6 @@ namespace Aspire.Hosting.ApplicationModel;
 /// </summary>
 [DebuggerDisplay("Url = {Url}, DisplayText = {DisplayText}")]
 [AspireDto]
-[AspireExport(ExposeProperties = true)]
 public sealed class ResourceUrlAnnotation : IResourceAnnotation
 {
     /// <summary>

@@ -458,11 +458,18 @@ public partial class AspireExportAnalyzer : DiagnosticAnalyzer
                     continue;
                 }
 
-                // Check if the type has [AspireExport] (ExposeProperties or ExposeMethods)
+                // Check if the type has [AspireExport] or [AspireDto]
                 var hasExport = false;
                 foreach (var attr in contextNamedType.GetAttributes())
                 {
                     if (SymbolEqualityComparer.Default.Equals(attr.AttributeClass, aspireExportAttribute))
+                    {
+                        hasExport = true;
+                        break;
+                    }
+
+                    // [AspireDto] types are already exported for serialization
+                    if (attr.AttributeClass?.Name == "AspireDtoAttribute")
                     {
                         hasExport = true;
                         break;

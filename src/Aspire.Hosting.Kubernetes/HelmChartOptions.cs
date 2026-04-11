@@ -129,7 +129,7 @@ public sealed partial class HelmChartOptions
 
     private static void ValidateChartVersion(string version)
     {
-        if (!SemVerPattern().IsMatch(version))
+        if (!Aspire.SemVersion.TryParse(version, Aspire.SemVersionStyles.Strict, out _))
         {
             throw new ArgumentException($"Helm chart version '{version}' is invalid. Use a semantic version such as '1.0.0' or '1.0.0-beta.1'.", nameof(version));
         }
@@ -137,7 +137,4 @@ public sealed partial class HelmChartOptions
 
     [GeneratedRegex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")]
     private static partial Regex DnsLabelPattern();
-
-    [GeneratedRegex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*)?(\+[0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*)?$")]
-    private static partial Regex SemVerPattern();
 }
