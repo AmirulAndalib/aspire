@@ -174,7 +174,7 @@ peSubnet.AddPrivateEndpoint(sql);
                 output.WriteLine($"New content:\n{content}");
             }
 
-            // Step 8: Modify Web project Program.cs to register SQL client
+            // Step 8: Modify Web project Program.cs to register SQL client and add SQL verification endpoint
             {
                 var projectDir = Path.Combine(workspace.WorkspaceRoot.FullName, projectName);
                 var webProgramPath = Path.Combine(projectDir, $"{projectName}.Web", "Program.cs");
@@ -190,9 +190,34 @@ builder.AddServiceDefaults();
 builder.AddSqlServerClient("db");
 """);
 
+                // Add a /sql-check endpoint that exercises real database operations
+                // to verify the managed identity role assignment (db_owner) works correctly
+                content = content.Replace(
+                    "app.Run();",
+                    """"
+app.MapGet("/sql-check", async (Microsoft.Data.SqlClient.SqlConnection db) =>
+{
+    await db.OpenAsync();
+    using var cmd = db.CreateCommand();
+
+    // Create a test table, insert, read back, then clean up — proves db_owner role works
+    cmd.CommandText = """
+        CREATE TABLE __aspire_connectivity_test (id INT, value NVARCHAR(50));
+        INSERT INTO __aspire_connectivity_test VALUES (1, 'aspire');
+        SELECT value FROM __aspire_connectivity_test WHERE id = 1;
+        DROP TABLE __aspire_connectivity_test;
+    """;
+
+    var result = await cmd.ExecuteScalarAsync();
+    return Results.Ok(new { status = "connected", result });
+});
+
+app.Run();
+"""");
+
                 File.WriteAllText(webProgramPath, content);
 
-                output.WriteLine($"Modified Web Program.cs to add SQL client registration");
+                output.WriteLine($"Modified Web Program.cs to add SQL client and /sql-check endpoint");
             }
 
             // Step 9: Navigate to AppHost project directory
@@ -238,6 +263,14 @@ builder.AddSqlServerClient("db");
                       "if [ \"$failed\" -ne 0 ]; then echo \"❌ One or more endpoint checks failed\"; exit 1; fi");
             await auto.EnterAsync();
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(5));
+
+            // Step 14: Verify SQL connectivity via /sql-check endpoint
+            // This proves the managed identity SID is correct and the db_owner role was assigned
+            output.WriteLine("Step 14: Verifying SQL database connectivity...");
+            await auto.TypeAsync($"curl -sf \"https://$(az containerapp list -g \"{resourceGroupName}\" " +
+                      "--query \"[].properties.configuration.ingress.fqdn\" -o tsv 2>/dev/null | grep -v '\\.internal\\.' | head -1)/sql-check\"");
+            await auto.EnterAsync();
+            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(2));
 
             // Step 14: Exit terminal
             await auto.TypeAsync("exit");
