@@ -102,9 +102,7 @@ public sealed class AcrPurgeTaskDeploymentTests(ITestOutputHelper output)
             await auto.TypeAsync("aspire add Aspire.Hosting.Azure.AppContainers");
             await auto.EnterAsync();
 
-            // When running from a PR bundle, the NuGet.config version selection prompt doesn't appear
-            // because the bundle already has the correct package versions.
-            if (DeploymentE2ETestHelpers.IsRunningInCI && DeploymentE2ETestHelpers.GetPrNumber() <= 0)
+            if (DeploymentE2ETestHelpers.IsRunningInCI)
             {
                 await auto.WaitUntilTextAsync("(based on NuGet.config)", timeout: TimeSpan.FromSeconds(60));
                 await auto.EnterAsync();
