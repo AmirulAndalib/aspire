@@ -133,8 +133,22 @@ public sealed class AcaManagedRedisDeploymentTests(ITestOutputHelper output)
                 .WaitUntil(s => waitingForUrlsPrompt.Search(s).Count > 0, TimeSpan.FromSeconds(10))
                 .Enter() // Select "No" for localhost URLs (default)
                 .WaitUntil(s => waitingForRedisPrompt.Search(s).Count > 0, TimeSpan.FromSeconds(10))
-                .Enter() // Select "Yes" for Redis Cache (first/default option)
-                .WaitForSuccessPrompt(counter, TimeSpan.FromMinutes(5));
+                .Enter(); // Select "Yes" for Redis Cache (first/default option)
+
+            // Handle the agent init prompt that appears after aspire new completes.
+            // The CLI may show "Would you like to configure AI agent environments?" — decline it.
+            var waitingForAgentInitPrompt = new CellPatternSearcher()
+                .Find("configure AI agent environments");
+            var waitingForNewSuccessPrompt = new CellPatternSearcher()
+                .FindPattern(counter.Value.ToString())
+                .RightText(" OK] $ ");
+
+            sequenceBuilder
+                .WaitUntil(s => waitingForAgentInitPrompt.Search(s).Count > 0
+                    || waitingForNewSuccessPrompt.Search(s).Count > 0, TimeSpan.FromMinutes(5))
+                .Wait(500)
+                .Type("n").Enter()
+                .WaitForSuccessPrompt(counter, TimeSpan.FromMinutes(1));
 
             // Step 4: Navigate to project directory
             output.WriteLine("Step 4: Navigating to project directory...");
