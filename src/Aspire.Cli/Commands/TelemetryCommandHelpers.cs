@@ -404,8 +404,9 @@ internal static class TelemetryCommandHelpers
     /// <param name="dashboardUrl">The base dashboard URL.</param>
     /// <param name="traceId">The trace ID.</param>
     /// <param name="displayText">The text to display (defaults to shortened trace ID).</param>
+    /// <param name="spanId">Optional span ID to highlight in the trace detail view.</param>
     /// <returns>A Spectre markup string with hyperlink, or plain text if dashboardUrl is null.</returns>
-    public static string FormatTraceLink(string? dashboardUrl, string traceId, string? displayText = null)
+    public static string FormatTraceLink(string? dashboardUrl, string traceId, string? displayText = null, string? spanId = null)
     {
         var text = displayText ?? OtlpHelpers.ToShortenedId(traceId);
         if (string.IsNullOrEmpty(dashboardUrl))
@@ -414,7 +415,7 @@ internal static class TelemetryCommandHelpers
         }
 
         // Dashboard trace detail URL: /traces/detail/{traceId}
-        var url = DashboardUrls.CombineUrl(dashboardUrl, DashboardUrls.TraceDetailUrl(traceId));
+        var url = DashboardUrls.CombineUrl(dashboardUrl, DashboardUrls.TraceDetailUrl(traceId, spanId));
         return $"[link={url}]{text}[/]";
     }
 

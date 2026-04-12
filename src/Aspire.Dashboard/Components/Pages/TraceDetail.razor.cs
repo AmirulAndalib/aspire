@@ -242,7 +242,9 @@ public partial class TraceDetail : ComponentBase, IComponentWithTelemetry, IDisp
                 await OnShowPropertiesAsync(spanVm, buttonId: null);
             }
 
-            // Navigate to remove ?spanId=xxx in the URL.
+            // Navigate to remove ?spanId=xxx in the URL. A small delay is required here, otherwise the page rendering breaks.
+            await Task.Delay(200);
+
             NavigationManager.NavigateTo(DashboardUrls.TraceDetailUrl(TraceId), new NavigationOptions { ReplaceHistoryEntry = true });
         }
     }
