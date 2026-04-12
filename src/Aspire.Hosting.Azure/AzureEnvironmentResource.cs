@@ -340,6 +340,9 @@ public sealed class AzureEnvironmentResource : Resource
         {
             await resourceGroup.DeleteAsync(WaitUntil.Started, context.CancellationToken).ConfigureAwait(false);
 
+            context.Summary.Add("🗑️ Resource Group", resourceGroupName);
+            context.Summary.Add("🔑 Subscription", subscriptionId);
+
             await deleteTask.CompleteAsync(
                 new MarkdownString($"Resource group **{resourceGroupName}** deletion initiated successfully"),
                 CompletionState.Completed,

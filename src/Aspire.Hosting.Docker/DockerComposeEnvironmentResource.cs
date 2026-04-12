@@ -157,6 +157,8 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
                         ctx.Logger.LogInformation("Compose file '{Path}' no longer exists, skipping compose down.", savedComposeFilePath);
                     }
 
+                    ctx.Summary.Add("🗑️ Compose", Name);
+
                     // Clean up deployment state for this environment
                     await deploymentStateManager.DeleteSectionAsync(stateSection, ctx.CancellationToken).ConfigureAwait(false);
                 },
