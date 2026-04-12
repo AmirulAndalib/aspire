@@ -413,9 +413,10 @@ internal abstract class PipelineCommandBase : BaseCommand
                     var connector = hasTags ? "├" : "└";
                     var continuation = hasTags ? "│" : " ";
                     var firstLinePrefix = $"   {connector}─ [blue]Depends on:[/] ";
-                    // Continuation aligns items under the first dep value:
-                    // "   ├─ Depends on: " = 19 visible chars
-                    var continuationPrefix = $"   {continuation}                 ";
+                    // Build continuation prefix that aligns wrapped items under the first dep value.
+                    // Replace the connector with the continuation char and pad the rest with spaces.
+                    var visibleWidth = StripMarkup(firstLinePrefix).Length;
+                    var continuationPrefix = "   " + continuation + new string(' ', visibleWidth - 4);
                     var wrappedDeps = FormatWithHangingIndent(step.DependsOn, firstLinePrefix, continuationPrefix);
                     _ansiConsole.MarkupLine(wrappedDeps);
                 }
