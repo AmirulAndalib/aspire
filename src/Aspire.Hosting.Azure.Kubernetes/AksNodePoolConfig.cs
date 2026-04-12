@@ -11,7 +11,7 @@ namespace Aspire.Hosting.Azure.Kubernetes;
 /// <param name="MinCount">The minimum number of nodes.</param>
 /// <param name="MaxCount">The maximum number of nodes.</param>
 /// <param name="Mode">The mode of the node pool.</param>
-internal sealed record AksNodePoolConfig(
+public sealed record AksNodePoolConfig(
     string Name,
     string VmSize,
     int MinCount,
@@ -21,7 +21,7 @@ internal sealed record AksNodePoolConfig(
 /// <summary>
 /// Specifies the mode of an AKS node pool.
 /// </summary>
-internal enum AksNodePoolMode
+public enum AksNodePoolMode
 {
     /// <summary>
     /// System node pool for hosting system pods.

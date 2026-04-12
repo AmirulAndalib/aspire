@@ -53,22 +53,23 @@ public class AzureKubernetesEnvironmentExtensionsTests
     }
 
     [Fact]
-    public void AddAzureKubernetesEnvironment_WithNodePool()
+    public void AddNodePool_ReturnsNodePoolResource()
     {
         using var builder = TestDistributedApplicationBuilder.Create();
 
-        var aks = builder.AddAzureKubernetesEnvironment("aks")
-            .WithNodePool("gpu", "Standard_NC6s_v3", 0, 5);
+        var aks = builder.AddAzureKubernetesEnvironment("aks");
+        var gpuPool = aks.AddNodePool("gpu", "Standard_NC6s_v3", 0, 5);
 
         // Default system pool + added user pool
         Assert.Equal(2, aks.Resource.NodePools.Count);
 
-        var userPool = aks.Resource.NodePools[1];
-        Assert.Equal("gpu", userPool.Name);
-        Assert.Equal("Standard_NC6s_v3", userPool.VmSize);
-        Assert.Equal(0, userPool.MinCount);
-        Assert.Equal(5, userPool.MaxCount);
-        Assert.Equal(AksNodePoolMode.User, userPool.Mode);
+        Assert.Equal("gpu", gpuPool.Resource.Name);
+        Assert.Equal("gpu", gpuPool.Resource.Config.Name);
+        Assert.Equal("Standard_NC6s_v3", gpuPool.Resource.Config.VmSize);
+        Assert.Equal(0, gpuPool.Resource.Config.MinCount);
+        Assert.Equal(5, gpuPool.Resource.Config.MaxCount);
+        Assert.Equal(AksNodePoolMode.User, gpuPool.Resource.Config.Mode);
+        Assert.Same(aks.Resource, gpuPool.Resource.Parent);
     }
 
     [Fact]
@@ -264,5 +265,36 @@ public class AzureKubernetesEnvironmentExtensionsTests
             .AsExisting(nameParam, rgParam);
 
         Assert.NotNull(aks);
+    }
+
+    [Fact]
+    public void WithNodePoolAffinity_AddsAnnotation()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create();
+
+        var aks = builder.AddAzureKubernetesEnvironment("aks");
+        var gpuPool = aks.AddNodePool("gpu", "Standard_NC6s_v3", 0, 5);
+
+        var container = builder.AddContainer("myapi", "myimage")
+            .WithNodePoolAffinity(gpuPool);
+
+        Assert.True(container.Resource.TryGetLastAnnotation<AksNodePoolAffinityAnnotation>(out var affinity));
+        Assert.Same(gpuPool.Resource, affinity.NodePool);
+        Assert.Equal("gpu", affinity.NodePool.Config.Name);
+    }
+
+    [Fact]
+    public void AddNodePool_MultiplePoolsSupported()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create();
+
+        var aks = builder.AddAzureKubernetesEnvironment("aks");
+        var pool1 = aks.AddNodePool("cpu", "Standard_D4s_v5", 1, 10);
+        var pool2 = aks.AddNodePool("gpu", "Standard_NC6s_v3", 0, 5);
+
+        // Default system pool + 2 user pools
+        Assert.Equal(3, aks.Resource.NodePools.Count);
+        Assert.Equal("cpu", pool1.Resource.Name);
+        Assert.Equal("gpu", pool2.Resource.Name);
     }
 }

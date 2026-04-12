@@ -109,16 +109,29 @@ public static class AzureKubernetesEnvironmentExtensions
     /// <summary>
     /// Adds a node pool to the AKS cluster.
     /// </summary>
-    /// <param name="builder">The resource builder.</param>
+    /// <param name="builder">The AKS environment resource builder.</param>
     /// <param name="name">The name of the node pool.</param>
     /// <param name="vmSize">The VM size for nodes.</param>
     /// <param name="minCount">The minimum node count for autoscaling.</param>
     /// <param name="maxCount">The maximum node count for autoscaling.</param>
-    /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
+    /// <returns>A reference to the <see cref="IResourceBuilder{AksNodePoolResource}"/> for the new node pool.</returns>
+    /// <remarks>
+    /// The returned node pool resource can be passed to
+    /// <see cref="WithNodePoolAffinity{T}"/> on compute resources to schedule workloads on this pool.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var aks = builder.AddAzureKubernetesEnvironment("aks");
+    /// var gpuPool = aks.AddNodePool("gpu", "Standard_NC6s_v3", 0, 5);
+    ///
+    /// builder.AddProject&lt;MyApi&gt;()
+    ///     .WithNodePoolAffinity(gpuPool);
+    /// </code>
+    /// </example>
     [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
-    public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithNodePool(
+    public static IResourceBuilder<AksNodePoolResource> AddNodePool(
         this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
-        string name,
+        [ResourceName] string name,
         string vmSize,
         int minCount,
         int maxCount)
@@ -127,8 +140,48 @@ public static class AzureKubernetesEnvironmentExtensions
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentException.ThrowIfNullOrEmpty(vmSize);
 
-        builder.Resource.NodePools.Add(
-            new AksNodePoolConfig(name, vmSize, minCount, maxCount, AksNodePoolMode.User));
+        var config = new AksNodePoolConfig(name, vmSize, minCount, maxCount, AksNodePoolMode.User);
+        builder.Resource.NodePools.Add(config);
+
+        var nodePool = new AksNodePoolResource(name, config, builder.Resource);
+
+        if (builder.ApplicationBuilder.ExecutionContext.IsRunMode)
+        {
+            return builder.ApplicationBuilder.CreateResourceBuilder(nodePool);
+        }
+
+        return builder.ApplicationBuilder.AddResource(nodePool)
+            .ExcludeFromManifest();
+    }
+
+    /// <summary>
+    /// Schedules a compute resource's workload on the specified AKS node pool.
+    /// This translates to a Kubernetes <c>nodeSelector</c> with the <c>agentpool</c> label
+    /// targeting the named node pool.
+    /// </summary>
+    /// <typeparam name="T">The type of the compute resource.</typeparam>
+    /// <param name="builder">The resource builder.</param>
+    /// <param name="nodePool">The node pool to schedule the workload on.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{T}"/> for chaining.</returns>
+    /// <example>
+    /// <code>
+    /// var aks = builder.AddAzureKubernetesEnvironment("aks");
+    /// var gpuPool = aks.AddNodePool("gpu", "Standard_NC6s_v3", 0, 5);
+    ///
+    /// builder.AddProject&lt;MyApi&gt;()
+    ///     .WithNodePoolAffinity(gpuPool);
+    /// </code>
+    /// </example>
+    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    public static IResourceBuilder<T> WithNodePoolAffinity<T>(
+        this IResourceBuilder<T> builder,
+        IResourceBuilder<AksNodePoolResource> nodePool)
+        where T : IResource
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(nodePool);
+
+        builder.WithAnnotation(new AksNodePoolAffinityAnnotation(nodePool.Resource));
         return builder;
     }
 
