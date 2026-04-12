@@ -101,13 +101,8 @@ public sealed class TypeScriptExpressDeploymentTests(ITestOutputHelper output)
             await auto.TypeAsync("aspire add Aspire.Hosting.Azure.AppContainers");
             await auto.EnterAsync();
 
-            // In CI, aspire add shows a version selection prompt
-            if (DeploymentE2ETestHelpers.IsRunningInCI)
-            {
-                await auto.WaitUntilTextAsync("(based on NuGet.config)", timeout: TimeSpan.FromSeconds(60));
-                await auto.EnterAsync(); // select first version (PR build)
-            }
-
+            // TypeScript AppHost with bundle install: aspire add completes without a NuGet
+            // version selection prompt — the bundle provides the correct package versions directly.
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(180));
 
             // Step 6: Modify apphost.ts to add Azure Container App Environment for deployment
