@@ -424,9 +424,9 @@ public class KubernetesDeployTests(ITestOutputHelper output)
             output.WriteLine($"  {log}");
         }
 
-        // Verify helm-uninstall-env depends on destroy-prereq (because it's RequiredBy destroy)
+        // Verify helm-uninstall-env depends on destroy-helm-env (the prompt layer)
         var helmUninstallLines = logs.Where(l => l.Contains("helm-uninstall-env")).ToList();
-        Assert.Contains(helmUninstallLines, msg => msg.Contains("destroy-prereq"));
+        Assert.Contains(helmUninstallLines, msg => msg.Contains("destroy-helm-env"));
     }
 
     [Fact]

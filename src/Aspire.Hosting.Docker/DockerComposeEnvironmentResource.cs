@@ -4,6 +4,7 @@
 #pragma warning disable ASPIREPIPELINES001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 #pragma warning disable ASPIREPIPELINES003 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 #pragma warning disable ASPIRECONTAINERRUNTIME001
+#pragma warning disable ASPIREINTERACTION001
 
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting.ApplicationModel;
@@ -13,6 +14,8 @@ using Aspire.Hosting.Publishing;
 using Aspire.Hosting.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Aspire.Hosting.Docker;
 
@@ -127,9 +130,18 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
                 Action = ctx => DockerComposeDownAsync(ctx),
                 Tags = ["docker-compose-down"]
             };
-            dockerComposeDownStep.RequiredBy(WellKnownPipelineSteps.Destroy);
-            dockerComposeDownStep.DependsOn(WellKnownPipelineSteps.DestroyPrereq);
             steps.Add(dockerComposeDownStep);
+
+            var dockerComposeDestroyStep = new PipelineStep
+            {
+                Name = $"destroy-compose-{Name}",
+                Description = $"Confirms and destroys the Docker Compose environment {Name}.",
+                Action = ctx => ConfirmDestroyAsync(ctx, $"Shut down Docker Compose environment '{Name}'? This will stop and remove all containers, networks, and volumes."),
+                DependsOnSteps = [WellKnownPipelineSteps.DestroyPrereq]
+            };
+            dockerComposeDestroyStep.RequiredBy(WellKnownPipelineSteps.Destroy);
+            dockerComposeDownStep.DependsOn(dockerComposeDestroyStep);
+            steps.Add(dockerComposeDestroyStep);
 
             return steps;
         }));
@@ -283,6 +295,38 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
             {
                 await deployTask.CompleteAsync($"Compose shutdown failed ({runtime.Name}): {ex.Message}", CompletionState.CompletedWithError, context.CancellationToken).ConfigureAwait(false);
                 throw;
+            }
+        }
+    }
+
+    private static async Task ConfirmDestroyAsync(PipelineStepContext context, string message)
+    {
+        var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
+
+        if (!options.Value.Yes)
+        {
+            var interactionService = context.Services.GetRequiredService<IInteractionService>();
+
+            if (interactionService.IsAvailable)
+            {
+                var result = await interactionService.PromptNotificationAsync(
+                    "Destroy Environment",
+                    message,
+                    new NotificationInteractionOptions
+                    {
+                        Intent = MessageIntent.Confirmation,
+                        ShowSecondaryButton = true,
+                        ShowDismiss = false,
+                        PrimaryButtonText = "Yes, destroy",
+                        SecondaryButtonText = "Cancel"
+                    },
+                    context.CancellationToken).ConfigureAwait(false);
+
+                if (result.Canceled || !result.Data)
+                {
+                    context.Logger.LogInformation("User canceled the destroy operation.");
+                    throw new OperationCanceledException("Destroy operation canceled by user.");
+                }
             }
         }
     }

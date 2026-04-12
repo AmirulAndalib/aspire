@@ -106,7 +106,7 @@ Step: destroy-azure-azure634f9
     Resource: azure634f9 (AzureEnvironmentResource)
 
 Step: destroy-prereq
-    Description: Prerequisite step that runs before any destroy operations. Confirms the destructive action.
+    Description: Prerequisite step that runs before any destroy operations.
     Dependencies: none
 
 Step: diagnostics

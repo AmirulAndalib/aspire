@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #pragma warning disable ASPIREPIPELINES001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+#pragma warning disable ASPIREINTERACTION001
 
 using System.Globalization;
 using System.Text;
@@ -15,6 +16,7 @@ using Aspire.Hosting.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Aspire.Hosting.Kubernetes;
 
@@ -152,7 +154,7 @@ internal static partial class HelmDeploymentEngine
         instructionsStep.RequiredBy(WellKnownPipelineSteps.Deploy);
         steps.Add(instructionsStep);
 
-        // Step 4: Helm uninstall (teardown)
+        // Step 4: Helm uninstall (teardown, callable via aspire do)
         var helmUninstallStep = new PipelineStep
         {
             Name = $"helm-uninstall-{environment.Name}",
@@ -160,9 +162,24 @@ internal static partial class HelmDeploymentEngine
             Tags = [HelmUninstallTag],
             Action = ctx => HelmUninstallAsync(ctx, environment)
         };
-        helmUninstallStep.RequiredBy(WellKnownPipelineSteps.Destroy);
-        helmUninstallStep.DependsOn(WellKnownPipelineSteps.DestroyPrereq);
         steps.Add(helmUninstallStep);
+
+        // Step 5: Destroy confirmation (prompts before uninstalling, used by aspire destroy)
+        var helmDestroyStep = new PipelineStep
+        {
+            Name = $"destroy-helm-{environment.Name}",
+            Description = $"Confirms destruction of the Helm deployment for {environment.Name}.",
+            Action = async ctx =>
+            {
+                var @namespace = await ResolveNamespaceAsync(ctx, environment).ConfigureAwait(false);
+                var releaseName = await ResolveReleaseNameAsync(ctx, environment).ConfigureAwait(false);
+                await ConfirmDestroyAsync(ctx, $"Uninstall Helm release '{releaseName}' from namespace '{@namespace}'? This action cannot be undone.").ConfigureAwait(false);
+            },
+            DependsOnSteps = [WellKnownPipelineSteps.DestroyPrereq]
+        };
+        helmDestroyStep.RequiredBy(WellKnownPipelineSteps.Destroy);
+        helmUninstallStep.DependsOn(helmDestroyStep);
+        steps.Add(helmDestroyStep);
 
         return Task.FromResult<IReadOnlyList<PipelineStep>>(steps);
     }
@@ -567,6 +584,38 @@ internal static partial class HelmDeploymentEngine
                     CompletionState.CompletedWithError,
                     context.CancellationToken).ConfigureAwait(false);
                 throw;
+            }
+        }
+    }
+
+    private static async Task ConfirmDestroyAsync(PipelineStepContext context, string message)
+    {
+        var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
+
+        if (!options.Value.Yes)
+        {
+            var interactionService = context.Services.GetRequiredService<IInteractionService>();
+
+            if (interactionService.IsAvailable)
+            {
+                var result = await interactionService.PromptNotificationAsync(
+                    "Destroy Environment",
+                    message,
+                    new NotificationInteractionOptions
+                    {
+                        Intent = MessageIntent.Confirmation,
+                        ShowSecondaryButton = true,
+                        ShowDismiss = false,
+                        PrimaryButtonText = "Yes, destroy",
+                        SecondaryButtonText = "Cancel"
+                    },
+                    context.CancellationToken).ConfigureAwait(false);
+
+                if (result.Canceled || !result.Data)
+                {
+                    context.Logger.LogInformation("User canceled the destroy operation.");
+                    throw new OperationCanceledException("Destroy operation canceled by user.");
+                }
             }
         }
     }

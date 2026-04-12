@@ -297,6 +297,39 @@ public sealed class AzureEnvironmentResource : Resource
             }
         }
 
+        // Confirm destruction with the user (unless --yes was specified)
+        var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
+        if (!options.Value.Yes)
+        {
+            var interactionService = context.Services.GetRequiredService<IInteractionService>();
+
+            if (interactionService.IsAvailable)
+            {
+                var confirmMessage = resources.Count > 0
+                    ? $"Delete resource group '{resourceGroupName}' with {resources.Count} resource(s)? This action cannot be undone."
+                    : $"Delete resource group '{resourceGroupName}'? This action cannot be undone.";
+
+                var result = await interactionService.PromptNotificationAsync(
+                    "Destroy Azure Resources",
+                    confirmMessage,
+                    new NotificationInteractionOptions
+                    {
+                        Intent = MessageIntent.Confirmation,
+                        ShowSecondaryButton = true,
+                        ShowDismiss = false,
+                        PrimaryButtonText = "Yes, destroy",
+                        SecondaryButtonText = "Cancel"
+                    },
+                    context.CancellationToken).ConfigureAwait(false);
+
+                if (result.Canceled || !result.Data)
+                {
+                    context.Logger.LogInformation("User canceled the destroy operation.");
+                    throw new OperationCanceledException("Destroy operation canceled by user.");
+                }
+            }
+        }
+
         // Delete the resource group
         var deleteTask = await context.ReportingStep.CreateTaskAsync(
             new MarkdownString($"Deleting resource group **{resourceGroupName}** ({resources.Count} resource(s))"),

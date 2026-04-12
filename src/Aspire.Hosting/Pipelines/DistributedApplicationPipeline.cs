@@ -276,41 +276,8 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         _steps.Add(new PipelineStep
         {
             Name = WellKnownPipelineSteps.DestroyPrereq,
-            Description = "Prerequisite step that runs before any destroy operations. Confirms the destructive action.",
-            Action = async context =>
-            {
-                var hostEnvironment = context.Services.GetRequiredService<IHostEnvironment>();
-                var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
-
-                context.Logger.LogInformation("Preparing to destroy environment '{EnvironmentName}'", hostEnvironment.EnvironmentName);
-
-                if (!options.Value.Yes)
-                {
-                    var interactionService = context.Services.GetRequiredService<IInteractionService>();
-
-                    if (interactionService.IsAvailable)
-                    {
-                        var result = await interactionService.PromptNotificationAsync(
-                            "Destroy Environment",
-                            $"This will destroy the '{hostEnvironment.EnvironmentName}' environment. This action cannot be undone. Do you want to continue?",
-                            new NotificationInteractionOptions
-                            {
-                                Intent = MessageIntent.Confirmation,
-                                ShowSecondaryButton = true,
-                                ShowDismiss = false,
-                                PrimaryButtonText = "Yes, destroy",
-                                SecondaryButtonText = "Cancel"
-                            },
-                            context.CancellationToken).ConfigureAwait(false);
-
-                        if (result.Canceled || !result.Data)
-                        {
-                            context.Logger.LogInformation("User canceled the destroy operation.");
-                            throw new OperationCanceledException("Destroy operation canceled by user.");
-                        }
-                    }
-                }
-            }
+            Description = "Prerequisite step that runs before any destroy operations.",
+            Action = _ => Task.CompletedTask,
         });
     }
 
