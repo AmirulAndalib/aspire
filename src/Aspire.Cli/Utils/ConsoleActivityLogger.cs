@@ -47,10 +47,11 @@ internal sealed class ConsoleActivityLogger
 
     // No raw ANSI escape codes; rely on Spectre.Console markup tokens.
 
-    private const string SuccessSymbol = "✓\uFE0E";
-    private const string FailureSymbol = "✗\uFE0E";
+    private const string SuccessSymbol = "✓";
+    private const string FailureSymbol = "✗";
+    // The warning symbol is intentionally not ⚠ because that character can be displayed as an emoji in some terminals, causing rendering issues.
     private const string WarningSymbol = "△";
-    private const string InProgressSymbol = "→\uFE0E";
+    private const string InProgressSymbol = "→";
     private const string InfoSymbol = "i";
     private const int SummaryTimelineWidth = 28;
     private const int SummaryTimelineTicks = 4;
