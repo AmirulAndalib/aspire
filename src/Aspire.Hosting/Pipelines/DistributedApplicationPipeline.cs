@@ -276,7 +276,7 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         _steps.Add(new PipelineStep
         {
             Name = WellKnownPipelineSteps.DestroyPrereq,
-            Description = "Prerequisite step that runs before any destroy operations. Confirms the destructive action and verifies deployment state.",
+            Description = "Prerequisite step that runs before any destroy operations. Confirms the destructive action.",
             Action = async context =>
             {
                 var hostEnvironment = context.Services.GetRequiredService<IHostEnvironment>();
@@ -292,7 +292,7 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
                     {
                         var result = await interactionService.PromptNotificationAsync(
                             "Destroy Environment",
-                            $"This will destroy all resources for the '{hostEnvironment.EnvironmentName}' environment. This action cannot be undone. Do you want to continue?",
+                            $"This will destroy the '{hostEnvironment.EnvironmentName}' environment. This action cannot be undone. Do you want to continue?",
                             new NotificationInteractionOptions
                             {
                                 Intent = MessageIntent.Confirmation,
