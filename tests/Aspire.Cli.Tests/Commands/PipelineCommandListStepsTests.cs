@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.RegularExpressions;
 using Aspire.Cli.Backchannel;
 using Aspire.Cli.Commands;
 using Aspire.Cli.Tests.Utils;
@@ -9,8 +10,13 @@ using Spectre.Console;
 
 namespace Aspire.Cli.Tests.Commands;
 
-public class PipelineCommandListStepsTests(ITestOutputHelper outputHelper)
+public partial class PipelineCommandListStepsTests(ITestOutputHelper outputHelper)
 {
+    [GeneratedRegex(@"\x1B\[[0-9;]*m")]
+    private static partial Regex AnsiEscapeRegex();
+
+    private static string StripAnsi(string text) => AnsiEscapeRegex().Replace(text, "");
+
     [Fact]
     public void PrintPipelineSteps_WithNoDependencies_ShowsNoDependencies()
     {
@@ -18,7 +24,7 @@ public class PipelineCommandListStepsTests(ITestOutputHelper outputHelper)
 
         command.PrintPipelineSteps([new PipelineStepInfo { Name = "parameter-prompt" }]);
 
-        var output = writer.ToString();
+        var output = StripAnsi(writer.ToString());
         Assert.Contains("1. parameter-prompt", output);
         Assert.Contains("No dependencies", output);
     }
@@ -33,7 +39,7 @@ public class PipelineCommandListStepsTests(ITestOutputHelper outputHelper)
             new PipelineStepInfo { Name = "build-webapi", DependsOn = ["parameter-prompt"] }
         ]);
 
-        var output = writer.ToString();
+        var output = StripAnsi(writer.ToString());
         Assert.Contains("2. build-webapi", output);
         Assert.Contains("Depends on: parameter-prompt", output);
     }
@@ -47,7 +53,7 @@ public class PipelineCommandListStepsTests(ITestOutputHelper outputHelper)
             new PipelineStepInfo { Name = "deploy-webapi", DependsOn = ["build-webapi", "provision-redis"] }
         ]);
 
-        var output = writer.ToString();
+        var output = StripAnsi(writer.ToString());
         Assert.Contains("Depends on: build-webapi, provision-redis", output);
     }
 
@@ -60,7 +66,7 @@ public class PipelineCommandListStepsTests(ITestOutputHelper outputHelper)
             new PipelineStepInfo { Name = "build-webapi", DependsOn = ["parameter-prompt"], Tags = ["build-compute"] }
         ]);
 
-        var output = writer.ToString();
+        var output = StripAnsi(writer.ToString());
         Assert.Contains("Tags: build-compute", output);
     }
 
@@ -73,7 +79,7 @@ public class PipelineCommandListStepsTests(ITestOutputHelper outputHelper)
             new PipelineStepInfo { Name = "provision-redis-infra", DependsOn = ["parameter-prompt"], Tags = ["provision-infra"] }
         ]);
 
-        var output = writer.ToString();
+        var output = StripAnsi(writer.ToString());
         Assert.Contains("Depends on: parameter-prompt", output);
         Assert.Contains("Tags: provision-infra", output);
     }
@@ -85,7 +91,7 @@ public class PipelineCommandListStepsTests(ITestOutputHelper outputHelper)
 
         command.PrintPipelineSteps([]);
 
-        var output = writer.ToString();
+        var output = StripAnsi(writer.ToString());
         Assert.Contains("No pipeline steps found", output);
     }
 
@@ -100,7 +106,7 @@ public class PipelineCommandListStepsTests(ITestOutputHelper outputHelper)
             new PipelineStepInfo { Name = "step-c" }
         ]);
 
-        var output = writer.ToString();
+        var output = StripAnsi(writer.ToString());
         Assert.Contains("1. step-a", output);
         Assert.Contains("2. step-b", output);
         Assert.Contains("3. step-c", output);
@@ -121,7 +127,7 @@ public class PipelineCommandListStepsTests(ITestOutputHelper outputHelper)
             new PipelineStepInfo { Name = "deploy-frontend", DependsOn = ["build-frontend", "deploy-webapi"], Tags = ["deploy-compute"] },
         ]);
 
-        var output = writer.ToString();
+        var output = StripAnsi(writer.ToString());
         Assert.Contains("1. parameter-prompt", output);
         Assert.Contains("7. deploy-frontend", output);
         Assert.Contains("No dependencies", output);
