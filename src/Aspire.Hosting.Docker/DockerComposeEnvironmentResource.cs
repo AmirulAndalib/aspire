@@ -147,20 +147,42 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
 
                     await ConfirmDestroyAsync(ctx, $"Shut down Docker Compose environment '{Name}'? This will stop and remove all containers, networks, and volumes.").ConfigureAwait(false);
 
-                    // If the compose file no longer exists, treat as already cleaned up
+                    // Use saved state to build the compose context — don't recompute from current model
                     if (File.Exists(savedComposeFilePath))
                     {
-                        await DockerComposeDownAsync(ctx).ConfigureAwait(false);
+                        var savedOutputPath = stateSection.Data["OutputPath"]?.ToString() ?? Path.GetDirectoryName(savedComposeFilePath)!;
+                        var savedProjectName = stateSection.Data["ProjectName"]?.ToString() ?? GetDockerComposeProjectName(ctx, this);
+
+                        var runtime = await ctx.Services.GetRequiredService<IContainerRuntimeResolver>().ResolveAsync(ctx.CancellationToken).ConfigureAwait(false);
+
+                        var composeContext = new ComposeOperationContext
+                        {
+                            ComposeFilePath = savedComposeFilePath,
+                            ProjectName = savedProjectName,
+                            WorkingDirectory = savedOutputPath
+                        };
+
+                        var deployTask = await ctx.ReportingStep.CreateTaskAsync(
+                            new MarkdownString($"Running compose down for **{Name}** using **{runtime.Name}**"),
+                            ctx.CancellationToken).ConfigureAwait(false);
+                        await using (deployTask.ConfigureAwait(false))
+                        {
+                            await runtime.ComposeDownAsync(composeContext, ctx.CancellationToken).ConfigureAwait(false);
+                            await deployTask.CompleteAsync(
+                                new MarkdownString($"Compose shutdown complete for **{Name}** ({runtime.Name})"),
+                                CompletionState.Completed,
+                                ctx.CancellationToken).ConfigureAwait(false);
+                        }
+
+                        ctx.Summary.Add("🗑️ Compose", Name);
+
+                        // Clean up deployment state only after successful teardown
+                        await deploymentStateManager.DeleteSectionAsync(stateSection, ctx.CancellationToken).ConfigureAwait(false);
                     }
                     else
                     {
-                        ctx.Logger.LogInformation("Compose file '{Path}' no longer exists, skipping compose down.", savedComposeFilePath);
+                        ctx.Logger.LogInformation("Compose file '{Path}' no longer exists, skipping compose down. State preserved for manual cleanup.", savedComposeFilePath);
                     }
-
-                    ctx.Summary.Add("🗑️ Compose", Name);
-
-                    // Clean up deployment state for this environment
-                    await deploymentStateManager.DeleteSectionAsync(stateSection, ctx.CancellationToken).ConfigureAwait(false);
                 },
                 DependsOnSteps = [WellKnownPipelineSteps.DestroyPrereq]
             };

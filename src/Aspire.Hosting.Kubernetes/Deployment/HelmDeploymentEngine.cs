@@ -180,7 +180,7 @@ internal static partial class HelmDeploymentEngine
                 // Use saved state for the confirmation message (more accurate than recomputing)
                 var @namespace = savedNamespace ?? "default";
                 await ConfirmDestroyAsync(ctx, $"Uninstall Helm release '{savedReleaseName}' from namespace '{@namespace}'? This action cannot be undone.").ConfigureAwait(false);
-                await HelmUninstallAsync(ctx, environment).ConfigureAwait(false);
+                await HelmUninstallAsync(ctx, savedReleaseName, @namespace).ConfigureAwait(false);
 
                 ctx.Summary.Add("🗑️ Helm Release", savedReleaseName);
                 ctx.Summary.Add("☸️ Namespace", @namespace);
@@ -561,7 +561,11 @@ internal static partial class HelmDeploymentEngine
     {
         var @namespace = await ResolveNamespaceAsync(context, environment).ConfigureAwait(false);
         var releaseName = await ResolveReleaseNameAsync(context, environment).ConfigureAwait(false);
+        await HelmUninstallAsync(context, releaseName, @namespace).ConfigureAwait(false);
+    }
 
+    private static async Task HelmUninstallAsync(PipelineStepContext context, string releaseName, string @namespace)
+    {
         var uninstallTask = await context.ReportingStep.CreateTaskAsync(
             new MarkdownString($"Uninstalling Helm release **{releaseName}** from namespace **{@namespace}**"),
             context.CancellationToken).ConfigureAwait(false);

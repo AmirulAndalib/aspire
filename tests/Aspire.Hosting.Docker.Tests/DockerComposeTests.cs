@@ -4,6 +4,7 @@
 #pragma warning disable ASPIRECOMPUTE002
 #pragma warning disable ASPIRECOMPUTE003
 #pragma warning disable ASPIREPIPELINES001
+#pragma warning disable ASPIREPIPELINES002
 #pragma warning disable ASPIREPIPELINES003
 #pragma warning disable ASPIRECONTAINERRUNTIME001
 
@@ -12,6 +13,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Pipelines;
 using Aspire.Hosting.Publishing;
 using Aspire.Hosting.Testing;
+using Aspire.Hosting.Tests;
 using Aspire.Hosting.Tests.Publishing;
 using Aspire.Hosting.Utils;
 using Aspire.TestUtilities;
@@ -897,4 +899,76 @@ public class DockerComposeTests(ITestOutputHelper output)
 
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "ExecuteBeforeStartHooksAsync")]
     private static extern Task ExecuteBeforeStartHooksAsync(DistributedApplication app, CancellationToken cancellationToken);
+
+    [Fact]
+    public async Task DestroyCompose_WithState_RunsComposeDown()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        // Create a fake compose file so destroy finds it
+        var composeFilePath = Path.Combine(tempDir.Path, "docker-compose.yaml");
+        await File.WriteAllTextAsync(composeFilePath, "version: '3'");
+
+        var fakeRuntime = new FakeContainerRuntime();
+        var stateManager = new InMemoryDeploymentStateManager();
+        stateManager.SetSection("DockerCompose:env", new System.Text.Json.Nodes.JsonObject
+        {
+            ["OutputPath"] = tempDir.Path,
+            ["ProjectName"] = "aspire-env-test",
+            ["ComposeFilePath"] = composeFilePath
+        });
+
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+        var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, tempDir.Path, step: WellKnownPipelineSteps.Destroy);
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IContainerRuntime>(fakeRuntime);
+        builder.Services.AddSingleton<IContainerRuntimeResolver>(sp => (IContainerRuntimeResolver)sp.GetRequiredService<IContainerRuntime>());
+        builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+        builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+
+        builder.AddDockerComposeEnvironment("env");
+        builder.AddProject<Projects.ServiceA>("api").PublishAsDockerFile();
+
+        using var app = builder.Build();
+        await app.RunAsync();
+
+        // Verify compose down was called
+        Assert.True(fakeRuntime.WasComposeDownCalled);
+
+        // Verify the destroy step ran
+        var createdSteps = mockActivityReporter.CreatedSteps;
+        Assert.Contains(createdSteps, s => s.Contains("destroy-compose-", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task DestroyCompose_WithNoState_ReportsNothingToDestroy()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var fakeRuntime = new FakeContainerRuntime();
+        var stateManager = new InMemoryDeploymentStateManager();
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+
+        var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, tempDir.Path, step: WellKnownPipelineSteps.Destroy);
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IContainerRuntime>(fakeRuntime);
+        builder.Services.AddSingleton<IContainerRuntimeResolver>(sp => (IContainerRuntimeResolver)sp.GetRequiredService<IContainerRuntime>());
+        builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+        builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+
+        builder.AddDockerComposeEnvironment("env");
+        builder.AddProject<Projects.ServiceA>("api").PublishAsDockerFile();
+
+        using var app = builder.Build();
+        await app.RunAsync();
+
+        // Verify compose down was NOT called
+        Assert.False(fakeRuntime.WasComposeDownCalled);
+
+        // Verify it reported nothing to destroy
+        var completedSteps = mockActivityReporter.CompletedSteps;
+        Assert.Contains(completedSteps, s => s.CompletionText.Contains("Nothing to destroy", StringComparison.OrdinalIgnoreCase));
+    }
 }
