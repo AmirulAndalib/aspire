@@ -4,9 +4,11 @@
 #pragma warning disable ASPIRECOMPUTE002
 #pragma warning disable ASPIRECOMPUTE003
 #pragma warning disable ASPIREPIPELINES001
+#pragma warning disable ASPIREPIPELINES002
 #pragma warning disable ASPIREPIPELINES003
 #pragma warning disable ASPIRECONTAINERRUNTIME001
 
+using System.Text.Json.Nodes;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Pipelines;
 using Aspire.Hosting.Publishing;
@@ -1311,5 +1313,97 @@ public class KubernetesDeployTests(ITestOutputHelper output)
         Assert.NotNull(dashboard.OtlpGrpcEndpoint);
         Assert.Equal("http", dashboard.PrimaryEndpoint.EndpointName);
         Assert.Equal("otlp-grpc", dashboard.OtlpGrpcEndpoint.EndpointName);
+    }
+
+    [Fact]
+    public async Task DestroyHelm_WithState_RunsHelmUninstall()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var fakeHelm = new FakeHelmRunner();
+        var stateManager = new InMemoryDeploymentStateManager();
+        stateManager.SetSection("Helm:env", new JsonObject
+        {
+            ["ReleaseName"] = "my-release",
+            ["Namespace"] = "my-namespace"
+        });
+
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Destroy);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+        builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
+        builder.Services.AddSingleton<IHelmRunner>(fakeHelm);
+        builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+
+        builder.AddKubernetesEnvironment("env");
+        builder.AddContainer("api", "myimage");
+
+        using var app = builder.Build();
+        await app.RunAsync();
+
+        // Verify helm uninstall was called with saved state values
+        Assert.True(fakeHelm.WasUninstallCalled);
+        Assert.Contains("my-release", fakeHelm.LastArguments!);
+        Assert.Contains("my-namespace", fakeHelm.LastArguments!);
+    }
+
+    [Fact]
+    public async Task DestroyHelm_WithNoState_ReportsNothingToDestroy()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var fakeHelm = new FakeHelmRunner();
+        var stateManager = new InMemoryDeploymentStateManager();
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Destroy);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+        builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
+        builder.Services.AddSingleton<IHelmRunner>(fakeHelm);
+        builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+
+        builder.AddKubernetesEnvironment("env");
+        builder.AddContainer("api", "myimage");
+
+        using var app = builder.Build();
+        await app.RunAsync();
+
+        // Verify helm was NOT called
+        Assert.False(fakeHelm.WasUninstallCalled);
+
+        // Verify it reported nothing to destroy
+        var completedSteps = mockActivityReporter.CompletedSteps;
+        Assert.Contains(completedSteps, s => s.CompletionText.Contains("Nothing to destroy", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private sealed class FakeHelmRunner : IHelmRunner
+    {
+        public bool WasUninstallCalled { get; private set; }
+        public string? LastArguments { get; private set; }
+
+        public Task<int> RunAsync(
+            string arguments,
+            string? workingDirectory = null,
+            Action<string>? onOutputData = null,
+            Action<string>? onErrorData = null,
+            CancellationToken cancellationToken = default)
+        {
+            LastArguments = arguments;
+            if (arguments.StartsWith("uninstall", StringComparison.OrdinalIgnoreCase))
+            {
+                WasUninstallCalled = true;
+            }
+            return Task.FromResult(0);
+        }
     }
 }
