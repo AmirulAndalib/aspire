@@ -397,7 +397,7 @@ internal abstract class PipelineCommandBase : BaseCommand
         {
             var step = steps[i];
 
-            _ansiConsole.MarkupLine($"[bold green]{i + 1}.[/] [bold]{step.Name.EscapeMarkup()}[/]");
+            _ansiConsole.MarkupLine($"[bold green]{i + 1}.[/] [cyan]{step.Name.EscapeMarkup()}[/]");
 
             var hasDeps = step.DependsOn.Length > 0;
             var hasTags = step.Tags.Length > 0;
@@ -412,9 +412,11 @@ internal abstract class PipelineCommandBase : BaseCommand
                 {
                     var connector = hasTags ? "├" : "└";
                     var continuation = hasTags ? "│" : " ";
-                    // "   ├─ Depends on: " is 19 chars; hanging indent aligns continuation items
-                    const string hangingIndent = "                   ";
-                    var wrappedDeps = FormatWithHangingIndent(step.DependsOn, $"   {connector}─ [blue]Depends on:[/] ", $"   {continuation}  {hangingIndent}");
+                    var firstLinePrefix = $"   {connector}─ [blue]Depends on:[/] ";
+                    // Continuation aligns items under the first dep value:
+                    // "   ├─ Depends on: " = 19 visible chars
+                    var continuationPrefix = $"   {continuation}                 ";
+                    var wrappedDeps = FormatWithHangingIndent(step.DependsOn, firstLinePrefix, continuationPrefix);
                     _ansiConsole.MarkupLine(wrappedDeps);
                 }
 
