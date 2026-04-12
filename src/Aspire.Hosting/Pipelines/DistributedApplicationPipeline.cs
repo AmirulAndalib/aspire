@@ -264,6 +264,54 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
                 DumpDependencyGraphDiagnostics(stepsToAnalyze, context);
             }
         });
+
+        // Add a "destroy" aggregation step for teardown operations
+        _steps.Add(new PipelineStep
+        {
+            Name = WellKnownPipelineSteps.Destroy,
+            Description = "Aggregation step for all destroy operations. All destroy steps should be required by this step.",
+            Action = _ => Task.CompletedTask,
+        });
+
+        _steps.Add(new PipelineStep
+        {
+            Name = WellKnownPipelineSteps.DestroyPrereq,
+            Description = "Prerequisite step that runs before any destroy operations. Confirms the destructive action and verifies deployment state.",
+            Action = async context =>
+            {
+                var hostEnvironment = context.Services.GetRequiredService<IHostEnvironment>();
+                var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
+
+                context.Logger.LogInformation("Preparing to destroy environment '{EnvironmentName}'", hostEnvironment.EnvironmentName);
+
+                if (!options.Value.Yes)
+                {
+                    var interactionService = context.Services.GetRequiredService<IInteractionService>();
+
+                    if (interactionService.IsAvailable)
+                    {
+                        var result = await interactionService.PromptNotificationAsync(
+                            "Destroy Environment",
+                            $"This will destroy all resources for the '{hostEnvironment.EnvironmentName}' environment. This action cannot be undone. Do you want to continue?",
+                            new NotificationInteractionOptions
+                            {
+                                Intent = MessageIntent.Confirmation,
+                                ShowSecondaryButton = true,
+                                ShowDismiss = false,
+                                PrimaryButtonText = "Yes, destroy",
+                                SecondaryButtonText = "Cancel"
+                            },
+                            context.CancellationToken).ConfigureAwait(false);
+
+                        if (result.Canceled || !result.Data)
+                        {
+                            context.Logger.LogInformation("User canceled the destroy operation.");
+                            throw new OperationCanceledException("Destroy operation canceled by user.");
+                        }
+                    }
+                }
+            }
+        });
     }
 
     public bool HasSteps => _steps.Count > 0;

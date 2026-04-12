@@ -127,6 +127,8 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
                 Action = ctx => DockerComposeDownAsync(ctx),
                 Tags = ["docker-compose-down"]
             };
+            dockerComposeDownStep.RequiredBy(WellKnownPipelineSteps.Destroy);
+            dockerComposeDownStep.DependsOn(WellKnownPipelineSteps.DestroyPrereq);
             steps.Add(dockerComposeDownStep);
 
             return steps;

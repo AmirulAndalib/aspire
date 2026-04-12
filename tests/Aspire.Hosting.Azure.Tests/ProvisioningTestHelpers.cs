@@ -397,6 +397,11 @@ internal sealed class TestResourceGroupResource : IResourceGroupResource
         }
         return new TestArmDeploymentCollection(_deploymentOutputs!);
     }
+
+    public Task DeleteAsync(WaitUntil waitUntil, CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>

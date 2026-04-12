@@ -119,6 +119,21 @@ public sealed class AzureEnvironmentResource : Resource
             return [publishStep, validateStep, createContextStep, provisionStep];
         }));
 
+        // Add destroy step for tearing down Azure resources
+        Annotations.Add(new PipelineStepAnnotation((factoryContext) =>
+        {
+            var destroyStep = new PipelineStep
+            {
+                Name = $"destroy-azure-{Name}",
+                Description = $"Destroys the Azure resource group and all resources for {Name}.",
+                Action = ctx => DestroyAzureResourcesAsync(ctx),
+                RequiredBySteps = [WellKnownPipelineSteps.Destroy],
+                DependsOnSteps = [WellKnownPipelineSteps.DestroyPrereq]
+            };
+
+            return [destroyStep];
+        }));
+
         Annotations.Add(ManifestPublishingCallbackAnnotation.Ignore);
 
         Location = location;
@@ -184,6 +199,73 @@ public sealed class AzureEnvironmentResource : Resource
                 CompletionState.CompletedWithError,
                 context.CancellationToken).ConfigureAwait(false);
             throw;
+        }
+    }
+
+    private static async Task DestroyAzureResourcesAsync(PipelineStepContext context)
+    {
+        var deploymentStateManager = context.Services.GetRequiredService<IDeploymentStateManager>();
+        var tokenCredentialProvider = context.Services.GetRequiredService<ITokenCredentialProvider>();
+        var armClientProvider = context.Services.GetRequiredService<IArmClientProvider>();
+
+        // Read deployment state to find the resource group
+        var azureStateSection = await deploymentStateManager.AcquireSectionAsync("Azure", context.CancellationToken).ConfigureAwait(false);
+
+        var resourceGroupName = azureStateSection.Data["ResourceGroup"]?.ToString();
+        var subscriptionId = azureStateSection.Data["SubscriptionId"]?.ToString();
+
+        if (string.IsNullOrEmpty(resourceGroupName) || string.IsNullOrEmpty(subscriptionId))
+        {
+            await context.ReportingStep.CompleteAsync(
+                "No Azure deployment state found. Nothing to destroy.",
+                CompletionState.Completed,
+                context.CancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var deployTask = await context.ReportingStep.CreateTaskAsync(
+            new MarkdownString($"Deleting Azure resource group **{resourceGroupName}**"),
+            context.CancellationToken).ConfigureAwait(false);
+        await using (deployTask.ConfigureAwait(false))
+        {
+            try
+            {
+                var credential = tokenCredentialProvider.TokenCredential;
+                var armClient = armClientProvider.GetArmClient(credential, subscriptionId);
+                var (subscription, _) = await armClient.GetSubscriptionAndTenantAsync(context.CancellationToken).ConfigureAwait(false);
+
+                var resourceGroups = subscription.GetResourceGroups();
+                var rgResponse = await resourceGroups.GetAsync(resourceGroupName, context.CancellationToken).ConfigureAwait(false);
+                var resourceGroup = rgResponse.Value;
+
+                await resourceGroup.DeleteAsync(global::Azure.WaitUntil.Started, context.CancellationToken).ConfigureAwait(false);
+
+                // Clean up deployment state after successful destroy initiation
+                await deploymentStateManager.DeleteSectionAsync(azureStateSection, context.CancellationToken).ConfigureAwait(false);
+
+                await deployTask.CompleteAsync(
+                    new MarkdownString($"Resource group **{resourceGroupName}** deletion initiated successfully"),
+                    CompletionState.Completed,
+                    context.CancellationToken).ConfigureAwait(false);
+            }
+            catch (global::Azure.RequestFailedException ex) when (ex.Status == 404)
+            {
+                // Resource group already deleted
+                await deploymentStateManager.DeleteSectionAsync(azureStateSection, context.CancellationToken).ConfigureAwait(false);
+
+                await deployTask.CompleteAsync(
+                    new MarkdownString($"Resource group **{resourceGroupName}** not found (already deleted)"),
+                    CompletionState.Completed,
+                    context.CancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await deployTask.CompleteAsync(
+                    $"Failed to delete resource group '{resourceGroupName}': {ex.Message}",
+                    CompletionState.CompletedWithError,
+                    context.CancellationToken).ConfigureAwait(false);
+                throw;
+            }
         }
     }
 }

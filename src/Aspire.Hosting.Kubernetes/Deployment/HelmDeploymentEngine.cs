@@ -160,6 +160,8 @@ internal static partial class HelmDeploymentEngine
             Tags = [HelmUninstallTag],
             Action = ctx => HelmUninstallAsync(ctx, environment)
         };
+        helmUninstallStep.RequiredBy(WellKnownPipelineSteps.Destroy);
+        helmUninstallStep.DependsOn(WellKnownPipelineSteps.DestroyPrereq);
         steps.Add(helmUninstallStep);
 
         return Task.FromResult<IReadOnlyList<PipelineStep>>(steps);
