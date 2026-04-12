@@ -971,4 +971,58 @@ public class DockerComposeTests(ITestOutputHelper output)
         var completedSteps = mockActivityReporter.CompletedSteps;
         Assert.Contains(completedSteps, s => s.CompletionText.Contains("Nothing to destroy", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public async Task DeployThenDestroy_RoundTrip_UsesPersistedState()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var fakeRuntime = new FakeContainerRuntime();
+        var stateManager = new InMemoryDeploymentStateManager();
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+
+        // Step 1: Deploy — this should persist state
+        var deployBuilder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, tempDir.Path, step: WellKnownPipelineSteps.Deploy);
+        deployBuilder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        deployBuilder.Services.AddSingleton<IContainerRuntime>(fakeRuntime);
+        deployBuilder.Services.AddSingleton<IContainerRuntimeResolver>(sp => (IContainerRuntimeResolver)sp.GetRequiredService<IContainerRuntime>());
+        deployBuilder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
+        deployBuilder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+
+        deployBuilder.AddDockerComposeEnvironment("env");
+        deployBuilder.AddProject<Projects.ServiceA>("api").PublishAsDockerFile();
+
+        using (var deployApp = deployBuilder.Build())
+        {
+            await deployApp.RunAsync();
+        }
+
+        // Verify deploy persisted state
+        var stateSection = await stateManager.AcquireSectionAsync("DockerCompose:env");
+        Assert.NotNull(stateSection.Data["ComposeFilePath"]?.ToString());
+        Assert.NotNull(stateSection.Data["ProjectName"]?.ToString());
+
+        // Step 2: Destroy — should read the persisted state and call compose down
+        fakeRuntime = new FakeContainerRuntime(); // fresh runtime to track destroy calls
+        mockActivityReporter.Clear();
+
+        var destroyBuilder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, tempDir.Path, step: WellKnownPipelineSteps.Destroy);
+        destroyBuilder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        destroyBuilder.Services.AddSingleton<IContainerRuntime>(fakeRuntime);
+        destroyBuilder.Services.AddSingleton<IContainerRuntimeResolver>(sp => (IContainerRuntimeResolver)sp.GetRequiredService<IContainerRuntime>());
+        destroyBuilder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
+        destroyBuilder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+        destroyBuilder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+
+        destroyBuilder.AddDockerComposeEnvironment("env");
+        destroyBuilder.AddProject<Projects.ServiceA>("api").PublishAsDockerFile();
+
+        using (var destroyApp = destroyBuilder.Build())
+        {
+            await destroyApp.RunAsync();
+        }
+
+        // Verify compose down was called using the state from deploy
+        Assert.True(fakeRuntime.WasComposeDownCalled, "ComposeDownAsync should have been called using persisted state from deploy");
+    }
 }

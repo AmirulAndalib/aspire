@@ -1750,9 +1750,12 @@ public class AzureDeployerTests(ITestOutputHelper testOutputHelper)
             ["Location"] = "westus2"
         });
 
+        var testResourceGroup = new TestResourceGroupResource("rg-test-destroy");
+        var armClientProvider = new TestArmClientProvider(testResourceGroup);
+
         var mockActivityReporter = new TestPipelineActivityReporter(testOutputHelper);
         var testInteractionService = new TestInteractionService();
-        ConfigureTestServices(builder, interactionService: testInteractionService, bicepProvisioner: new NoOpBicepProvisioner(), activityReporter: mockActivityReporter, deploymentStateManager: stateManager, setDefaultProvisioningOptions: false);
+        ConfigureTestServices(builder, interactionService: testInteractionService, bicepProvisioner: new NoOpBicepProvisioner(), armClientProvider: armClientProvider, activityReporter: mockActivityReporter, deploymentStateManager: stateManager, setDefaultProvisioningOptions: false);
         builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
 
         builder.AddAzureContainerAppEnvironment("aca");
@@ -1761,9 +1764,9 @@ public class AzureDeployerTests(ITestOutputHelper testOutputHelper)
         using var app = builder.Build();
         await app.RunAsync();
 
-        // Verify the destroy step ran successfully (check tasks, not step completion)
-        var createdSteps = mockActivityReporter.CreatedSteps;
-        Assert.Contains(createdSteps, s => s.Contains("destroy-azure-", StringComparison.OrdinalIgnoreCase));
+        // Verify the resource group was actually deleted via ARM
+        Assert.True(testResourceGroup.WasDeleteCalled, "DeleteAsync should have been called on the resource group");
+        Assert.True(testResourceGroup.WasGetResourcesCalled, "GetResourcesAsync should have been called to enumerate resources before deletion");
     }
 
     [Fact]
