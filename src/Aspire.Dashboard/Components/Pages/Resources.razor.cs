@@ -608,7 +608,7 @@ public partial class Resources : ComponentBase, IComponentWithTelemetry, IAsyncD
             }
 
             // Navigate to remove ?resource=xxx in the URL. A small delay is required here, otherwise the page rendering breaks.
-            await Task.Delay(200);
+            await Task.Delay(200, _watchTaskCancellationTokenSource.Token);
 
             NavigationManager.NavigateTo(DashboardUrls.ResourcesUrl(), new NavigationOptions { ReplaceHistoryEntry = true });
         }

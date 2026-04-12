@@ -41,6 +41,7 @@ public partial class StructuredLogs : IComponentWithTelemetry, IPageWithSessionA
     private List<OtlpResource> _resources = default!;
     private List<SelectViewModel<ResourceTypeDetails>> _resourceViewModels = default!;
     private List<SelectViewModel<LogLevel?>> _logLevels = default!;
+    private readonly CancellationTokenSource _cts = new();
     private Subscription? _resourcesSubscription;
     private Subscription? _logsSubscription;
     private bool _resourceChanged;
@@ -267,7 +268,7 @@ public partial class StructuredLogs : IComponentWithTelemetry, IPageWithSessionA
             }
 
             // Navigate to remove ?logEntryId=xxx in the URL. A small delay is required here, otherwise the page rendering breaks.
-            await Task.Delay(200);
+            await Task.Delay(200, _cts.Token);
 
             NavigationManager.NavigateTo(DashboardUrls.StructuredLogsUrl(), new NavigationOptions { ReplaceHistoryEntry = true });
         }
@@ -480,6 +481,7 @@ public partial class StructuredLogs : IComponentWithTelemetry, IPageWithSessionA
 
     public void Dispose()
     {
+        _cts.Cancel();
         _aiContext?.Dispose();
         _resourcesSubscription?.Dispose();
         _logsSubscription?.Dispose();

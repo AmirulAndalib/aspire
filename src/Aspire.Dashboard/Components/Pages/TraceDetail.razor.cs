@@ -31,6 +31,7 @@ public partial class TraceDetail : ComponentBase, IComponentWithTelemetry, IDisp
     private const string ActionsColumn = nameof(ActionsColumn);
     private const int RootSpanDepth = 1;
 
+    private readonly CancellationTokenSource _cts = new();
     private readonly List<IDisposable> _peerChangesSubscriptions = new();
     private OtlpTrace? _trace;
     private Subscription? _tracesSubscription;
@@ -243,7 +244,7 @@ public partial class TraceDetail : ComponentBase, IComponentWithTelemetry, IDisp
             }
 
             // Navigate to remove ?spanId=xxx in the URL. A small delay is required here, otherwise the page rendering breaks.
-            await Task.Delay(200);
+            await Task.Delay(200, _cts.Token);
 
             NavigationManager.NavigateTo(DashboardUrls.TraceDetailUrl(TraceId), new NavigationOptions { ReplaceHistoryEntry = true });
         }
@@ -572,6 +573,7 @@ public partial class TraceDetail : ComponentBase, IComponentWithTelemetry, IDisp
 
     public void Dispose()
     {
+        _cts.Cancel();
         _aiContext?.Dispose();
         foreach (var subscription in _peerChangesSubscriptions)
         {

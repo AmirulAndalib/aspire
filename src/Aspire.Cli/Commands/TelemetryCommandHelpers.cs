@@ -409,7 +409,7 @@ internal static class TelemetryCommandHelpers
     public static string FormatTraceLink(string? dashboardUrl, string traceId, string? displayText = null, string? spanId = null)
     {
         var text = displayText ?? OtlpHelpers.ToShortenedId(traceId);
-        if (string.IsNullOrEmpty(dashboardUrl))
+        if (string.IsNullOrEmpty(dashboardUrl) || string.IsNullOrEmpty(traceId))
         {
             return text;
         }
