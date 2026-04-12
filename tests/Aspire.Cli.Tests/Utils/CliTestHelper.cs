@@ -300,6 +300,8 @@ internal sealed class CliServiceCollectionTestOptions
         {
             // Use a large width to prevent Spectre.Console from word-wrapping output lines.
             console.Profile.Width = int.MaxValue;
+            // Disable link capabilities to prevent OSC 8 hyperlink sequences in output.
+            console.Profile.Capabilities.Links = false;
         }
         return console;
     }
