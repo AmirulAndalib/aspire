@@ -270,7 +270,13 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         {
             Name = WellKnownPipelineSteps.Destroy,
             Description = "Aggregation step for all destroy operations. All destroy steps should be required by this step.",
-            Action = _ => Task.CompletedTask,
+            Action = async context =>
+            {
+                // Full destroy clears all deployment state — parameters, Azure config, everything.
+                // The next deploy starts completely fresh.
+                var deploymentStateManager = context.Services.GetRequiredService<IDeploymentStateManager>();
+                await deploymentStateManager.ClearAllStateAsync(context.CancellationToken).ConfigureAwait(false);
+            },
         });
 
         _steps.Add(new PipelineStep
