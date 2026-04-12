@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Cli.EndToEnd.Tests.Helpers;
+using Aspire.Cli.Resources;
 using Aspire.Cli.Tests.Utils;
 using Aspire.TestUtilities;
 using Hex1b.Automation;
@@ -293,10 +294,11 @@ builder.Build().Run();
             // Phase 6: Cleanup
             // =====================================================================
 
-            // Uninstall the Helm release
-            await auto.TypeAsync("helm uninstall aspire-app");
+            // Destroy the deployment using aspire destroy (runs helm uninstall)
+            await auto.TypeAsync("aspire destroy --yes");
             await auto.EnterAsync();
-            await auto.WaitForSuccessPromptAsync(counter);
+            await auto.WaitUntilTextAsync(ConsoleActivityLoggerStrings.PipelineSucceeded, timeout: TimeSpan.FromMinutes(2));
+            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(1));
 
             // Delete the KinD cluster
             await auto.TypeAsync($"kind delete cluster --name={clusterName}");
