@@ -24,4 +24,12 @@ internal sealed class DefaultResourceGroupResource(ResourceGroupResource resourc
     {
         await resourceGroupResource.DeleteAsync(waitUntil, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
+
+    public async IAsyncEnumerable<(string Name, string ResourceType)> GetResourcesAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        await foreach (var resource in resourceGroupResource.GetGenericResourcesAsync(cancellationToken: cancellationToken).ConfigureAwait(false))
+        {
+            yield return (resource.Data.Name, resource.Data.ResourceType.ToString());
+        }
+    }
 }

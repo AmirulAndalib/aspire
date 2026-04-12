@@ -168,6 +168,12 @@ internal interface IResourceGroupResource
     /// Deletes the resource group.
     /// </summary>
     Task DeleteAsync(WaitUntil waitUntil, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all resources in the resource group.
+    /// </summary>
+    /// <returns>A list of resources with their name and type.</returns>
+    IAsyncEnumerable<(string Name, string ResourceType)> GetResourcesAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>

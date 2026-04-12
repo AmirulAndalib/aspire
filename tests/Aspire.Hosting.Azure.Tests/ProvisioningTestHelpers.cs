@@ -402,6 +402,12 @@ internal sealed class TestResourceGroupResource : IResourceGroupResource
     {
         return Task.CompletedTask;
     }
+
+    public async IAsyncEnumerable<(string Name, string ResourceType)> GetResourcesAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        await Task.CompletedTask;
+        yield break;
+    }
 }
 
 /// <summary>
