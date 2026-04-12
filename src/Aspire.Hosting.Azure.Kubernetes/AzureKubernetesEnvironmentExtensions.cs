@@ -1,0 +1,205 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Azure;
+using Aspire.Hosting.Azure.Kubernetes;
+using Aspire.Hosting.Kubernetes;
+using Aspire.Hosting.Kubernetes.Extensions;
+using Aspire.Hosting.Lifecycle;
+using Azure.Provisioning;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Aspire.Hosting;
+
+/// <summary>
+/// Provides extension methods for adding Azure Kubernetes Service (AKS) environments to the application model.
+/// </summary>
+public static class AzureKubernetesEnvironmentExtensions
+{
+    /// <summary>
+    /// Adds an Azure Kubernetes Service (AKS) environment to the distributed application.
+    /// This provisions an AKS cluster and configures it as a Kubernetes compute environment.
+    /// </summary>
+    /// <param name="builder">The <see cref="IDistributedApplicationBuilder"/>.</param>
+    /// <param name="name">The name of the AKS environment resource.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/>.</returns>
+    /// <remarks>
+    /// This method internally creates a Kubernetes environment for Helm-based deployment
+    /// and provisions an AKS cluster via Azure Bicep. It combines the functionality of
+    /// <c>AddKubernetesEnvironment</c> with Azure-specific provisioning.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var aks = builder.AddAzureKubernetesEnvironment("aks")
+    ///     .WithVersion("1.30");
+    /// </code>
+    /// </example>
+    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    public static IResourceBuilder<AzureKubernetesEnvironmentResource> AddAzureKubernetesEnvironment(
+        this IDistributedApplicationBuilder builder,
+        [ResourceName] string name)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        // Set up Azure provisioning infrastructure
+        builder.AddAzureProvisioning();
+        builder.Services.Configure<AzureProvisioningOptions>(
+            o => o.SupportsTargetedRoleAssignments = true);
+
+        // Register the AKS-specific infrastructure eventing subscriber
+        builder.Services.TryAddEventingSubscriber<AzureKubernetesInfrastructure>();
+
+        // Also register the generic K8s infrastructure (for Helm chart generation)
+        builder.AddKubernetesInfrastructureCore();
+
+        // Create the unified environment resource
+        var resource = new AzureKubernetesEnvironmentResource(name, ConfigureAksInfrastructure);
+
+        // Create the inner KubernetesEnvironmentResource (for Helm deployment)
+        resource.KubernetesEnvironment = new KubernetesEnvironmentResource($"{name}-k8s")
+        {
+            HelmChartName = builder.Environment.ApplicationName.ToHelmChartName(),
+        };
+
+        if (builder.ExecutionContext.IsRunMode)
+        {
+            return builder.CreateResourceBuilder(resource);
+        }
+
+        return builder.AddResource(resource);
+    }
+
+    /// <summary>
+    /// Configures the Kubernetes version for the AKS cluster.
+    /// </summary>
+    /// <param name="builder">The resource builder.</param>
+    /// <param name="version">The Kubernetes version (e.g., "1.30").</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
+    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithVersion(
+        this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
+        string version)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrEmpty(version);
+
+        builder.Resource.KubernetesVersion = version;
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures the SKU tier for the AKS cluster.
+    /// </summary>
+    /// <param name="builder">The resource builder.</param>
+    /// <param name="tier">The SKU tier.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
+    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithSkuTier(
+        this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
+        AksSkuTier tier)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Resource.SkuTier = tier;
+        return builder;
+    }
+
+    /// <summary>
+    /// Adds a node pool to the AKS cluster.
+    /// </summary>
+    /// <param name="builder">The resource builder.</param>
+    /// <param name="name">The name of the node pool.</param>
+    /// <param name="vmSize">The VM size for nodes.</param>
+    /// <param name="minCount">The minimum node count for autoscaling.</param>
+    /// <param name="maxCount">The maximum node count for autoscaling.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
+    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithNodePool(
+        this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
+        string name,
+        string vmSize,
+        int minCount,
+        int maxCount)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrEmpty(name);
+        ArgumentException.ThrowIfNullOrEmpty(vmSize);
+
+        builder.Resource.NodePools.Add(
+            new AksNodePoolConfig(name, vmSize, minCount, maxCount, AksNodePoolMode.User));
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures the AKS cluster as a private cluster with a private API server endpoint.
+    /// </summary>
+    /// <param name="builder">The resource builder.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
+    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    public static IResourceBuilder<AzureKubernetesEnvironmentResource> AsPrivateCluster(
+        this IResourceBuilder<AzureKubernetesEnvironmentResource> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Resource.IsPrivateCluster = true;
+        return builder;
+    }
+
+    /// <summary>
+    /// Enables Container Insights monitoring on the AKS cluster.
+    /// </summary>
+    /// <param name="builder">The resource builder.</param>
+    /// <param name="logAnalytics">Optional Log Analytics workspace. If not provided, one will be auto-created.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
+    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithContainerInsights(
+        this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
+        IResourceBuilder<AzureLogAnalyticsWorkspaceResource>? logAnalytics = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Resource.ContainerInsightsEnabled = true;
+
+        if (logAnalytics is not null)
+        {
+            builder.Resource.LogAnalyticsWorkspace = logAnalytics.Resource;
+        }
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures the AKS environment to use a specific Azure Log Analytics workspace.
+    /// </summary>
+    /// <param name="builder">The resource builder.</param>
+    /// <param name="workspaceBuilder">The Log Analytics workspace resource builder.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
+    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithAzureLogAnalyticsWorkspace(
+        this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
+        IResourceBuilder<AzureLogAnalyticsWorkspaceResource> workspaceBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(workspaceBuilder);
+
+        builder.Resource.LogAnalyticsWorkspace = workspaceBuilder.Resource;
+        return builder;
+    }
+
+    // NOTE: Full AKS Bicep provisioning with ContainerServiceManagedCluster types requires
+    // the Azure.Provisioning.ContainerService package (currently unavailable in internal feeds).
+    // This implementation uses ProvisioningOutput placeholders. When the package becomes available,
+    // replace this with typed ContainerServiceManagedCluster resource construction.
+    private static void ConfigureAksInfrastructure(AzureResourceInfrastructure infrastructure)
+    {
+        // Outputs will be populated by the Bicep module generated during publish
+        infrastructure.Add(new ProvisioningOutput("id", typeof(string)));
+        infrastructure.Add(new ProvisioningOutput("name", typeof(string)));
+        infrastructure.Add(new ProvisioningOutput("clusterFqdn", typeof(string)));
+        infrastructure.Add(new ProvisioningOutput("oidcIssuerUrl", typeof(string)));
+        infrastructure.Add(new ProvisioningOutput("kubeletIdentityObjectId", typeof(string)));
+        infrastructure.Add(new ProvisioningOutput("nodeResourceGroup", typeof(string)));
+    }
+}
