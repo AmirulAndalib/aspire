@@ -224,6 +224,18 @@ public sealed class AzureEnvironmentResource : Resource
             return;
         }
 
+        // Fail fast in non-interactive mode without --yes before doing any Azure work
+        var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
+        if (!options.Value.Yes)
+        {
+            var interactionService = context.Services.GetRequiredService<IInteractionService>();
+            if (!interactionService.IsAvailable)
+            {
+                throw new InvalidOperationException(
+                    "Cannot perform destructive operation without confirmation. Use --yes to skip the confirmation prompt in non-interactive mode.");
+            }
+        }
+
         var credential = tokenCredentialProvider.TokenCredential;
         var armClient = armClientProvider.GetArmClient(credential, subscriptionId);
         var (subscription, _) = await armClient.GetSubscriptionAndTenantAsync(context.CancellationToken).ConfigureAwait(false);
@@ -296,16 +308,9 @@ public sealed class AzureEnvironmentResource : Resource
         }
 
         // Confirm destruction with the user (unless --yes was specified)
-        var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
         if (!options.Value.Yes)
         {
             var interactionService = context.Services.GetRequiredService<IInteractionService>();
-
-            if (!interactionService.IsAvailable)
-            {
-                throw new InvalidOperationException(
-                    "Cannot perform destructive operation without confirmation. Use --yes to skip the confirmation prompt in non-interactive mode.");
-            }
 
             var confirmMessage = resources.Count > 0
                 ? $"Delete resource group '{resourceGroupName}' with {resources.Count} resource(s)? This action cannot be undone."
