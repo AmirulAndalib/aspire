@@ -36,5 +36,5 @@ public class PipelineOptions
     /// <summary>
     /// Gets or sets a value indicating whether to skip confirmation prompts for destructive operations.
     /// </summary>
-    public bool Yes { get; set; }
+    public bool SkipConfirmation { get; set; }
 }

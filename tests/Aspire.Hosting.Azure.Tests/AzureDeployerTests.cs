@@ -1756,7 +1756,7 @@ public class AzureDeployerTests(ITestOutputHelper testOutputHelper)
         var mockActivityReporter = new TestPipelineActivityReporter(testOutputHelper);
         var testInteractionService = new TestInteractionService();
         ConfigureTestServices(builder, interactionService: testInteractionService, bicepProvisioner: new NoOpBicepProvisioner(), armClientProvider: armClientProvider, activityReporter: mockActivityReporter, deploymentStateManager: stateManager, setDefaultProvisioningOptions: false);
-        builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+        builder.Services.Configure<PipelineOptions>(o => o.SkipConfirmation = true);
 
         builder.AddAzureContainerAppEnvironment("aca");
         builder.AddContainer("api", "myimage");
@@ -1777,7 +1777,7 @@ public class AzureDeployerTests(ITestOutputHelper testOutputHelper)
         var mockActivityReporter = new TestPipelineActivityReporter(testOutputHelper);
 
         ConfigureTestServices(builder, bicepProvisioner: new NoOpBicepProvisioner(), activityReporter: mockActivityReporter, deploymentStateManager: stateManager, setDefaultProvisioningOptions: false);
-        builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+        builder.Services.Configure<PipelineOptions>(o => o.SkipConfirmation = true);
 
         builder.AddAzureContainerAppEnvironment("aca");
         builder.AddContainer("api", "myimage");

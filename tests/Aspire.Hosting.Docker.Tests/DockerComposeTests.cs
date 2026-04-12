@@ -925,7 +925,7 @@ public class DockerComposeTests(ITestOutputHelper output)
         builder.Services.AddSingleton<IContainerRuntimeResolver>(sp => (IContainerRuntimeResolver)sp.GetRequiredService<IContainerRuntime>());
         builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
         builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
-        builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+        builder.Services.Configure<PipelineOptions>(o => o.SkipConfirmation = true);
 
         builder.AddDockerComposeEnvironment("env");
         builder.AddProject<Projects.ServiceA>("api").PublishAsDockerFile();
@@ -956,7 +956,7 @@ public class DockerComposeTests(ITestOutputHelper output)
         builder.Services.AddSingleton<IContainerRuntimeResolver>(sp => (IContainerRuntimeResolver)sp.GetRequiredService<IContainerRuntime>());
         builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
         builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
-        builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+        builder.Services.Configure<PipelineOptions>(o => o.SkipConfirmation = true);
 
         builder.AddDockerComposeEnvironment("env");
         builder.AddProject<Projects.ServiceA>("api").PublishAsDockerFile();
@@ -1012,7 +1012,7 @@ public class DockerComposeTests(ITestOutputHelper output)
         destroyBuilder.Services.AddSingleton<IContainerRuntimeResolver>(sp => (IContainerRuntimeResolver)sp.GetRequiredService<IContainerRuntime>());
         destroyBuilder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
         destroyBuilder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
-        destroyBuilder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+        destroyBuilder.Services.Configure<PipelineOptions>(o => o.SkipConfirmation = true);
 
         destroyBuilder.AddDockerComposeEnvironment("env");
         destroyBuilder.AddProject<Projects.ServiceA>("api").PublishAsDockerFile();

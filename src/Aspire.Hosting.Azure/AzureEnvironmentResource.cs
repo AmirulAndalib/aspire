@@ -221,7 +221,7 @@ public sealed class AzureEnvironmentResource : Resource
 
         // Fail fast in non-interactive mode without --yes before doing any Azure work
         var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
-        if (!options.Value.Yes)
+        if (!options.Value.SkipConfirmation)
         {
             var interactionService = context.Services.GetRequiredService<IInteractionService>();
             if (!interactionService.IsAvailable)
@@ -302,7 +302,7 @@ public sealed class AzureEnvironmentResource : Resource
         }
 
         // Confirm destruction with the user (unless --yes was specified)
-        if (!options.Value.Yes)
+        if (!options.Value.SkipConfirmation)
         {
             var interactionService = context.Services.GetRequiredService<IInteractionService>();
 

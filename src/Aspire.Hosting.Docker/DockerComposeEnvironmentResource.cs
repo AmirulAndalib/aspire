@@ -367,7 +367,7 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
     {
         var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
 
-        if (!options.Value.Yes)
+        if (!options.Value.SkipConfirmation)
         {
             var interactionService = context.Services.GetRequiredService<IInteractionService>();
 

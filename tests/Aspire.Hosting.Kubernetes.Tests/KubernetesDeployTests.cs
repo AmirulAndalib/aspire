@@ -1338,7 +1338,7 @@ public class KubernetesDeployTests(ITestOutputHelper output)
         builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
         builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
         builder.Services.AddSingleton<IHelmRunner>(fakeHelm);
-        builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+        builder.Services.Configure<PipelineOptions>(o => o.SkipConfirmation = true);
 
         builder.AddKubernetesEnvironment("env");
         builder.AddContainer("api", "myimage");
@@ -1370,7 +1370,7 @@ public class KubernetesDeployTests(ITestOutputHelper output)
         builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
         builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
         builder.Services.AddSingleton<IHelmRunner>(fakeHelm);
-        builder.Services.Configure<PipelineOptions>(o => o.Yes = true);
+        builder.Services.Configure<PipelineOptions>(o => o.SkipConfirmation = true);
 
         builder.AddKubernetesEnvironment("env");
         builder.AddContainer("api", "myimage");

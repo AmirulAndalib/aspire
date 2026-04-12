@@ -647,7 +647,7 @@ public class DistributedApplicationBuilder : IDistributedApplicationBuilder
             // TODO: Rename this to something related to deployment state
             { "--clear-cache", "Pipeline:ClearCache" },
 
-            { "--yes", "Pipeline:Yes" },
+            { "--yes", "Pipeline:SkipConfirmation" },
 
             // DCP Publisher options, we should only process these in run mode
             { "--dcp-cli-path", "DcpPublisher:CliPath" },
