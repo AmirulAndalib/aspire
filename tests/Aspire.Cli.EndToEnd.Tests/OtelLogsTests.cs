@@ -45,8 +45,9 @@ public sealed class OtelLogsTests(ITestOutputHelper output)
         await auto.AspireStartAsync(counter);
 
         // Wait for the apiservice resource to be running before querying logs
-        await auto.TypeAsync("aspire wait apiservice --status up");
+        await auto.TypeAsync("aspire wait apiservice --status up --timeout 300");
         await auto.EnterAsync();
+        await auto.WaitUntilTextAsync("is up (running).", timeout: TimeSpan.FromMinutes(6));
         await auto.WaitForSuccessPromptAsync(counter);
 
         // Run aspire otel logs and capture output to a file
