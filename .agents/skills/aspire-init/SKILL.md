@@ -285,9 +285,22 @@ Analyze the repository to discover all projects and services that could be model
 - `node_modules/`, `.modules/`, `dist/`, `build/`, `bin/`, `obj/`, `.git/`
 - Test projects (directories named `test`/`tests`/`__tests__`, projects referencing xUnit/NUnit/MSTest, or test-only package.json scripts)
 
-### Step 2: Smoke-test the skeleton
+### Step 2: Check prerequisites and smoke-test the skeleton
 
-Before investing time in wiring, verify that the Aspire skeleton boots correctly:
+Before investing time in wiring, run `aspire doctor` to verify the environment is ready:
+
+```bash
+aspire doctor
+```
+
+This checks for a working .NET SDK, container runtime (Docker/Podman), trusted dev certificates, and deprecated workloads. **Fix any failures before proceeding** — discovering that Docker isn't running *after* you've wired 10 services wastes significant time.
+
+Common issues caught by `aspire doctor`:
+- **Container runtime not running**: Start Docker Desktop or Podman before proceeding — container resources will fail to start without it.
+- **Deprecated aspire workload installed**: If installed by Visual Studio, it can't be removed via CLI — this is a warning, not a blocker.
+- **Untrusted dev certificate**: Run `aspire certs trust` to fix HTTPS endpoint failures.
+
+Once the environment is clean, verify the Aspire skeleton boots:
 
 ```bash
 aspire start
@@ -588,6 +601,11 @@ Once the app is running, use the Aspire CLI to verify everything is wired up cor
 3. **OTel is flowing** (if configured in Step 8): `aspire otel` — verify that services instrumented with OpenTelemetry are exporting traces and metrics to the Aspire dashboard collector.
 4. **No startup errors**: `aspire logs <resource>` — check logs for each resource to ensure clean startup with no crashes, missing config, or connection failures.
 5. **Dashboard is accessible**: Confirm the dashboard URL is printed and can be opened (remember: include the login token — see "Dashboard URL must include auth token" above).
+6. **Telemetry reaches the dashboard**: After resources are running, verify that traces and structured logs appear in the Aspire dashboard. Open the dashboard, navigate to the Traces view, and confirm at least one trace is visible from a service. If no telemetry flows:
+   - Check whether the service's OTel setup conditionally disables export (e.g., based on a `selfHosted` flag, a config key like `OpenTelemetry:Enabled`, or an environment check). Many SDKs default OTel OFF for self-hosted/local modes — set the enabling flag explicitly via `WithEnvironment()`.
+   - Check that `OTEL_EXPORTER_OTLP_ENDPOINT` is being injected by Aspire (it should be automatic for services modeled with `AddCSharpApp`/`AddProject`).
+   - Generate a trace by making an HTTP request to one of the services (e.g., `curl https://localhost:<port>/healthz` or any known endpoint). Some services don't emit traces until they receive traffic.
+   - Check service logs for OTLP exporter errors (connection refused, TLS handshake failures).
 
 **This skill is not done until `aspire start` runs without errors and every resource is in an expected terminal/runtime state.** Acceptable end states are:
 

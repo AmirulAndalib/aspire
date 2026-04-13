@@ -291,6 +291,25 @@ var api = builder.AddCSharpApp("api", "../src/Api")
     .WaitForCompletion(migration);  // Don't start until migration finishes
 ```
 
+## Secrets in process arguments — avoid `WithArgs` for sensitive values
+
+**⚠️ Never pass connection strings, passwords, or other secrets via `WithArgs()`.** Process arguments are visible in task managers, `ps` output, process inspection tools, and often end up in logs. This is a secret leakage risk.
+
+```csharp
+// ❌ WRONG — connection string visible in process arguments
+var migrator = builder.AddCSharpApp("migrator", "../util/Migrator")
+    .WithArgs(context =>
+    {
+        context.Args.Add(db.Resource.ConnectionStringExpression);
+    });
+
+// ✅ CORRECT — pass secrets via environment variables
+var migrator = builder.AddCSharpApp("migrator", "../util/Migrator")
+    .WithEnvironment("DB_CONNECTION_STRING", db.Resource.ConnectionStringExpression);
+```
+
+If the tool only accepts the connection string as a CLI argument (e.g., a third-party migration runner), note this limitation to the user and suggest modifying the tool to read from an environment variable or config file instead. If modification isn't possible, using `WithArgs` is acceptable as a pragmatic tradeoff — but flag it explicitly.
+
 ## Container lifetimes
 
 By default, containers are stopped when the AppHost stops. Use **persistent lifetime** to keep containers running across restarts (useful for databases during development):
