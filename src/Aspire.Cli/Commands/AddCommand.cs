@@ -208,10 +208,13 @@ internal sealed class AddCommand : BaseCommand
             };
 
             // Add the package using the appropriate project handler
-            var addPackageSource = source;
-            if (string.IsNullOrEmpty(addPackageSource) && selectedNuGetPackage.Channel.Type is PackageChannelType.Explicit)
+            if (string.IsNullOrEmpty(source) && VersionHelper.IsPrChannel(selectedNuGetPackage.Channel.Name))
             {
-                addPackageSource = selectedNuGetPackage.Channel.SourceDetails;
+                var nugetConfigPrompter = new NuGetConfigPrompter(InteractionService);
+                await nugetConfigPrompter.CreateOrUpdateWithoutPromptAsync(
+                    effectiveAppHostProjectFile.Directory!,
+                    selectedNuGetPackage.Channel,
+                    cancellationToken);
             }
 
             context = new AddPackageContext
@@ -219,7 +222,7 @@ internal sealed class AddCommand : BaseCommand
                 AppHostFile = effectiveAppHostProjectFile,
                 PackageId = selectedNuGetPackage.Package.Id,
                 PackageVersion = selectedNuGetPackage.Package.Version,
-                Source = addPackageSource
+                Source = source
             };
 
             // Stop any running AppHost instance before adding the package.
@@ -312,8 +315,12 @@ internal sealed class AddCommand : BaseCommand
 
         // When PR hives are present, prefer the package that exactly matches the installed
         // CLI/SDK version so template- and add-generated projects stay on the same build.
+        var prChannelPackageVersions = packageVersions
+            .Where(p => VersionHelper.IsPrChannel(p.Channel.Name))
+            .ToArray();
+
         if (VersionHelper.TryGetCurrentCliVersionMatch(
-            packageVersions,
+            prChannelPackageVersions,
             p => p.Package.Version,
             out var cliVersionPackage,
             hasPrHives: ExecutionContext.GetPrHiveCount() > 0))

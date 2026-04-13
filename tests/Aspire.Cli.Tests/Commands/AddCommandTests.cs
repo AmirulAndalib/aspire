@@ -890,7 +890,7 @@ public class AddCommandTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public async Task AddCommand_WithPrHive_ForwardsSelectedChannelSourceToAddPackage()
+    public async Task AddCommand_WithPrHive_CreatesNuGetConfigAndDoesNotForceSingleSource()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
 
@@ -902,10 +902,16 @@ public class AddCommandTests(ITestOutputHelper outputHelper)
         var cliVersion = VersionHelper.GetDefaultSdkVersion();
         var expectedSource = Path.Combine(prHiveDir.FullName, "packages").Replace('\\', '/');
         string? addUsedSource = null;
+        var appHostDirectory = Directory.CreateDirectory(Path.Combine(workspace.WorkspaceRoot.FullName, "AppHost"));
+        var appHostFile = new FileInfo(Path.Combine(appHostDirectory.FullName, "AppHost.csproj"));
+        File.WriteAllText(appHostFile.FullName, "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
-            options.ProjectLocatorFactory = _ => new TestProjectLocator();
+            options.ProjectLocatorFactory = _ => new TestProjectLocator
+            {
+                UseOrFindAppHostProjectFileAsyncCallback = (_, _, _) => Task.FromResult<FileInfo?>(appHostFile)
+            };
 
             options.DotNetCliRunnerFactory = (sp) =>
             {
@@ -948,7 +954,11 @@ public class AddCommandTests(ITestOutputHelper outputHelper)
         var exitCode = await result.InvokeAsync().DefaultTimeout();
 
         Assert.Equal(0, exitCode);
-        Assert.Equal(expectedSource, addUsedSource);
+        Assert.Null(addUsedSource);
+
+        var nuGetConfigPath = Path.Combine(appHostDirectory.FullName, "nuget.config");
+        Assert.True(File.Exists(nuGetConfigPath));
+        Assert.Contains(expectedSource, File.ReadAllText(nuGetConfigPath), StringComparison.Ordinal);
     }
 }
 
