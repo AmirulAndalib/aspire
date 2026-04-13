@@ -105,8 +105,9 @@ public sealed class PythonFastApiDeploymentTests(ITestOutputHelper output)
             await auto.TypeAsync("aspire add Aspire.Hosting.Azure.AppContainers");
             await auto.EnterAsync();
 
-            // In CI, aspire add shows a version selection prompt
-            if (DeploymentE2ETestHelpers.IsRunningInCI)
+            // In CI, aspire add shows a version selection prompt when packages aren't from local hive.
+            // When using bundle install (PR > 0), the CLI auto-selects from the local hive.
+            if (DeploymentE2ETestHelpers.IsRunningInCI && DeploymentE2ETestHelpers.GetPrNumber() <= 0)
             {
                 await auto.WaitUntilTextAsync("(based on NuGet.config)", timeout: TimeSpan.FromSeconds(60));
                 await auto.EnterAsync(); // select first version (PR build)

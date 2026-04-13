@@ -102,11 +102,13 @@ public sealed class TypeScriptExpressDeploymentTests(ITestOutputHelper output)
             await auto.TypeAsync("aspire add Aspire.Hosting.Azure.AppContainers");
             await auto.EnterAsync();
 
-            // In CI, aspire add shows a version selection prompt
-            if (DeploymentE2ETestHelpers.IsRunningInCI)
+            // When using bundle install (InstallAspireBundleFromPullRequestAsync), the CLI
+            // auto-selects the package version from the local hive without prompting.
+            // Only wait for the version selection prompt when the bundle is NOT installed.
+            if (DeploymentE2ETestHelpers.IsRunningInCI && DeploymentE2ETestHelpers.GetPrNumber() <= 0)
             {
                 await auto.WaitUntilTextAsync("(based on NuGet.config)", timeout: TimeSpan.FromSeconds(60));
-                await auto.EnterAsync(); // select first version (PR build)
+                await auto.EnterAsync();
             }
 
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(180));

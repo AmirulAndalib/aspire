@@ -147,7 +147,7 @@ public sealed class TypeScriptVnetSqlServerInfraDeploymentTests(ITestOutputHelpe
             await auto.TypeAsync("aspire add Aspire.Hosting.Azure.AppContainers");
             await auto.EnterAsync();
 
-            if (DeploymentE2ETestHelpers.IsRunningInCI)
+            if (DeploymentE2ETestHelpers.IsRunningInCI && DeploymentE2ETestHelpers.GetPrNumber() <= 0)
             {
                 await auto.WaitUntilTextAsync("(based on NuGet.config)", timeout: TimeSpan.FromSeconds(60));
                 await auto.EnterAsync();
@@ -160,7 +160,7 @@ public sealed class TypeScriptVnetSqlServerInfraDeploymentTests(ITestOutputHelpe
             await auto.TypeAsync("aspire add Aspire.Hosting.Azure.Network");
             await auto.EnterAsync();
 
-            if (DeploymentE2ETestHelpers.IsRunningInCI)
+            if (DeploymentE2ETestHelpers.IsRunningInCI && DeploymentE2ETestHelpers.GetPrNumber() <= 0)
             {
                 await auto.WaitUntilTextAsync("(based on NuGet.config)", timeout: TimeSpan.FromSeconds(60));
                 await auto.EnterAsync();
@@ -173,7 +173,7 @@ public sealed class TypeScriptVnetSqlServerInfraDeploymentTests(ITestOutputHelpe
             await auto.TypeAsync("aspire add Aspire.Hosting.Azure.Sql");
             await auto.EnterAsync();
 
-            if (DeploymentE2ETestHelpers.IsRunningInCI)
+            if (DeploymentE2ETestHelpers.IsRunningInCI && DeploymentE2ETestHelpers.GetPrNumber() <= 0)
             {
                 await auto.WaitUntilTextAsync("(based on NuGet.config)", timeout: TimeSpan.FromSeconds(60));
                 await auto.EnterAsync();
