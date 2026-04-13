@@ -2,12 +2,21 @@
 """
 Aspire Issue Heatmap Generator
 
-Fetches all open issues from dotnet/aspire, classifies them into feature
-quadrants (Integrations, Inner Loop, Polyglot, Deployment, Dashboard, Infra),
-and generates a heatmap visualization + CSV export.
+Fetches all open issues from dotnet/aspire, classifies them, and generates
+a heatmap visualization + CSV export.
+
+Classification is pluggable: by default uses the heuristic classifier in
+classify.py. To use pre-computed classifications (e.g. from an LLM), pass
+--classifications path/to/classifications.json containing:
+
+    [{"n": 12345, "c": "Integrations", "y": "bug"}, ...]
 
 Usage:
-    python generate_heatmap.py [--repo OWNER/REPO] [--output DIR]
+    # Heuristic classification (fast, no AI)
+    python generate_heatmap.py
+
+    # Pre-computed LLM classifications
+    python generate_heatmap.py --classifications output/classifications.json
 
 Prerequisites:
     - gh CLI authenticated with repo access
@@ -18,169 +27,12 @@ import argparse
 import csv
 import json
 import os
-import re
 import subprocess
 import sys
 from collections import Counter
 from datetime import datetime, timezone
 
-# ── Issue classification ─────────────────────────────────────────────────────
-
-# Labels that are meta/process and should be excluded from theme analysis
-SKIP_LABELS = frozenset({
-    'needs-area-label', 'needs-retriage', 'needs-further-triage',
-    'untriaged', 'needs-author-action', 'needs-design',
-    'enhancement', 'bug', 'help wanted', 'good first issue',
-    'tracking', 'blog-post', 'external', 'blocked',
-    'aspirifriday', 'aspirifridays', 'hardproblems', 'refactoring',
-})
-
-
-def classify_issue(issue):
-    """Classify an issue into a quadrant and bug/feature type."""
-    labels = {l['name'].lower() for l in issue.get('labels', [])}
-    title = issue.get('title', '').lower()
-    body = (issue.get('body') or '')[:500].lower()
-
-    category = _classify_category(labels, title, body)
-    is_bug = _classify_type(labels, title, body)
-    return category, is_bug
-
-
-def _classify_category(labels, title, body):
-    """Determine which quadrant an issue belongs to."""
-
-    has_appmodel = bool(labels & {'area-app-model', 'area-orchestrator'})
-
-    # ── Infra ──
-    infra_labels = {
-        'area-engineering-systems', 'area-testing', 'area-app-testing',
-        'flaky-test', 'failing-test', 'disabled-tests', 'quarantined-test',
-        'area-pipelines', 'area-samples', 'area-meta', 'area-copilot',
-        'area-grafana', 'pod-e2e', 'perf',
-    }
-    if labels & infra_labels or any('testing' in l and l != 'area-app-testing' for l in labels):
-        return 'Infra'
-
-    # ── Deployment ──
-    deploy_labels = {
-        'area-deployment', 'deployment-e2e', 'azure-container-apps',
-        'area-azure-aca', 'docker-compose', 'kubernetes',
-        'azure-functions', 'azure.provisioning',
-    }
-    deploy_title_kw = [
-        'deploy', 'publish', 'container app', 'docker compose',
-        'kubernetes', 'k8s', 'helm', 'aca ', 'bicep',
-        'manifest', 'terraform', 'azure container',
-    ]
-    if labels & deploy_labels:
-        return 'Deployment'
-    if has_appmodel and any(kw in title for kw in deploy_title_kw):
-        return 'Deployment'
-
-    # ── Dashboard ──
-    dashboard_labels = {
-        'area-dashboard', 'dashboard-filter-sort', 'dashboard-metrics',
-        'dashboard-resource-details', 'dashboard-dashpages',
-        'dashboard-logs', 'dashboard-resize', 'dashboard-persistence',
-        'dashboard-settings', 'feature-dashboard-extensibility',
-        'a11y', 'a11ysev3',
-    }
-    if labels & dashboard_labels:
-        return 'Dashboard'
-    if has_appmodel and 'dashboard' in title:
-        return 'Dashboard'
-
-    # ── Inner Loop ──
-    inner_labels = {
-        'area-cli', 'area-tooling', 'area-acquisition', 'area-extension',
-        'ai', 'devtunnels', 'agentic-workflows', 'area-mcp',
-        'area-aspire.dev', 'vs', 'wsl', 'interaction-service',
-    }
-    inner_title_kw = [
-        'cli ', 'debugg', 'hot reload', 'inner loop', 'ai ',
-        'copilot', 'agent', 'visual studio', 'vs code',
-        'vscode', 'launch', 'f5 ', 'dotnet run', 'dotnet watch',
-    ]
-    if labels & inner_labels:
-        return 'Inner Loop'
-    if has_appmodel and any(kw in title for kw in inner_title_kw):
-        return 'Inner Loop'
-
-    # ── Integrations ──
-    integration_labels = {
-        'area-integrations', 'azure', 'azure-cosmosdb', 'azure-storage',
-        'azure-servicebus', 'azure-eventhubs', 'azure-keyvault',
-        'azure-signalr', 'azure-sqlserver', 'postgres', 'sqlserver',
-        'redis', 'rabbitmq', 'kafka', 'mongodb', 'oracle', 'mysql',
-        'nats', 'milvus', 'entityframework', 'keycloak', 'yarp',
-        'orleans', 'blazor-wasm', 'podman',
-    }
-    integration_title_kw = [
-        'integration', 'component', 'redis', 'postgres',
-        'sql server', 'kafka', 'rabbitmq', 'mongo',
-        'entity framework', 'ef core', 'mysql', 'oracle',
-        'keycloak', 'yarp', 'orleans', 'nats', 'milvus',
-    ]
-    if labels & integration_labels:
-        return 'Integrations'
-    if has_appmodel and any(kw in title for kw in integration_title_kw):
-        return 'Integrations'
-
-    # ── Polyglot ──
-    polyglot_labels = {
-        'area-polyglot', 'area-templates',
-        'javascript', 'python', 'area-service-discovery',
-        'area-telemetry',
-    }
-    polyglot_title_kw = [
-        'typescript', 'type system', 'polyglot',
-        'python', 'node.js', 'nodejs', 'javascript',
-        'js apphost', 'export', 'template',
-        'service discovery', 'dns ', 'otel', 'opentelemetry',
-    ]
-    if labels & polyglot_labels:
-        return 'Polyglot'
-    if any(kw in title for kw in polyglot_title_kw):
-        return 'Polyglot'
-
-    # app-model/orchestrator fallback → Polyglot
-    if has_appmodel:
-        return 'Polyglot'
-
-    # ── No area label: title keyword fallback ──
-    if any(kw in title for kw in integration_title_kw + ['azure']):
-        return 'Integrations'
-    if any(kw in title for kw in deploy_title_kw):
-        return 'Deployment'
-    if any(kw in title for kw in inner_title_kw):
-        return 'Inner Loop'
-    if 'dashboard' in title:
-        return 'Dashboard'
-
-    return 'Uncategorized'
-
-
-def _classify_type(labels, title, body):
-    """Determine if an issue is a bug or feature request."""
-    bug_labels = {
-        'bug', 'silent-failure', 'flaky-test', 'failing-test',
-        'disabled-tests', 'quarantined-test',
-    }
-    if any('regression' in l for l in labels):
-        return True
-    if labels & bug_labels:
-        return True
-    bug_kw = [
-        'bug', 'crash', 'exception', 'error', 'fail', 'broken',
-        "doesn't work", 'not working', 'regression', 'fix ',
-    ]
-    return any(kw in title for kw in bug_kw)
-
-
-def clean_label(name):
-    """Strip emoji/unicode from label names for display."""
-    return re.sub(r'[^\x20-\x7E]+', '', name).strip()
+from classify import CATEGORIES, SKIP_LABELS, clean_label, classify_issue, get_top_themes
 
 
 # ── Data fetching ────────────────────────────────────────────────────────────
@@ -204,8 +56,6 @@ def fetch_issues(repo):
 
 # ── Stats aggregation ────────────────────────────────────────────────────────
 
-CATEGORIES = ['Integrations', 'Inner Loop', 'Polyglot', 'Deployment', 'Dashboard', 'Infra']
-
 CAT_COLORS = {
     'Integrations': '#58a6ff',
     'Inner Loop': '#f0883e',
@@ -227,22 +77,13 @@ def compute_stats(categorized):
         median_age = sorted(ages)[len(ages) // 2] if ages else 0
         avg_age = sum(ages) / len(ages) if ages else 0
 
-        theme_counter = Counter()
-        for c in items:
-            for l in c['labels']:
-                ln = l.lower()
-                if ln not in SKIP_LABELS and not ln.startswith('area-'):
-                    cleaned = clean_label(l)
-                    if cleaned and cleaned.lower() not in SKIP_LABELS:
-                        theme_counter[cleaned] += 1
-
         stats[cat] = {
             'total': len(items),
             'bugs': len(bugs),
             'features': len(features),
             'median_age': median_age,
             'avg_age': avg_age,
-            'top_themes': theme_counter.most_common(5),
+            'top_themes': get_top_themes(items),
         }
     return stats
 
@@ -462,8 +303,13 @@ def export_csv(categorized, issues_by_num, date_str, output_dir):
 
 def main():
     parser = argparse.ArgumentParser(description='Generate Aspire issue heatmap')
-    parser.add_argument('--repo', default='dotnet/aspire', help='GitHub repo (default: dotnet/aspire)')
-    parser.add_argument('--output', default=None, help='Output directory (default: tools/IssueHeatmap/output)')
+    parser.add_argument('--repo', default='dotnet/aspire',
+                        help='GitHub repo (default: dotnet/aspire)')
+    parser.add_argument('--output', default=None,
+                        help='Output directory (default: tools/IssueHeatmap/output)')
+    parser.add_argument('--classifications', default=None,
+                        help='Path to pre-computed classifications JSON '
+                             '(e.g. from LLM). Format: [{"n": 123, "c": "Integrations", "y": "bug"}, ...]')
     args = parser.parse_args()
 
     # Resolve output dir
@@ -477,27 +323,56 @@ def main():
     now = datetime.now(timezone.utc)
     date_str = now.strftime('%Y-%m-%d')
 
-    # Fetch
+    # Fetch issues (always needed for dates, labels, titles)
     issues = fetch_issues(args.repo)
     issues_by_num = {i['number']: i for i in issues}
 
-    # Classify
-    print("Classifying issues...")
-    categorized = []
-    for issue in issues:
-        cat, is_bug = classify_issue(issue)
-        created = datetime.fromisoformat(
-            issue['createdAt'].replace('Z', '+00:00'))
-        age_days = (now - created).days
-        labels = [l['name'] for l in issue.get('labels', [])]
-        categorized.append({
-            'number': issue['number'],
-            'title': issue['title'],
-            'category': cat,
-            'is_bug': is_bug,
-            'age_days': age_days,
-            'labels': labels,
-        })
+    # Classify — either from pre-computed file or heuristics
+    if args.classifications:
+        print(f"Loading pre-computed classifications from {args.classifications}...")
+        with open(args.classifications, encoding='utf-8') as f:
+            raw = json.load(f)
+        cl_map = {c['n']: c for c in raw}
+        categorized = []
+        for issue in issues:
+            cl = cl_map.get(issue['number'])
+            if cl:
+                cat = cl['c']
+                is_bug = cl['y'] == 'bug'
+            else:
+                # Fall back to heuristic for issues not in the file
+                cat, is_bug = classify_issue(issue)
+            created = datetime.fromisoformat(
+                issue['createdAt'].replace('Z', '+00:00'))
+            age_days = (now - created).days
+            labels = [l['name'] for l in issue.get('labels', [])]
+            categorized.append({
+                'number': issue['number'],
+                'title': issue['title'],
+                'category': cat,
+                'is_bug': is_bug,
+                'age_days': age_days,
+                'labels': labels,
+            })
+        print(f"  Loaded {len(cl_map)} classifications "
+              f"({len(categorized) - len(cl_map)} fell back to heuristic)")
+    else:
+        print("Classifying issues with heuristics...")
+        categorized = []
+        for issue in issues:
+            cat, is_bug = classify_issue(issue)
+            created = datetime.fromisoformat(
+                issue['createdAt'].replace('Z', '+00:00'))
+            age_days = (now - created).days
+            labels = [l['name'] for l in issue.get('labels', [])]
+            categorized.append({
+                'number': issue['number'],
+                'title': issue['title'],
+                'category': cat,
+                'is_bug': is_bug,
+                'age_days': age_days,
+                'labels': labels,
+            })
 
     total = len(categorized)
     stats = compute_stats(categorized)

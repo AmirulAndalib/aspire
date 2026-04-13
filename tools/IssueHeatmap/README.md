@@ -22,29 +22,60 @@ Generates a visual heatmap of all open issues in the `dotnet/aspire` repository,
 ## Usage
 
 ```bash
-# From the repo root:
+# Heuristic classification (fast, no AI needed):
 python tools/IssueHeatmap/generate_heatmap.py
 
-# Or with options:
-python tools/IssueHeatmap/generate_heatmap.py --repo dotnet/aspire --output tools/IssueHeatmap/output
+# With pre-computed LLM classifications:
+python tools/IssueHeatmap/generate_heatmap.py --classifications output/classifications.json
+
+# Custom output directory:
+python tools/IssueHeatmap/generate_heatmap.py --output /tmp/heatmap
 ```
 
 This will:
 1. Fetch all open issues via `gh issue list`
-2. Classify each issue into a quadrant and bug/feature type using label + title + body heuristics
+2. Classify each issue (heuristic or pre-computed)
 3. Generate a heatmap PNG and a CSV with all classifications
 
 Output files are saved to `tools/IssueHeatmap/output/` with the current date.
 
+## File Structure
+
+```
+tools/IssueHeatmap/
+├── README.md                  # This file
+├── classify.py                # Heuristic classifier (swappable)
+├── generate_heatmap.py        # Main script: fetch, visualize, export
+└── output/                    # Generated artifacts (date-stamped)
+```
+
+### classify.py
+
+Contains the heuristic classification logic. The key function is:
+
+```python
+classify_issue(issue) -> (category: str, is_bug: bool)
+```
+
+This can be swapped for LLM-based classification by producing a JSON file:
+
+```json
+[{"n": 12345, "c": "Integrations", "y": "bug"}, ...]
+```
+
+And passing it via `--classifications`.
+
 ## AI-Enhanced Classification
 
-For higher accuracy classification using generative AI (recommended for periodic reports), use the Copilot CLI:
+For higher accuracy (recommended for periodic reports), use the Copilot CLI:
 
 ```
 Ask Copilot: "Generate an issue heatmap for aspire using AI classification"
 ```
 
-This will classify each issue individually using an LLM rather than heuristics, producing more accurate results especially for issues with ambiguous labels.
+This classifies each issue individually using an LLM rather than heuristics,
+producing more accurate results especially for ambiguous issues. The LLM
+output can be saved as a classifications JSON and passed to the script.
 
 ## Output
 
