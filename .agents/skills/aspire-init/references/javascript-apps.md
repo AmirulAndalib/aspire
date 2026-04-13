@@ -50,6 +50,35 @@ When the framework supports reading the port from an env var or Aspire already h
 
 **Suppress auto-browser-open:** Many dev servers (Vite, CRA, Next.js) auto-open a browser on start. Add `.withEnvironment("BROWSER", "none")` to prevent this in Aspire-managed apps. Vite also respects `server.open: false` in its config.
 
+## Yarn/pnpm workspace monorepos
+
+In monorepos that use **yarn workspaces** or **pnpm workspaces**, all workspace packages share a single root-level `node_modules/` directory (hoisted or symlinked). This creates two specific problems with `.withYarn()` / `.withPnpm()`:
+
+1. **Concurrent install conflicts (Windows)**: `.withYarn()` runs `yarn install` before each resource starts. When multiple resources start concurrently, each triggers a root-level `yarn install` that tries to write to the shared `node_modules/`. On Windows, this causes `EPERM: operation not permitted` errors when one resource's running process (e.g., `esbuild.exe`) holds a file lock while another `yarn install` tries to overwrite it.
+
+2. **Redundant installs**: In a properly set up workspace, `yarn` at the root installs everything for all workspaces. Running `yarn install` per-resource is redundant and slow.
+
+**The fix: don't use `.withYarn()` on individual workspace resources.** Instead, ensure dependencies are installed once at the root before starting:
+
+```typescript
+// ❌ WRONG for workspace monorepos — concurrent installs cause file locking errors
+const app = await builder.addViteApp("app", "./packages/frontend")
+    .withYarn();  // triggers yarn install at startup → EPERM on Windows
+
+const api = await builder.addNodeApp("api", "./packages/api", "src/index.ts")
+    .withYarn();  // second concurrent yarn install → file lock conflict
+
+// ✅ CORRECT for workspace monorepos — deps already installed at root
+const app = await builder.addViteApp("app", "./packages/frontend");
+
+const api = await builder.addNodeApp("api", "./packages/api", "src/index.ts")
+    .withRunScript("start:dev");
+```
+
+Tell the user: *"This is a yarn workspace monorepo — I'll skip `.withYarn()` on individual resources since dependencies are shared at the root. Make sure to run `yarn` at the root before `aspire start`."*
+
+**This only applies to workspace monorepos with shared `node_modules`.** For standalone apps or apps with independent `node_modules` directories, `.withYarn()` / `.withPnpm()` is correct and should be used — it ensures deps are installed before the resource starts.
+
 ## TypeScript AppHost dependency configuration (Step 6)
 
 ### package.json
