@@ -21,7 +21,7 @@ public sealed class OtelLogsTests(ITestOutputHelper output)
         var repoRoot = CliE2ETestHelpers.GetRepoRoot();
         var installMode = CliE2ETestHelpers.DetectDockerInstallMode(repoRoot);
 
-        var workspace = TemporaryWorkspace.Create(output);
+        using var workspace = TemporaryWorkspace.Create(output);
 
         using var terminal = CliE2ETestHelpers.CreateDockerTestTerminal(repoRoot, installMode, output, mountDockerSocket: true, workspace: workspace);
 
@@ -44,8 +44,8 @@ public sealed class OtelLogsTests(ITestOutputHelper output)
         // Start the AppHost in the background
         await auto.AspireStartAsync(counter);
 
-        // Wait for resources to produce structured logs
-        await auto.TypeAsync("sleep 15");
+        // Wait for the apiservice resource to be running before querying logs
+        await auto.TypeAsync("aspire wait apiservice --status up");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
@@ -54,21 +54,15 @@ public sealed class OtelLogsTests(ITestOutputHelper output)
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
-        // Verify the output contains structured log entries (not "No logs found")
+        // Verify the output contains structured log entries with apiservice content
         await auto.TypeAsync("cat otel_logs.txt | head -20");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
-        // Assert that logs were found by checking absence of "No logs found"
-        await auto.TypeAsync("grep -c 'No logs found' otel_logs.txt && echo 'NO_LOGS_DETECTED' || echo 'STRUCTURED_LOGS_PRESENT'");
+        // Assert structured logs are present and contain apiservice entries
+        await auto.TypeAsync("if [ ! -r otel_logs.txt ]; then echo 'OTEL_LOGS_FILE_UNREADABLE'; elif grep -q 'apiservice' otel_logs.txt; then echo 'STRUCTURED_LOGS_PRESENT'; else echo 'STRUCTURED_LOGS_MISSING'; fi");
         await auto.EnterAsync();
         await auto.WaitUntilTextAsync("STRUCTURED_LOGS_PRESENT", timeout: TimeSpan.FromSeconds(10));
-        await auto.WaitForAnyPromptAsync(counter);
-
-        // Verify the output contains entries from the apiservice resource
-        await auto.TypeAsync("grep -q 'apiservice' otel_logs.txt && echo 'APISERVICE_LOGS_FOUND' || echo 'APISERVICE_LOGS_MISSING'");
-        await auto.EnterAsync();
-        await auto.WaitUntilTextAsync("APISERVICE_LOGS_FOUND", timeout: TimeSpan.FromSeconds(10));
         await auto.WaitForAnyPromptAsync(counter);
 
         // Also verify JSON format works and contains structured data
