@@ -888,6 +888,68 @@ public class AddCommandTests(ITestOutputHelper outputHelper)
         Assert.False(promptedForVersion);
         Assert.Equal(cliVersion, selectedPackageVersion);
     }
+
+    [Fact]
+    public async Task AddCommand_WithPrHive_ForwardsSelectedChannelSourceToAddPackage()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var hivesDir = new DirectoryInfo(Path.Combine(workspace.WorkspaceRoot.FullName, ".aspire", "hives"));
+        hivesDir.Create();
+        var prHiveDir = hivesDir.CreateSubdirectory("pr-12345");
+        prHiveDir.CreateSubdirectory("packages");
+
+        var cliVersion = VersionHelper.GetDefaultSdkVersion();
+        var expectedSource = Path.Combine(prHiveDir.FullName, "packages").Replace('\\', '/');
+        string? addUsedSource = null;
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.ProjectLocatorFactory = _ => new TestProjectLocator();
+
+            options.DotNetCliRunnerFactory = (sp) =>
+            {
+                var runner = new TestDotNetCliRunner();
+                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, invocationOptions, cancellationToken) =>
+                {
+                    var implicitPackage = new NuGetPackage
+                    {
+                        Id = "Aspire.Hosting.Redis",
+                        Source = "implicit",
+                        Version = "13.2.2"
+                    };
+
+                    var prHivePackage = new NuGetPackage
+                    {
+                        Id = "Aspire.Hosting.Redis",
+                        Source = "pr-hive",
+                        Version = cliVersion
+                    };
+
+                    return nugetSource is null
+                        ? (0, new[] { implicitPackage })
+                        : (0, new[] { prHivePackage });
+                };
+
+                runner.AddPackageAsyncCallback = (projectFilePath, packageName, packageVersion, nugetSource, noRestore, invocationOptions, cancellationToken) =>
+                {
+                    addUsedSource = nugetSource;
+                    return 0;
+                };
+
+                return runner;
+            };
+        });
+
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<AddCommand>();
+        var result = command.Parse("add redis");
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(expectedSource, addUsedSource);
+    }
 }
 
 internal sealed class TestAddCommandPrompter(IInteractionService interactionService) : AddCommandPrompter(interactionService)

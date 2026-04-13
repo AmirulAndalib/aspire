@@ -208,12 +208,18 @@ internal sealed class AddCommand : BaseCommand
             };
 
             // Add the package using the appropriate project handler
+            var addPackageSource = source;
+            if (string.IsNullOrEmpty(addPackageSource) && selectedNuGetPackage.Channel.Type is PackageChannelType.Explicit)
+            {
+                addPackageSource = selectedNuGetPackage.Channel.SourceDetails;
+            }
+
             context = new AddPackageContext
             {
                 AppHostFile = effectiveAppHostProjectFile,
                 PackageId = selectedNuGetPackage.Package.Id,
                 PackageVersion = selectedNuGetPackage.Package.Version,
-                Source = source
+                Source = addPackageSource
             };
 
             // Stop any running AppHost instance before adding the package.
