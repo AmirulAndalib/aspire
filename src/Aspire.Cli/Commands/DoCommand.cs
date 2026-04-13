@@ -30,6 +30,16 @@ internal sealed class DoCommand : PipelineCommandBase
             Arity = ArgumentArity.ZeroOrOne
         };
         Arguments.Add(_stepArgument);
+
+        Validators.Add(result =>
+        {
+            var step = result.GetValue(_stepArgument);
+            var listSteps = result.GetValue(s_listStepsOption);
+            if (string.IsNullOrEmpty(step) && !listSteps && !ExtensionHelper.IsExtensionHost(interactionService, out _, out _))
+            {
+                result.AddError("The 'step' argument is required when not using --list-steps.");
+            }
+        });
     }
 
     protected override string OperationCompletedPrefix => DoCommandStrings.OperationCompletedPrefix;
@@ -53,12 +63,6 @@ internal sealed class DoCommand : PipelineCommandBase
                 DoCommandStrings.StepArgumentDescription,
                 required: true,
                 cancellationToken: cancellationToken);
-        }
-
-        // Step is required when not using --list-steps
-        if (string.IsNullOrEmpty(step) && !parseResult.GetValue(s_listStepsOption))
-        {
-            throw new InvalidOperationException("The 'step' argument is required when not using --list-steps.");
         }
 
         if (!string.IsNullOrEmpty(step))
