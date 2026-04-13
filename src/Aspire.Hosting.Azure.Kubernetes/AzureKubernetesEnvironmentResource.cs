@@ -256,9 +256,8 @@ public class AzureKubernetesEnvironmentResource(
             sb.AppendLine("}");
             sb.AppendLine();
             sb.AppendLine("// AcrPull role assignment for the AKS kubelet managed identity");
-            sb.Append("resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {");
-            sb.AppendLine();
-            sb.Append("  name: guid(acr.id, ").Append(id).AppendLine(".properties.identityProfile.kubeletidentity.objectId, subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d'))");
+            sb.AppendLine("resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {");
+            sb.Append("  name: guid(acr.id, ").Append(id).AppendLine(".id, subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d'))");
             sb.AppendLine("  scope: acr");
             sb.AppendLine("  properties: {");
             sb.Append("    principalId: ").Append(id).AppendLine(".properties.identityProfile.kubeletidentity.objectId");
