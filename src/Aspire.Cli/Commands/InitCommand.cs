@@ -154,7 +154,8 @@ internal sealed class InitCommand : BaseCommand, IPackageMetaPrefetchingCommand
                 return polyglotResult;
             }
 
-            return await _agentInitCommand.PromptAndChainAsync(_hostEnvironment, InteractionService, polyglotResult, _executionContext.WorkingDirectory, cancellationToken);
+            var agentResult = await _agentInitCommand.PromptAndChainAsync(_hostEnvironment, InteractionService, polyglotResult, _executionContext.WorkingDirectory, cancellationToken);
+            return agentResult.ExitCode;
         }
 
         // For C#, we need the .NET SDK
@@ -194,7 +195,8 @@ internal sealed class InitCommand : BaseCommand, IPackageMetaPrefetchingCommand
             return initResult;
         }
 
-        return await _agentInitCommand.PromptAndChainAsync(_hostEnvironment, InteractionService, initResult, workspaceRoot, cancellationToken);
+        var agentInitResult = await _agentInitCommand.PromptAndChainAsync(_hostEnvironment, InteractionService, initResult, workspaceRoot, cancellationToken);
+        return agentInitResult.ExitCode;
     }
 
     private async Task<int> InitializeExistingSolutionAsync(InitContext initContext, ParseResult parseResult, CancellationToken cancellationToken)
