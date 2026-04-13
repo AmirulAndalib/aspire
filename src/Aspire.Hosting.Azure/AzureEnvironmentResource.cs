@@ -253,51 +253,53 @@ public sealed class AzureEnvironmentResource : Resource
         }
 
         // Enumerate resources in the resource group so the user can see what will be destroyed
-        var discoveryTask = await context.ReportingStep.CreateTaskAsync(
-            new MarkdownString($"Discovering resources in **{resourceGroupName}**"),
-            context.CancellationToken).ConfigureAwait(false);
-
         var resources = new List<(string Name, string ResourceType)>();
-        await using var _ = discoveryTask.ConfigureAwait(false);
 
-        try
         {
-            await foreach (var resource in resourceGroup.GetResourcesAsync(context.CancellationToken).ConfigureAwait(false))
-            {
-                resources.Add(resource);
-            }
+            var discoveryTask = await context.ReportingStep.CreateTaskAsync(
+                new MarkdownString($"Discovering resources in **{resourceGroupName}**"),
+                context.CancellationToken).ConfigureAwait(false);
+            await using var _ = discoveryTask.ConfigureAwait(false);
 
-            if (resources.Count == 0)
+            try
             {
-                await discoveryTask.CompleteAsync(
-                    new MarkdownString($"Resource group **{resourceGroupName}** is empty"),
-                    CompletionState.Completed,
-                    context.CancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                foreach (var (name, type) in resources)
+                await foreach (var resource in resourceGroup.GetResourcesAsync(context.CancellationToken).ConfigureAwait(false))
                 {
-                    var shortType = type.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase)
-                        ? type["Microsoft.".Length..]
-                        : type;
-                    context.Logger.LogInformation("  {Type}: {Name}", shortType, name);
+                    resources.Add(resource);
                 }
 
+                if (resources.Count == 0)
+                {
+                    await discoveryTask.CompleteAsync(
+                        new MarkdownString($"Resource group **{resourceGroupName}** is empty"),
+                        CompletionState.Completed,
+                        context.CancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    foreach (var (name, type) in resources)
+                    {
+                        var shortType = type.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase)
+                            ? type["Microsoft.".Length..]
+                            : type;
+                        context.Logger.LogInformation("  {Type}: {Name}", shortType, name);
+                    }
+
+                    await discoveryTask.CompleteAsync(
+                        new MarkdownString($"Found **{resources.Count}** resource(s) in **{resourceGroupName}**"),
+                        CompletionState.Completed,
+                        context.CancellationToken).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Non-fatal — proceed with deletion even if enumeration fails
+                context.Logger.LogWarning(ex, "Failed to enumerate resources in resource group '{ResourceGroupName}'", resourceGroupName);
                 await discoveryTask.CompleteAsync(
-                    new MarkdownString($"Found **{resources.Count}** resource(s) in **{resourceGroupName}**"),
+                    "Could not enumerate resources (will proceed with deletion)",
                     CompletionState.Completed,
                     context.CancellationToken).ConfigureAwait(false);
             }
-        }
-        catch (Exception ex)
-        {
-            // Non-fatal — proceed with deletion even if enumeration fails
-            context.Logger.LogWarning(ex, "Failed to enumerate resources in resource group '{ResourceGroupName}'", resourceGroupName);
-            await discoveryTask.CompleteAsync(
-                "Could not enumerate resources (will proceed with deletion)",
-                CompletionState.Completed,
-                context.CancellationToken).ConfigureAwait(false);
         }
 
         // Confirm destruction with the user (unless --yes was specified)

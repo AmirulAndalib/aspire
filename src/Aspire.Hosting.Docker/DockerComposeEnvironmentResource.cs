@@ -145,7 +145,7 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
                         return;
                     }
 
-                    await ConfirmDestroyAsync(ctx, $"Shut down Docker Compose environment '{Name}'? This will stop and remove all containers, networks, and volumes.").ConfigureAwait(false);
+                    await ConfirmDestroyAsync(ctx, Name).ConfigureAwait(false);
 
                     // Use saved state to build the compose context — don't recompute from current model
                     // Only use the project name for down — the compose file may not be valid for down
@@ -357,7 +357,7 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
         }
     }
 
-    private static async Task ConfirmDestroyAsync(PipelineStepContext context, string message)
+    private static async Task ConfirmDestroyAsync(PipelineStepContext context, string environmentName)
     {
         var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
 
@@ -373,7 +373,7 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
 
             var result = await interactionService.PromptNotificationAsync(
                 "Destroy environment",
-                message,
+                $"Shut down Docker Compose environment '{environmentName}'? This will stop and remove all containers, networks, and volumes.",
                 new NotificationInteractionOptions
                 {
                     Intent = MessageIntent.Confirmation,
