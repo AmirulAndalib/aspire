@@ -105,9 +105,9 @@ internal sealed class CliInstallStrategy
     ///   1. ASPIRE_E2E_ARCHIVE → LocalHive
     ///   2. ASPIRE_E2E_QUALITY → InstallScript with quality
     ///   3. ASPIRE_E2E_VERSION → InstallScript with version
-    ///   4. CI (GITHUB_PR_NUMBER) → PullRequest
-    ///   4. CI (GITHUB_PR_NUMBER) → PullRequest
-    ///   5. Fallback → InstallScript (latest GA)
+    ///   4. CI with PR (GITHUB_PR_NUMBER) → PullRequest
+    ///   5. CI without PR (main branch, scheduled) → InstallScript (dev/daily)
+    ///   6. Local fallback → InstallScript (latest GA)
     /// </summary>
     public static CliInstallStrategy Detect()
     {
@@ -132,13 +132,20 @@ internal sealed class CliInstallStrategy
             return FromVersion(version);
         }
 
-        // 4. CI — install from PR artifacts
+        // 4. CI with PR number — install from PR artifacts
         if (CliE2ETestHelpers.IsRunningInCI)
         {
             return new CliInstallStrategy(CliInstallMode.PullRequest);
         }
 
-        // 5. Fallback — latest GA
+        // 5. CI without PR (main branch push, scheduled) — use daily build
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")) ||
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS")))
+        {
+            return FromQuality("dev");
+        }
+
+        // 6. Local fallback — latest GA
         return LatestGa();
     }
 
