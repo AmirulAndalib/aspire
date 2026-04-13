@@ -9,8 +9,6 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 using Aspire.Hosting.Pipelines;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.Azure.Kubernetes;
@@ -166,14 +164,12 @@ internal sealed class AzureKubernetesInfrastructure(
                 // resolution that may not be available at this point in the pipeline.
                 var clusterName = environment.Name;
 
-                // Get the resource group from Azure provisioning configuration.
-                // The create-provisioning-context step resolves this and stores it in
-                // the Azure:ResourceGroup config key before any provision steps run.
-                var configuration = context.Services.GetRequiredService<IConfiguration>();
-                var resourceGroup = configuration["Azure:ResourceGroup"]
-                    ?? throw new InvalidOperationException(
-                        "Azure resource group name not found in configuration. " +
-                        "Ensure the Azure provisioning context has been created.");
+                // Get the resource group by querying Azure directly for the AKS cluster.
+                // We can't access the provisioning context internals from this package,
+                // so we query Azure for the cluster's resource group.
+                var azPath = FindAzCli();
+                var resourceGroup = await GetAksResourceGroupAsync(azPath, clusterName, context)
+                    .ConfigureAwait(false);
 
                 // Write credentials to an isolated kubeconfig file
                 var kubeConfigDir = Directory.CreateTempSubdirectory("aspire-aks");
@@ -182,8 +178,6 @@ internal sealed class AzureKubernetesInfrastructure(
                 var arguments = $"aks get-credentials --resource-group {resourceGroup} --name {clusterName} --file \"{kubeConfigPath}\" --overwrite-existing";
 
                 context.Logger.LogInformation("Fetching AKS credentials: az {Arguments}", arguments);
-
-                var azPath = FindAzCli();
 
                 using var process = new Process();
                 process.StartInfo = new ProcessStartInfo
@@ -283,5 +277,54 @@ internal sealed class AzureKubernetesInfrastructure(
 
         throw new InvalidOperationException(
             "Azure CLI (az) not found. Install it from https://learn.microsoft.com/cli/azure/install-azure-cli");
+    }
+
+    /// <summary>
+    /// Queries Azure for the resource group of the specified AKS cluster.
+    /// </summary>
+    private static async Task<string> GetAksResourceGroupAsync(
+        string azPath,
+        string clusterName,
+        PipelineStepContext context)
+    {
+        // Use az aks list to find the cluster and its resource group
+        var arguments = $"aks list --query \"[?name=='{clusterName}'].resourceGroup\" -o tsv";
+
+        using var process = new Process();
+        process.StartInfo = new ProcessStartInfo
+        {
+            FileName = azPath,
+            Arguments = arguments,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        process.Start();
+
+        var stdout = await process.StandardOutput.ReadToEndAsync(context.CancellationToken).ConfigureAwait(false);
+        var stderr = await process.StandardError.ReadToEndAsync(context.CancellationToken).ConfigureAwait(false);
+
+        await process.WaitForExitAsync(context.CancellationToken).ConfigureAwait(false);
+
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"Failed to query AKS cluster resource group (exit code {process.ExitCode}): {stderr.Trim()}");
+        }
+
+        var resourceGroup = stdout.Trim();
+
+        if (string.IsNullOrEmpty(resourceGroup))
+        {
+            throw new InvalidOperationException(
+                $"AKS cluster '{clusterName}' not found. Ensure the cluster has been provisioned.");
+        }
+
+        context.Logger.LogDebug("Resolved resource group '{ResourceGroup}' for AKS cluster '{ClusterName}'",
+            resourceGroup, clusterName);
+
+        return resourceGroup;
     }
 }
