@@ -337,14 +337,14 @@ public sealed class AzureEnvironmentResource : Resource
 
         try
         {
-            await resourceGroup.DeleteAsync(WaitUntil.Started, context.CancellationToken).ConfigureAwait(false);
+            await resourceGroup.DeleteAsync(WaitUntil.Completed, context.CancellationToken).ConfigureAwait(false);
 
             var portalUrl = AzurePortalUrls.GetResourceGroupUrl(subscriptionId, resourceGroupName, subscription.TenantId);
             context.Summary.Add("🗑️ Resource Group", new MarkdownString($"[{resourceGroupName}]({portalUrl})"));
             context.Summary.Add("🔑 Subscription", subscriptionId);
 
             await deleteTask.CompleteAsync(
-                new MarkdownString($"Resource group **{resourceGroupName}** deletion initiated successfully"),
+                new MarkdownString($"Resource group **{resourceGroupName}** deleted"),
                 CompletionState.Completed,
                 context.CancellationToken).ConfigureAwait(false);
         }
