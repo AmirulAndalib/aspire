@@ -105,15 +105,17 @@ public sealed class PythonFastApiDeploymentTests(ITestOutputHelper output)
             await auto.TypeAsync("aspire add Aspire.Hosting.Azure.AppContainers");
             await auto.EnterAsync();
 
-            // In CI, aspire add shows a version selection prompt when packages aren't from local hive.
-            // When using bundle install (PR > 0), the CLI auto-selects from the local hive.
-            if (DeploymentE2ETestHelpers.IsRunningInCI && DeploymentE2ETestHelpers.GetPrNumber() <= 0)
+            // aspire add may or may not show a version selection prompt depending on
+            // whether packages are available from the local hive (bundle install).
+            // Wait for either the version prompt or the success prompt.
+            if (DeploymentE2ETestHelpers.IsRunningInCI)
             {
-                await auto.WaitUntilTextAsync("(based on NuGet.config)", timeout: TimeSpan.FromSeconds(60));
-                await auto.EnterAsync(); // select first version (PR build)
+                await auto.WaitForAspireAddCompletionAsync(counter);
             }
-
-            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(180));
+            else
+            {
+                await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(180));
+            }
 
             // Step 6: Modify apphost.cs to add Azure Container App Environment
             // Note: Python template uses single-file AppHost (apphost.cs in project root)
