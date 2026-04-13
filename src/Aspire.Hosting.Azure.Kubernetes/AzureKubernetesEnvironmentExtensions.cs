@@ -77,33 +77,33 @@ public static class AzureKubernetesEnvironmentExtensions
 
         // Ensure push steps wait for ALL Azure provisioning to complete. Push steps
         // call registry.Endpoint.GetValueAsync() which awaits the BicepOutputReference
-        // for loginServer — if the ACR hasn't been provisioned yet (or outputs not
-        // populated yet), this blocks indefinitely.
-        // We make the push-prereq step depend on provisioning so all push steps
-        // (which already depend on push-prereq) are guaranteed to run after provisioning.
+        // for loginServer — if the ACR hasn't been provisioned yet, this blocks.
+        //
+        // NOTE: The standard push step dependency wiring (pushSteps.DependsOn(buildSteps) 
+        // and pushSteps.DependsOn(push-prereq)) from ProjectResource's PipelineConfigurationAnnotation
+        // may not resolve correctly when using Kubernetes compute environments, because
+        // context.GetSteps(resource, tag) may return empty if the resource reference doesn't
+        // match. We explicitly wire the dependencies here as a workaround.
         k8sEnvBuilder.WithAnnotation(new PipelineConfigurationAnnotation(context =>
         {
-            var pushPrereq = context.Steps
-                .FirstOrDefault(s => s.Name == WellKnownPipelineSteps.PushPrereq);
+            var pushSteps = context.Steps
+                .Where(s => s.Tags.Contains(WellKnownPipelineTags.PushContainerImage))
+                .ToList();
 
-            if (pushPrereq is not null)
+            foreach (var pushStep in pushSteps)
             {
-                pushPrereq.DependsOn(AzureEnvironmentResource.ProvisionInfrastructureStepName);
-                Console.WriteLine($"[AKS] Wired push-prereq to depend on {AzureEnvironmentResource.ProvisionInfrastructureStepName}");
-            }
-            else
-            {
-                Console.WriteLine("[AKS] WARNING: push-prereq step not found in pipeline!");
-            }
+                // Ensure push waits for Azure provisioning (ACR endpoint resolution)
+                pushStep.DependsOn(AzureEnvironmentResource.ProvisionInfrastructureStepName);
 
-            // Also log all push steps found
-            var pushSteps = context.Steps.Where(s => s.Tags.Contains(WellKnownPipelineTags.PushContainerImage)).ToList();
-            Console.WriteLine($"[AKS] Found {pushSteps.Count} push steps: {string.Join(", ", pushSteps.Select(s => s.Name))}");
+                // Ensure push waits for push-prereq (ACR login)
+                pushStep.DependsOn(WellKnownPipelineSteps.PushPrereq);
 
-            // Log all step dependencies for push steps
-            foreach (var step in pushSteps)
-            {
-                Console.WriteLine($"[AKS] Push step '{step.Name}' depends on: {string.Join(", ", step.DependsOnSteps)}");
+                // Ensure push waits for its corresponding build step
+                var resourceName = pushStep.Resource?.Name;
+                if (resourceName is not null)
+                {
+                    pushStep.DependsOn($"build-{resourceName}");
+                }
             }
         }));
 
