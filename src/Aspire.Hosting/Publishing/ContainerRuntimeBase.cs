@@ -530,7 +530,9 @@ internal abstract class ContainerRuntimeBase<TLogger> : IContainerRuntime where 
     /// </summary>
     private static string BuildComposeArguments(ComposeOperationContext context)
     {
-        var arguments = $"compose -f \"{context.ComposeFilePath}\" --project-name \"{context.ProjectName}\"";
+        var arguments = context.ComposeFilePath is not null
+            ? $"compose -f \"{context.ComposeFilePath}\" --project-name \"{context.ProjectName}\""
+            : $"compose --project-name \"{context.ProjectName}\"";
 
         if (context.EnvFilePath is not null && File.Exists(context.EnvFilePath))
         {

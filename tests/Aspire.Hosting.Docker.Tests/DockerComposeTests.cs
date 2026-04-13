@@ -905,17 +905,13 @@ public class DockerComposeTests(ITestOutputHelper output)
     {
         using var tempDir = new TestTempDirectory();
 
-        // Create a fake compose file so destroy finds it
-        var composeFilePath = Path.Combine(tempDir.Path, "docker-compose.yaml");
-        await File.WriteAllTextAsync(composeFilePath, "version: '3'");
-
         var fakeRuntime = new FakeContainerRuntime();
         var stateManager = new InMemoryDeploymentStateManager();
         stateManager.SetSection("DockerCompose:env", new System.Text.Json.Nodes.JsonObject
         {
             ["OutputPath"] = tempDir.Path,
             ["ProjectName"] = "aspire-env-test",
-            ["ComposeFilePath"] = composeFilePath
+            ["ComposeFilePath"] = Path.Combine(tempDir.Path, "docker-compose.yaml")
         });
 
         var mockActivityReporter = new TestPipelineActivityReporter(output);
@@ -935,6 +931,12 @@ public class DockerComposeTests(ITestOutputHelper output)
 
         // Verify compose down was called
         Assert.True(fakeRuntime.WasComposeDownCalled);
+
+        // Verify destroy uses project-name-only mode (no compose file)
+        // so it doesn't fail on stale build contexts in the compose file
+        Assert.NotNull(fakeRuntime.LastComposeDownContext);
+        Assert.Null(fakeRuntime.LastComposeDownContext.ComposeFilePath);
+        Assert.Equal("aspire-env-test", fakeRuntime.LastComposeDownContext.ProjectName);
 
         // Verify the destroy step ran
         var createdSteps = mockActivityReporter.CreatedSteps;
