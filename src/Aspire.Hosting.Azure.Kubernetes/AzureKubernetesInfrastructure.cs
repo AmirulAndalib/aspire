@@ -175,9 +175,11 @@ internal sealed class AzureKubernetesInfrastructure(
                 var kubeConfigDir = Directory.CreateTempSubdirectory("aspire-aks");
                 var kubeConfigPath = Path.Combine(kubeConfigDir.FullName, "kubeconfig");
 
-                var arguments = $"aks get-credentials --resource-group {resourceGroup} --name {clusterName} --file \"{kubeConfigPath}\" --overwrite-existing";
+                var arguments = $"aks get-credentials --resource-group \"{resourceGroup}\" --name \"{clusterName}\" --file \"{kubeConfigPath}\" --overwrite-existing";
 
-                context.Logger.LogInformation("Fetching AKS credentials: az {Arguments}", arguments);
+                context.Logger.LogInformation(
+                    "Fetching AKS credentials: cluster={ClusterName}, resourceGroup={ResourceGroup}",
+                    clusterName, resourceGroup);
 
                 using var process = new Process();
                 process.StartInfo = new ProcessStartInfo
@@ -314,7 +316,7 @@ internal sealed class AzureKubernetesInfrastructure(
                 $"Failed to query AKS cluster resource group (exit code {process.ExitCode}): {stderr.Trim()}");
         }
 
-        var resourceGroup = stdout.Trim();
+        var resourceGroup = stdout.Trim().ReplaceLineEndings("").Trim();
 
         if (string.IsNullOrEmpty(resourceGroup))
         {
