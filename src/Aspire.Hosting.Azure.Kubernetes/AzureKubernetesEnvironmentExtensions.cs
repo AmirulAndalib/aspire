@@ -86,7 +86,25 @@ public static class AzureKubernetesEnvironmentExtensions
             var pushPrereq = context.Steps
                 .FirstOrDefault(s => s.Name == WellKnownPipelineSteps.PushPrereq);
 
-            pushPrereq?.DependsOn(AzureEnvironmentResource.ProvisionInfrastructureStepName);
+            if (pushPrereq is not null)
+            {
+                pushPrereq.DependsOn(AzureEnvironmentResource.ProvisionInfrastructureStepName);
+                Console.WriteLine($"[AKS] Wired push-prereq to depend on {AzureEnvironmentResource.ProvisionInfrastructureStepName}");
+            }
+            else
+            {
+                Console.WriteLine("[AKS] WARNING: push-prereq step not found in pipeline!");
+            }
+
+            // Also log all push steps found
+            var pushSteps = context.Steps.Where(s => s.Tags.Contains(WellKnownPipelineTags.PushContainerImage)).ToList();
+            Console.WriteLine($"[AKS] Found {pushSteps.Count} push steps: {string.Join(", ", pushSteps.Select(s => s.Name))}");
+
+            // Log all step dependencies for push steps
+            foreach (var step in pushSteps)
+            {
+                Console.WriteLine($"[AKS] Push step '{step.Name}' depends on: {string.Join(", ", step.DependsOnSteps)}");
+            }
         }));
 
         return builder.AddResource(resource);
