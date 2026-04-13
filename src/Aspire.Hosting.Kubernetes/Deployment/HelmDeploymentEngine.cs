@@ -581,9 +581,6 @@ internal static partial class HelmDeploymentEngine
 
                 if (exitCode != 0)
                 {
-                    await uninstallTask.FailAsync(
-                        $"helm uninstall failed with exit code {exitCode}",
-                        cancellationToken: context.CancellationToken).ConfigureAwait(false);
                     throw new InvalidOperationException($"helm uninstall failed with exit code {exitCode}");
                 }
                 else
