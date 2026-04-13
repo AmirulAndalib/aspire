@@ -306,14 +306,13 @@ internal sealed class AddCommand : BaseCommand
 
         // When PR hives are present, prefer the package that exactly matches the installed
         // CLI/SDK version so template- and add-generated projects stay on the same build.
-        if (ExecutionContext.GetPrHiveCount() > 0)
+        if (VersionHelper.TryGetCurrentCliVersionMatch(
+            packageVersions,
+            p => p.Package.Version,
+            out var cliVersionPackage,
+            hasPrHives: ExecutionContext.GetPrHiveCount() > 0))
         {
-            var cliVersion = VersionHelper.GetDefaultSdkVersion();
-            var cliVersionPackage = packageVersions.FirstOrDefault(p => string.Equals(p.Package.Version, cliVersion, StringComparison.OrdinalIgnoreCase));
-            if (cliVersionPackage.Package is not null)
-            {
-                return cliVersionPackage;
-            }
+            return cliVersionPackage;
         }
 
         // In non-interactive mode, prefer the implicit/default channel first to keep

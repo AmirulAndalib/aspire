@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics.CodeAnalysis;
 using Aspire.Cli.Resources;
 using Aspire.Shared;
 
@@ -11,6 +12,36 @@ internal static class VersionHelper
     public static bool IsPrChannel(string? channelName)
     {
         return channelName?.StartsWith("pr-", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    public static bool TryGetCurrentCliVersionMatch<T>(
+        IEnumerable<T> candidates,
+        Func<T, string?> versionSelector,
+        [MaybeNullWhen(false)] out T match,
+        string? channelName = null,
+        bool hasPrHives = false)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        ArgumentNullException.ThrowIfNull(versionSelector);
+
+        if (!hasPrHives && !IsPrChannel(channelName))
+        {
+            match = default;
+            return false;
+        }
+
+        var cliVersion = GetDefaultSdkVersion();
+        foreach (var candidate in candidates)
+        {
+            if (string.Equals(versionSelector(candidate), cliVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                match = candidate;
+                return true;
+            }
+        }
+
+        match = default;
+        return false;
     }
 
     public static string GetDefaultTemplateVersion()

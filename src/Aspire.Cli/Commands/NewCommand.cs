@@ -322,12 +322,13 @@ internal sealed class NewCommand : BaseCommand, IPackageMetaPrefetchingCommand
                     .Where(p => Semver.SemVersion.TryParse(p.Version, Semver.SemVersionStyles.Strict, out _))
                     .ToArray();
 
-                NuGetPackage? package = null;
-                if (VersionHelper.IsPrChannel(selectedChannel.Name))
-                {
-                    var cliVersion = VersionHelper.GetDefaultSdkVersion();
-                    package = packages.FirstOrDefault(p => string.Equals(p.Version, cliVersion, StringComparison.OrdinalIgnoreCase));
-                }
+                NuGetPackage? package = VersionHelper.TryGetCurrentCliVersionMatch(
+                    packages,
+                    p => p.Version,
+                    out var cliVersionPackage,
+                    channelName: selectedChannel.Name)
+                    ? cliVersionPackage
+                    : null;
 
                 package ??= packages
                     .OrderByDescending(p => Semver.SemVersion.Parse(p.Version, Semver.SemVersionStyles.Strict), Semver.SemVersion.PrecedenceComparer)
