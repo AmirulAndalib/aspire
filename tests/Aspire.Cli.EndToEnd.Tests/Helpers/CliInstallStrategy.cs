@@ -15,12 +15,6 @@ internal enum CliInstallMode
     LocalHive,
 
     /// <summary>
-    /// The CLI was built from source — native AOT binary is mounted from the host.
-    /// Packages come from artifacts/packages/.
-    /// </summary>
-    SourceBuild,
-
-    /// <summary>
     /// Install from PR build artifacts using get-aspire-cli-pr.sh.
     /// Used in CI when GITHUB_PR_NUMBER is set.
     /// </summary>
@@ -51,11 +45,6 @@ internal sealed class CliInstallStrategy
     public string? ArchivePath { get; }
 
     /// <summary>
-    /// For SourceBuild: the path to the native AOT CLI publish directory on the host.
-    /// </summary>
-    public string? CliBinaryDir { get; }
-
-    /// <summary>
     /// For InstallScript: the quality level (e.g., "dev", "staging", "release").
     /// </summary>
     public string? Quality { get; }
@@ -65,11 +54,10 @@ internal sealed class CliInstallStrategy
     /// </summary>
     public string? Version { get; }
 
-    private CliInstallStrategy(CliInstallMode mode, string? archivePath = null, string? cliBinaryDir = null, string? quality = null, string? version = null)
+    private CliInstallStrategy(CliInstallMode mode, string? archivePath = null, string? quality = null, string? version = null)
     {
         Mode = mode;
         ArchivePath = archivePath;
-        CliBinaryDir = cliBinaryDir;
         Quality = quality;
         Version = version;
     }
@@ -118,10 +106,10 @@ internal sealed class CliInstallStrategy
     ///   2. ASPIRE_E2E_QUALITY → InstallScript with quality
     ///   3. ASPIRE_E2E_VERSION → InstallScript with version
     ///   4. CI (GITHUB_PR_NUMBER) → PullRequest
-    ///   5. Native AOT binary exists → SourceBuild
-    ///   6. Fallback → InstallScript (latest GA)
+    ///   4. CI (GITHUB_PR_NUMBER) → PullRequest
+    ///   5. Fallback → InstallScript (latest GA)
     /// </summary>
-    public static CliInstallStrategy Detect(string repoRoot)
+    public static CliInstallStrategy Detect()
     {
         // 1. Explicit archive override
         var archivePath = Environment.GetEnvironmentVariable("ASPIRE_E2E_ARCHIVE");
@@ -150,14 +138,7 @@ internal sealed class CliInstallStrategy
             return new CliInstallStrategy(CliInstallMode.PullRequest);
         }
 
-        // 5. Local source build — native AOT binary exists
-        var cliBinaryDir = CliE2ETestHelpers.FindLocalCliBinary(repoRoot);
-        if (cliBinaryDir is not null)
-        {
-            return new CliInstallStrategy(CliInstallMode.SourceBuild, cliBinaryDir: cliBinaryDir);
-        }
-
-        // 6. Fallback — latest GA
+        // 5. Fallback — latest GA
         return LatestGa();
     }
 
@@ -175,11 +156,6 @@ internal sealed class CliInstallStrategy
             case CliInstallMode.LocalHive:
                 // Mount the archive into the container
                 config.Volumes.Add($"{ArchivePath}:/tmp/aspire-localhive.tar.gz:ro");
-                break;
-
-            case CliInstallMode.SourceBuild:
-                // Mount the locally-built CLI binary
-                config.Volumes.Add($"{CliBinaryDir}:/opt/aspire-cli:ro");
                 break;
 
             case CliInstallMode.PullRequest:
@@ -207,7 +183,6 @@ internal sealed class CliInstallStrategy
         return Mode switch
         {
             CliInstallMode.LocalHive => $"LocalHive ({ArchivePath})",
-            CliInstallMode.SourceBuild => $"SourceBuild ({CliBinaryDir})",
             CliInstallMode.PullRequest => $"PullRequest (PR #{Environment.GetEnvironmentVariable("GITHUB_PR_NUMBER")})",
             CliInstallMode.InstallScript when Quality is not null => $"InstallScript (--quality {Quality})",
             CliInstallMode.InstallScript when Version is not null => $"InstallScript (--version {Version})",

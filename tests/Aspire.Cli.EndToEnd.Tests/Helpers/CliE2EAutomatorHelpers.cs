@@ -125,15 +125,6 @@ internal static class CliE2EAutomatorHelpers
                 await auto.WaitForSuccessPromptAsync(counter);
                 break;
 
-            case CliInstallMode.SourceBuild:
-                await auto.TypeAsync("mkdir -p ~/.aspire/bin && cp /opt/aspire-cli/aspire ~/.aspire/bin/aspire && chmod +x ~/.aspire/bin/aspire");
-                await auto.EnterAsync();
-                await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(30));
-                await auto.TypeAsync("export PATH=~/.aspire/bin:$PATH");
-                await auto.EnterAsync();
-                await auto.WaitForSuccessPromptAsync(counter);
-                break;
-
             case CliInstallMode.PullRequest:
                 var prNumber = CliE2ETestHelpers.GetRequiredPrNumber();
                 await auto.TypeAsync($"/opt/aspire-scripts/get-aspire-cli-pr.sh {prNumber}");
