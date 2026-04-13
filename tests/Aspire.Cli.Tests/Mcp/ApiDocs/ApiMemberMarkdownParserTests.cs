@@ -8,24 +8,24 @@ namespace Aspire.Cli.Tests.Documentation.ApiDocs;
 public class ApiMemberMarkdownParserTests
 {
     [Fact]
-    public void Parse_UsesKnownMemberGroupRoutesWithoutLanguageSpecificChecks()
+    public void Parse_UsesKnownMemberGroupRoutes()
     {
         var containerItem = new ApiReferenceItem
         {
-            Id = "python/aspire.python.test/testresource",
+            Id = "csharp/aspire.test.package/testresource",
             Name = "TestResource",
-            Language = ApiReferenceLanguages.Python,
-            Kind = ApiReferenceKinds.Symbol,
-            PageUrl = "https://aspire.dev/reference/api/python/aspire.python.test/testresource"
+            Language = ApiReferenceLanguages.CSharp,
+            Kind = ApiReferenceKinds.Type,
+            PageUrl = "https://aspire.dev/reference/api/csharp/aspire.test.package/testresource"
         };
 
         var memberGroupItem = new ApiReferenceItem
         {
-            Id = "python/aspire.python.test/testresource/methods",
+            Id = "csharp/aspire.test.package/testresource/methods",
             Name = "methods",
-            Language = ApiReferenceLanguages.Python,
+            Language = ApiReferenceLanguages.CSharp,
             Kind = ApiReferenceKinds.MemberGroup,
-            PageUrl = "https://aspire.dev/reference/api/python/aspire.python.test/testresource/methods",
+            PageUrl = "https://aspire.dev/reference/api/csharp/aspire.test.package/testresource/methods",
             ParentId = containerItem.Id,
             MemberGroup = "methods"
         };
@@ -37,8 +37,8 @@ public class ApiMemberMarkdownParserTests
 
             ## Methods
 
-            - [RunEmulator()](/reference/api/python/aspire.python.test/testresource/methods.md#runemulator) : `None` -- Runs the emulator.
-            - [OtherType](/reference/api/python/aspire.python.test/othertype.md) -- Should not be treated as a member.
+            - [RunEmulator()](/reference/api/csharp/aspire.test.package/testresource/methods.md#runemulator) : `void` -- Runs the emulator.
+            - [OtherType](/reference/api/csharp/aspire.test.package/othertype.md) -- Should not be treated as a member.
             """,
             ApiDocsSourceConfiguration.DefaultSitemapUrl,
             new Dictionary<string, ApiReferenceItem>(StringComparer.OrdinalIgnoreCase)
@@ -47,9 +47,9 @@ public class ApiMemberMarkdownParserTests
             });
 
         var item = Assert.Single(items);
-        Assert.Equal("python/aspire.python.test/testresource/methods#runemulator", item.Id);
+        Assert.Equal("csharp/aspire.test.package/testresource/methods#runemulator", item.Id);
         Assert.Equal("RunEmulator()", item.Name);
-        Assert.Equal(ApiReferenceLanguages.Python, item.Language);
+        Assert.Equal(ApiReferenceLanguages.CSharp, item.Language);
         Assert.Equal(ApiReferenceKinds.Member, item.Kind);
         Assert.Equal(memberGroupItem.Id, item.ParentId);
         Assert.Equal("Runs the emulator.", item.Summary);

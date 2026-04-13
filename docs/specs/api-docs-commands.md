@@ -14,7 +14,7 @@ The new command group lives under `aspire docs`, but it uses a different ingesti
 1. Expose API reference content through the Aspire CLI.
 2. Reuse the existing fetch, ETag, and disk-cache patterns where possible.
 3. Preserve API hierarchy so the CLI can browse the catalog without dumping every API at once.
-4. Support C# and TypeScript API reference pages today, while also modeling Java, Go, Rust, and Python language roots for future expansion.
+4. Support C# and TypeScript API reference pages.
 5. Return markdown for `get` operations.
 
 ## Non-goals
@@ -45,11 +45,6 @@ aspire docs api list csharp/<package>/<type>
 aspire docs api list typescript
 aspire docs api list typescript/<module>
 aspire docs api list typescript/<module>/<symbol>
-
-aspire docs api list java
-aspire docs api list go
-aspire docs api list rust
-aspire docs api list python
 ```
 
 ### Scope semantics
@@ -64,8 +59,6 @@ aspire docs api list python
 | `typescript/<module>/<symbol>` | Members under the symbol |
 
 If a scope has no children, `list` returns no results instead of expanding sideways or returning sibling scopes.
-
-The additional modeled language roots (`java`, `go`, `rust`, and `python`) are valid scopes even though `aspire.dev` does not currently publish API pages for them.
 
 ## Identifier model
 
@@ -122,7 +115,7 @@ The index should prioritize:
 5. Member-group matches
 6. Summary and description snippets when available from future index metadata
 
-The `--language` option limits results to a supported API language. Today the modeled language set is `csharp`, `typescript`, `java`, `go`, `rust`, and `python`.
+The `--language` option limits results to a supported API language. Today the supported language set is `csharp` and `typescript`.
 
 Search results should include enough metadata for the user to copy the returned identifier directly into `aspire docs api get`.
 
@@ -149,7 +142,7 @@ The implementation should not hardcode the sitemap and markdown endpoints direct
 The API pipeline consists of:
 
 1. Fetch sitemap
-2. Parse API routes for the modeled language set
+2. Parse C# and TypeScript API routes
 3. Build a hierarchical API map
 4. Persist the built index to disk
 5. Use the index to serve `list`, `search`, and `get`

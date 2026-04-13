@@ -16,7 +16,7 @@ public class ApiSitemapParserTests
     }
 
     [Fact]
-    public void Parse_FiltersToModeledApiRoutes()
+    public void Parse_FiltersToSupportedApiRoutes()
     {
         var sitemap = """
             <?xml version="1.0" encoding="UTF-8"?>
@@ -24,11 +24,7 @@ public class ApiSitemapParserTests
               <url><loc>https://aspire.dev/getting-started/</loc></url>
               <url><loc>https://aspire.dev/reference/api/csharp/aspire.test.package/</loc></url>
               <url><loc>https://aspire.dev/reference/api/typescript/aspire.hosting.test/</loc></url>
-              <url><loc>https://aspire.dev/reference/api/java/aspire.test.package/</loc></url>
-              <url><loc>https://aspire.dev/reference/api/go/aspire.test.package/</loc></url>
-              <url><loc>https://aspire.dev/reference/api/rust/aspire.test.package/</loc></url>
               <url><loc>https://aspire.dev/da/reference/api/csharp/aspire.test.package/</loc></url>
-              <url><loc>https://aspire.dev/reference/api/python/aspire.test.package/</loc></url>
             </urlset>
             """;
 
@@ -45,26 +41,6 @@ public class ApiSitemapParserTests
             {
                 Assert.Equal("typescript", entry.Language);
                 Assert.Equal(["aspire.hosting.test"], entry.Segments);
-            },
-            entry =>
-            {
-                Assert.Equal("java", entry.Language);
-                Assert.Equal(["aspire.test.package"], entry.Segments);
-            },
-            entry =>
-            {
-                Assert.Equal("go", entry.Language);
-                Assert.Equal(["aspire.test.package"], entry.Segments);
-            },
-            entry =>
-            {
-                Assert.Equal("rust", entry.Language);
-                Assert.Equal(["aspire.test.package"], entry.Segments);
-            },
-            entry =>
-            {
-                Assert.Equal("python", entry.Language);
-                Assert.Equal(["aspire.test.package"], entry.Segments);
             });
     }
 

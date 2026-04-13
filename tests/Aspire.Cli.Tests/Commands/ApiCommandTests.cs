@@ -62,23 +62,6 @@ public class ApiCommandTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public async Task ApiSearchCommand_WithModeledFutureLanguageFilter_ReturnsResults()
-    {
-        using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
-        {
-            options.ApiDocsIndexServiceFactory = _ => new TestApiDocsIndexService();
-        });
-        var provider = services.BuildServiceProvider();
-
-        var command = provider.GetRequiredService<Aspire.Cli.Commands.RootCommand>();
-        var result = command.Parse("docs api search emulator --language python --format json");
-
-        var exitCode = await result.InvokeAsync().DefaultTimeout();
-        Assert.Equal(ExitCodeConstants.Success, exitCode);
-    }
-
-    [Fact]
     public async Task ApiGetCommand_WithValidId_ReturnsContent()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);

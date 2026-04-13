@@ -26,36 +26,12 @@ internal static class ApiReferenceLanguages
     public const string TypeScript = "typescript";
 
     /// <summary>
-    /// The Java API language identifier.
-    /// </summary>
-    public const string Java = "java";
-
-    /// <summary>
-    /// The Go API language identifier.
-    /// </summary>
-    public const string Go = "go";
-
-    /// <summary>
-    /// The Rust API language identifier.
-    /// </summary>
-    public const string Rust = "rust";
-
-    /// <summary>
-    /// The Python API language identifier.
-    /// </summary>
-    public const string Python = "python";
-
-    /// <summary>
     /// Gets the supported API language identifiers.
     /// </summary>
     public static IReadOnlyList<string> All { get; } =
     [
         CSharp,
-        TypeScript,
-        Java,
-        Go,
-        Rust,
-        Python
+        TypeScript
     ];
 
     /// <summary>
@@ -897,9 +873,6 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
                 case ApiReferenceLanguages.TypeScript:
                     BuildTypeScriptItems(items, entry, typeScriptContainerIds, sitemapUrl);
                     break;
-                default:
-                    BuildGenericItems(items, entry, sitemapUrl);
-                    break;
             }
         }
 
@@ -994,31 +967,6 @@ internal sealed partial class ApiDocsIndexService(IApiDocsFetcher fetcher, IApiD
                 PageUrl = ApiDocsSourceConfiguration.RebasePageUrl(entry.Url, sitemapUrl)
             });
         }
-    }
-
-    private static void BuildGenericItems(List<ApiReferenceItem> items, ApiSitemapEntry entry, string sitemapUrl)
-    {
-        if (entry.Segments.Length is 0)
-        {
-            return;
-        }
-
-        items.Add(new ApiReferenceItem
-        {
-            Id = $"{entry.Language}/{string.Join('/', entry.Segments)}",
-            Name = entry.Segments[^1],
-            Language = entry.Language,
-            Kind = entry.Segments.Length switch
-            {
-                1 => ApiReferenceKinds.Module,
-                2 => ApiReferenceKinds.Symbol,
-                _ => ApiReferenceKinds.Member
-            },
-            ParentId = entry.Segments.Length == 1
-                ? entry.Language
-                : $"{entry.Language}/{string.Join('/', entry.Segments[..^1])}",
-            PageUrl = ApiDocsSourceConfiguration.RebasePageUrl(entry.Url, sitemapUrl)
-        });
     }
 
     private static List<ApiReferenceItem> Deduplicate(List<ApiReferenceItem> items)

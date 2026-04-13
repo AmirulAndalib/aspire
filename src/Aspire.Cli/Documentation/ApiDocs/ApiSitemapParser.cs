@@ -34,11 +34,7 @@ internal static class ApiSitemapParser
     private static readonly ApiLanguageRoute[] s_supportedLanguageRoutes =
     [
         new(ApiReferenceLanguages.CSharp, "/reference/api/csharp"),
-        new(ApiReferenceLanguages.TypeScript, "/reference/api/typescript"),
-        new(ApiReferenceLanguages.Java, "/reference/api/java"),
-        new(ApiReferenceLanguages.Go, "/reference/api/go"),
-        new(ApiReferenceLanguages.Rust, "/reference/api/rust"),
-        new(ApiReferenceLanguages.Python, "/reference/api/python")
+        new(ApiReferenceLanguages.TypeScript, "/reference/api/typescript")
     ];
 
     /// <summary>

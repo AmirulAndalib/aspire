@@ -67,31 +67,6 @@ public class ApiDocsIndexServiceTests
     }
 
     [Fact]
-    public async Task ListAsync_BuildsGenericHierarchyForModeledFutureLanguages()
-    {
-        var service = CreateService();
-
-        var pythonRoots = await service.ListAsync("python");
-        var pythonChildren = await service.ListAsync("python/aspire.python.test");
-
-        Assert.Collection(
-            pythonRoots,
-            item =>
-            {
-                Assert.Equal("python/aspire.python.test", item.Id);
-                Assert.Equal(ApiReferenceKinds.Module, item.Kind);
-            });
-
-        Assert.Collection(
-            pythonChildren,
-            item =>
-            {
-                Assert.Equal("python/aspire.python.test/testresource", item.Id);
-                Assert.Equal(ApiReferenceKinds.Symbol, item.Kind);
-            });
-    }
-
-    [Fact]
     public async Task SearchAsync_RespectsLanguageFilterAndFindsDirectRouteItems()
     {
         var service = CreateService();
@@ -207,18 +182,6 @@ public class ApiDocsIndexServiceTests
         Assert.Contains("https://aspire.dev/reference/api/csharp/aspire.test.package/alphatype", fetcher.RequestedPageUrls);
         Assert.DoesNotContain("https://aspire.dev/reference/api/csharp/aspire.test.package/thetatype", fetcher.RequestedPageUrls);
         Assert.DoesNotContain("https://aspire.dev/reference/api/csharp/aspire.test.package/zetatype", fetcher.RequestedPageUrls);
-    }
-
-    [Fact]
-    public async Task SearchAsync_FindsGenericItemsForModeledFutureLanguages()
-    {
-        var service = CreateService();
-
-        var results = await service.SearchAsync("runemulator", ApiReferenceLanguages.Python, 10);
-
-        var result = Assert.Single(results);
-        Assert.Equal("python/aspire.python.test/testresource/runemulator", result.Id);
-        Assert.Equal(ApiReferenceKinds.Member, result.Kind);
     }
 
     [Fact]
@@ -474,9 +437,6 @@ public class ApiDocsIndexServiceTests
               <url><loc>https://aspire.dev/reference/api/typescript/aspire.hosting.test/</loc></url>
               <url><loc>https://aspire.dev/reference/api/typescript/aspire.hosting.test/testresource/</loc></url>
               <url><loc>https://aspire.dev/reference/api/typescript/aspire.hosting.test/testresource/runasemulator/</loc></url>
-              <url><loc>https://aspire.dev/reference/api/python/aspire.python.test/</loc></url>
-              <url><loc>https://aspire.dev/reference/api/python/aspire.python.test/testresource/</loc></url>
-              <url><loc>https://aspire.dev/reference/api/python/aspire.python.test/testresource/runemulator/</loc></url>
             </urlset>
             """,
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
