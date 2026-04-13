@@ -660,6 +660,8 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
     {
         var formattedName = parameter.ValueExpression.Replace(HelmExtensions.StartDelimiter, string.Empty)
             .Replace(HelmExtensions.EndDelimiter, string.Empty)
+            .Replace("{", string.Empty)
+            .Replace("}", string.Empty)
             .Replace(".", "_")
             .ToHelmValuesSectionName();
 
