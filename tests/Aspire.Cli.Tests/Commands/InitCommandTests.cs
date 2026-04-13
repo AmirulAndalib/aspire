@@ -98,7 +98,7 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
             };
             options.PackagingServiceFactory = (sp) =>
             {
-                return new TestPackagingService();
+                return new ImplicitChannelPackagingService();
             };
         });
 
@@ -279,7 +279,7 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
             // Mock packaging service
             options.PackagingServiceFactory = (sp) =>
             {
-                return new TestPackagingService();
+                return new ImplicitChannelPackagingService();
             };
         });
 
@@ -375,7 +375,7 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
             // Mock packaging service to return fake channels
             options.PackagingServiceFactory = (sp) =>
             {
-                return new TestPackagingService();
+                return new ImplicitChannelPackagingService();
             };
         });
 
@@ -427,8 +427,7 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
         }
     }
 
-    // Test implementation of IPackagingService
-    private sealed class TestPackagingService : IPackagingService
+    private sealed class ImplicitChannelPackagingService : IPackagingService
     {
         public Task<IEnumerable<PackageChannel>> GetChannelsAsync(CancellationToken cancellationToken = default)
         {
@@ -552,7 +551,7 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
 
             options.PackagingServiceFactory = (sp) =>
             {
-                return new Aspire.Cli.Tests.TestServices.TestPackagingService
+                return new TestPackagingService
                 {
                     GetChannelsAsyncCallback = (ct) =>
                     {
@@ -660,7 +659,7 @@ public class InitCommandTests(ITestOutputHelper outputHelper)
             };
             options.PackagingServiceFactory = (sp) =>
             {
-                return new TestPackagingService();
+                return new ImplicitChannelPackagingService();
             };
         });
 

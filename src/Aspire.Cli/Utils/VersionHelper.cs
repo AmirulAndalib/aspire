@@ -14,6 +14,9 @@ internal static class VersionHelper
         return channelName?.StartsWith("pr-", StringComparison.OrdinalIgnoreCase) == true;
     }
 
+    /// <summary>
+    /// Finds the candidate that exactly matches the current CLI/SDK version when running against PR channels or PR hives.
+    /// </summary>
     public static bool TryGetCurrentCliVersionMatch<T>(
         IEnumerable<T> candidates,
         Func<T, string?> versionSelector,
