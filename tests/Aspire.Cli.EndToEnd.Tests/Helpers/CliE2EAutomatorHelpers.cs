@@ -165,6 +165,11 @@ internal static class CliE2EAutomatorHelpers
             default:
                 throw new ArgumentOutOfRangeException(nameof(strategy), strategy.Mode, "Unknown install mode");
         }
+
+        // Log the installed version for debugging — visible in asciinema recordings
+        await auto.TypeAsync("aspire --version");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
     }
 
     /// <summary>
