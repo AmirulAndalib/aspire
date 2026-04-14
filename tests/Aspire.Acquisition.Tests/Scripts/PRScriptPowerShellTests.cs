@@ -70,7 +70,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task MissingPRNumber_ReturnsError()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-WhatIf");
 
@@ -82,7 +82,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task WhatIfWithPRNumber_ShowsSteps()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-WhatIf");
 
@@ -95,7 +95,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     {
         using var env = new TestEnvironment();
         var customPath = Path.Combine(env.TempDirectory, "custom");
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-InstallPath", customPath, "-WhatIf");
 
@@ -107,7 +107,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task RunIdParameter_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-WorkflowRunId", "987654321", "-WhatIf");
 
@@ -119,7 +119,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task OSOverride_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-OS", "win", "-WhatIf");
 
@@ -131,7 +131,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task ArchOverride_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-Architecture", "x64", "-WhatIf");
 
@@ -143,7 +143,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task HiveOnlyFlag_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-HiveOnly", "-WhatIf");
 
@@ -155,7 +155,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task SkipExtensionFlag_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-SkipExtension", "-WhatIf");
 
@@ -167,7 +167,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task SkipPathFlag_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-SkipPath", "-WhatIf");
 
@@ -180,7 +180,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     {
         using var env = new TestEnvironment();
         var customPath = Path.Combine(env.TempDirectory, "custom");
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync(
             "-PRNumber", "12345",
@@ -200,7 +200,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task InvalidPRNumber_NonNumeric_ReturnsError()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "abc", "-WhatIf");
 
@@ -211,7 +211,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task InvalidPRNumber_Zero_ReturnsError()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "0", "-WhatIf");
 
@@ -222,7 +222,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task InvalidPRNumber_Negative_ReturnsError()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "-1", "-WhatIf");
 
@@ -233,7 +233,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task DryRun_ShowsDefaultInstallPath()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-SkipPath", "-WhatIf");
 
@@ -245,7 +245,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task AspireRepoEnvVar_IsUsedInDryRun()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
         cmd.WithEnvironmentVariable("ASPIRE_REPO", "my-org/my-aspire");
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-Verbose", "-WhatIf");
@@ -258,7 +258,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task DryRun_ShowsArtifactNameWithRid()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync(
             "-PRNumber", "12345",
@@ -275,7 +275,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task DryRun_ShowsNugetHivePath()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-Verbose", "-WhatIf");
 
@@ -287,7 +287,7 @@ public class PRScriptPowerShellTests(ITestOutputHelper testOutput)
     public async Task HiveOnly_SkipsCLIDownload()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-PRNumber", "12345", "-HiveOnly", "-Verbose", "-WhatIf");
 

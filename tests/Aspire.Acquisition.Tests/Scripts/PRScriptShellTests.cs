@@ -71,7 +71,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task DryRunWithPRNumber_ShowsSteps()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path");
 
@@ -85,7 +85,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     {
         using var env = new TestEnvironment();
         var customPath = Path.Combine(env.TempDirectory, "custom");
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path", "--install-path", customPath);
 
@@ -97,7 +97,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task RunIdParameter_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path", "--run-id", "987654321");
 
@@ -109,7 +109,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task OSOverride_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path", "--os", "linux");
 
@@ -121,7 +121,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task ArchOverride_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path", "--arch", "x64");
 
@@ -133,7 +133,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task HiveOnlyFlag_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path", "--hive-only");
 
@@ -145,7 +145,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task SkipExtensionFlag_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path", "--skip-extension");
 
@@ -157,7 +157,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task SkipPathFlag_IsRecognized()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path");
 
@@ -172,7 +172,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task BooleanFlags_AreAccepted(string flag)
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path", flag);
 
@@ -184,7 +184,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     {
         using var env = new TestEnvironment();
         var customPath = Path.Combine(env.TempDirectory, "custom");
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync(
             "12345",
@@ -206,7 +206,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task InvalidPRNumber_NonNumeric_ReturnsError()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("abc", "--dry-run", "--skip-path");
 
@@ -217,7 +217,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task InvalidPRNumber_Zero_ReturnsError()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("0", "--dry-run", "--skip-path");
 
@@ -228,7 +228,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task InvalidPRNumber_Negative_ReturnsError()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("-1", "--dry-run", "--skip-path");
 
@@ -239,7 +239,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task InvalidPRNumber_OptionAsFirst_ReturnsError()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("--dry-run", "--skip-path");
 
@@ -250,7 +250,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task UnknownFlag_ReturnsError()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--nonexistent-flag", "--dry-run", "--skip-path");
 
@@ -262,7 +262,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task AspireRepoEnvVar_IsUsedInDryRun()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
         cmd.WithEnvironmentVariable("ASPIRE_REPO", "my-org/my-aspire");
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path", "--verbose");
@@ -275,7 +275,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task DryRun_ShowsArtifactNameWithRid()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync(
             "12345", "--dry-run", "--skip-path", "--verbose",
@@ -289,7 +289,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task DryRun_ShowsDefaultInstallPath()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path");
 
@@ -301,7 +301,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task DryRun_ShowsNugetHivePath()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path", "--verbose");
 
@@ -313,7 +313,7 @@ public class PRScriptShellTests(ITestOutputHelper testOutput)
     public async Task HiveOnly_SkipsCLIDownload()
     {
         using var env = new TestEnvironment();
-        var cmd = await CreateCommandWithMockGhAsync(env);
+        using var cmd = await CreateCommandWithMockGhAsync(env);
 
         var result = await cmd.ExecuteAsync("12345", "--dry-run", "--skip-path", "--hive-only", "--verbose");
 
