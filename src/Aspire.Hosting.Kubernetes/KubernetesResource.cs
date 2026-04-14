@@ -365,6 +365,18 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
             foreach (var environmentVariable in context.EnvironmentVariables)
             {
                 var key = environmentVariable.Key;
+
+                // Check if the value contains deferred providers (e.g., Bicep outputs)
+                // that can only be resolved after infrastructure provisioning.
+                // If so, create a deferred HelmValue with the env var key name.
+                if (IsUnresolvedAtPublishTime(environmentVariable.Value) &&
+                    environmentVariable.Value is IValueProvider deferredVp)
+                {
+                    var deferredHelmValue = CreateDeferredHelmValue(key, deferredVp);
+                    ProcessEnvironmentHelmExpression(deferredHelmValue, key);
+                    continue;
+                }
+
                 var value = await ProcessValueAsync(environmentContext, executionContext, environmentVariable.Value).ConfigureAwait(false);
 
                 switch (value)
@@ -457,22 +469,12 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
 
             if (value is ConnectionStringReference cs)
             {
-                // Check if the connection string contains deferred values
-                if (IsUnresolvedAtPublishTime(cs) && cs.Resource.ConnectionStringExpression is IValueProvider csvp)
-                {
-                    return CreateDeferredHelmValue(cs.Resource.ConnectionStringExpression, csvp);
-                }
                 value = cs.Resource.ConnectionStringExpression;
                 continue;
             }
 
             if (value is IResourceWithConnectionString csrs)
             {
-                // Check if the connection string contains deferred values
-                if (IsUnresolvedAtPublishTime(csrs) && csrs.ConnectionStringExpression is IValueProvider csrsvp)
-                {
-                    return CreateDeferredHelmValue(csrs.ConnectionStringExpression, csrsvp);
-                }
                 value = csrs.ConnectionStringExpression;
                 continue;
             }
@@ -518,26 +520,6 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
                     // When at the top level, preserve the original object (e.g., HelmValue with ValuesKey)
                     // so ProcessEnvironmentHelmExpression handles it correctly.
                     return embedded ? inner?.ToString() ?? string.Empty : inner;
-                }
-
-                // Check if any value provider in the expression would fall through to
-                // ResolveUnknownValue (i.e., it's not an endpoint, parameter, connection string,
-                // or other known type). These are deferred value sources like BicepOutputReference.
-                // If found, defer the entire composite expression for deploy-time resolution.
-                if (expr is IValueProvider compositeValueProvider &&
-                    expr.ValueProviders.Any(IsUnresolvedAtPublishTime))
-                {
-                    var formattedName = expr.ValueExpression
-                        .Replace("{", string.Empty)
-                        .Replace("}", string.Empty)
-                        .Replace(".", "_")
-                        .ToHelmValuesSectionName();
-
-                    var helmExpression = formattedName.ToHelmConfigExpression(TargetResource.Name);
-                    return new HelmValue(helmExpression, expr.ValueExpression)
-                    {
-                        ValueProviderSource = compositeValueProvider
-                    };
                 }
 
                 var args = new object[expr.ValueProviders.Count];
@@ -741,16 +723,12 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
     /// <summary>
     /// Creates a HelmValue that defers resolution to deploy time via IValueProvider.
     /// </summary>
-    private HelmValue CreateDeferredHelmValue(IManifestExpressionProvider expressionProvider, IValueProvider valueProvider)
+    /// <param name="key">The environment variable or config key name to use as the Helm values path.</param>
+    /// <param name="valueProvider">The value provider for deploy-time resolution.</param>
+    private HelmValue CreateDeferredHelmValue(string key, IValueProvider valueProvider)
     {
-        var formattedName = expressionProvider.ValueExpression
-            .Replace("{", string.Empty)
-            .Replace("}", string.Empty)
-            .Replace(".", "_")
-            .ToHelmValuesSectionName();
-
-        var helmExpression = formattedName.ToHelmConfigExpression(TargetResource.Name);
-        return new HelmValue(helmExpression, expressionProvider.ValueExpression)
+        var helmExpression = key.ToHelmConfigExpression(TargetResource.Name);
+        return new HelmValue(helmExpression, string.Empty)
         {
             ValueProviderSource = valueProvider
         };
