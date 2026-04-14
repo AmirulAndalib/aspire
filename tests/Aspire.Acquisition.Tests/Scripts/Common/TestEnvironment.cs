@@ -74,6 +74,39 @@ public sealed class TestEnvironment : IDisposable
                 exit 0
 
                 :api
+                rem Parse endpoint and --jq flag to return realistic responses
+                set "ENDPOINT=%~2"
+                set "JQ_FILTER="
+                set "IDX=2"
+                :api_parse
+                shift
+                if "%~2"=="" goto :api_dispatch
+                if "%~2"=="--jq" (
+                    set "JQ_FILTER=%~3"
+                    shift
+                    goto :api_parse
+                )
+                goto :api_parse
+
+                :api_dispatch
+                echo %ENDPOINT% | findstr /C:"/pulls/" >nul 2>&1
+                if not errorlevel 1 (
+                    if defined JQ_FILTER (
+                        echo abc123def456789012345678901234567890abcd
+                    ) else (
+                        echo {"head":{"sha":"abc123def456789012345678901234567890abcd"}}
+                    )
+                    exit 0
+                )
+                echo %ENDPOINT% | findstr /C:"/actions/workflows/" >nul 2>&1
+                if not errorlevel 1 (
+                    if defined JQ_FILTER (
+                        echo 987654321
+                    ) else (
+                        echo {"workflow_runs":[{"id":987654321,"conclusion":"success"}]}
+                    )
+                    exit 0
+                )
                 echo {}
                 exit 0
 
@@ -171,7 +204,38 @@ public sealed class TestEnvironment : IDisposable
                     fi
                 fi
                 if [ "$1" = "api" ]; then
-                    # Mock gh api responses for PR discovery
+                    # Parse endpoint and --jq flag to return realistic responses
+                    endpoint="$2"
+                    jq_filter=""
+                    shift 2
+                    while [ $# -gt 0 ]; do
+                        case "$1" in
+                            --jq) jq_filter="$2"; shift 2 ;;
+                            *) shift ;;
+                        esac
+                    done
+
+                    # PR head SHA lookup: repos/.../pulls/<number>
+                    if echo "$endpoint" | grep -q "/pulls/"; then
+                        if [ -n "$jq_filter" ]; then
+                            echo "abc123def456789012345678901234567890abcd"
+                        else
+                            echo '{"head":{"sha":"abc123def456789012345678901234567890abcd"}}'
+                        fi
+                        exit 0
+                    fi
+
+                    # Workflow run lookup: repos/.../actions/workflows/...
+                    if echo "$endpoint" | grep -q "/actions/workflows/"; then
+                        if [ -n "$jq_filter" ]; then
+                            echo "987654321"
+                        else
+                            echo '{"workflow_runs":[{"id":987654321,"conclusion":"success"}]}'
+                        fi
+                        exit 0
+                    fi
+
+                    # Default for other API calls
                     echo '{}'
                     exit 0
                 fi

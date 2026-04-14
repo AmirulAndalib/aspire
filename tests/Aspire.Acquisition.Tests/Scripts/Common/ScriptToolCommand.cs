@@ -33,6 +33,10 @@ public class ScriptToolCommand : ToolCommand
         // Set mock HOME to prevent any accidental user directory access
         WithEnvironmentVariable("HOME", _testEnvironment.MockHome);
         WithEnvironmentVariable("USERPROFILE", _testEnvironment.MockHome);
+        // Override XDG_CONFIG_HOME to prevent scripts that consult
+        // ${XDG_CONFIG_HOME:-$HOME/.config} from reading a real profile
+        // outside the temp home when the developer has XDG_CONFIG_HOME set.
+        WithEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(_testEnvironment.MockHome, ".config"));
 
         // Disable any real PATH modifications during tests
         WithEnvironmentVariable("ASPIRE_TEST_MODE", "true");
