@@ -11,6 +11,7 @@ using Aspire.Hosting.Lifecycle;
 using Aspire.Hosting.Pipelines;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Aspire.Hosting.Kubernetes;
 using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.Azure.Kubernetes;
@@ -70,9 +71,9 @@ internal sealed class AzureKubernetesInfrastructure(
 
                 // If the resource has no explicit node pool affinity, assign it
                 // to the default user pool.
-                if (!r.TryGetLastAnnotation<AksNodePoolAffinityAnnotation>(out _) && defaultUserPool is not null)
+                if (!r.TryGetLastAnnotation<KubernetesNodePoolAnnotation>(out _) && defaultUserPool is not null)
                 {
-                    r.Annotations.Add(new AksNodePoolAffinityAnnotation(defaultUserPool));
+                    r.Annotations.Add(new KubernetesNodePoolAnnotation(defaultUserPool));
                 }
             }
         }

@@ -172,7 +172,7 @@ public static class AzureKubernetesEnvironmentExtensions
     /// <returns>A reference to the <see cref="IResourceBuilder{AksNodePoolResource}"/> for the new node pool.</returns>
     /// <remarks>
     /// The returned node pool resource can be passed to
-    /// <see cref="WithNodePoolAffinity{T}"/> on compute resources to schedule workloads on this pool.
+    /// <see cref="KubernetesEnvironmentExtensions.WithNodePool{T}"/> on compute resources to schedule workloads on this pool.
     /// </remarks>
     /// <example>
     /// <code>
@@ -180,7 +180,7 @@ public static class AzureKubernetesEnvironmentExtensions
     /// var gpuPool = aks.AddNodePool("gpu", "Standard_NC6s_v3", 0, 5);
     ///
     /// builder.AddProject&lt;MyApi&gt;()
-    ///     .WithNodePoolAffinity(gpuPool);
+    ///     .WithNodePool(gpuPool);
     /// </code>
     /// </example>
     [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
@@ -207,37 +207,6 @@ public static class AzureKubernetesEnvironmentExtensions
 
         return builder.ApplicationBuilder.AddResource(nodePool)
             .ExcludeFromManifest();
-    }
-
-    /// <summary>
-    /// Schedules a compute resource's workload on the specified AKS node pool.
-    /// This translates to a Kubernetes <c>nodeSelector</c> with the <c>agentpool</c> label
-    /// targeting the named node pool.
-    /// </summary>
-    /// <typeparam name="T">The type of the compute resource.</typeparam>
-    /// <param name="builder">The resource builder.</param>
-    /// <param name="nodePool">The node pool to schedule the workload on.</param>
-    /// <returns>A reference to the <see cref="IResourceBuilder{T}"/> for chaining.</returns>
-    /// <example>
-    /// <code>
-    /// var aks = builder.AddAzureKubernetesEnvironment("aks");
-    /// var gpuPool = aks.AddNodePool("gpu", "Standard_NC6s_v3", 0, 5);
-    ///
-    /// builder.AddProject&lt;MyApi&gt;()
-    ///     .WithNodePoolAffinity(gpuPool);
-    /// </code>
-    /// </example>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
-    public static IResourceBuilder<T> WithNodePoolAffinity<T>(
-        this IResourceBuilder<T> builder,
-        IResourceBuilder<AksNodePoolResource> nodePool)
-        where T : IResource
-    {
-        ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(nodePool);
-
-        builder.WithAnnotation(new AksNodePoolAffinityAnnotation(nodePool.Resource));
-        return builder;
     }
 
     /// <summary>

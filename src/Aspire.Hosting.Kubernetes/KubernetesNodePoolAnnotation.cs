@@ -3,17 +3,17 @@
 
 using Aspire.Hosting.ApplicationModel;
 
-namespace Aspire.Hosting.Azure.Kubernetes;
+namespace Aspire.Hosting.Kubernetes;
 
 /// <summary>
-/// Annotation that associates a compute resource with a specific AKS node pool.
+/// Annotation that associates a compute resource with a specific Kubernetes node pool.
 /// When present, the Kubernetes deployment will include a <c>nodeSelector</c> targeting
-/// the specified node pool via the <c>agentpool</c> label.
+/// the specified node pool.
 /// </summary>
-internal sealed class AksNodePoolAffinityAnnotation(AksNodePoolResource nodePool) : IResourceAnnotation
+internal sealed class KubernetesNodePoolAnnotation(KubernetesNodePoolResource nodePool) : IResourceAnnotation
 {
     /// <summary>
     /// Gets the node pool to schedule the workload on.
     /// </summary>
-    public AksNodePoolResource NodePool { get; } = nodePool;
+    public KubernetesNodePoolResource NodePool { get; } = nodePool;
 }

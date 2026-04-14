@@ -6,6 +6,7 @@
 using System.Runtime.CompilerServices;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Azure.Kubernetes;
+using Aspire.Hosting.Kubernetes;
 using Aspire.Hosting.Utils;
 
 namespace Aspire.Hosting.Azure.Tests;
@@ -35,8 +36,8 @@ public class AzureKubernetesInfrastructureTests
         Assert.Equal("workload", workloadPool.Name);
 
         // Compute resource should have been auto-assigned to the workload pool
-        Assert.True(container.Resource.TryGetLastAnnotation<AksNodePoolAffinityAnnotation>(out var affinity));
-        Assert.Equal("workload", affinity.NodePool.Config.Name);
+        Assert.True(container.Resource.TryGetLastAnnotation<KubernetesNodePoolAnnotation>(out var affinity));
+        Assert.Equal("workload", affinity.NodePool.Name);
     }
 
     [Fact]
@@ -58,8 +59,8 @@ public class AzureKubernetesInfrastructureTests
         Assert.DoesNotContain(aks.Resource.NodePools, p => p.Name == "workload");
 
         // Unaffinitized compute resource should get assigned to the first user pool
-        Assert.True(container.Resource.TryGetLastAnnotation<AksNodePoolAffinityAnnotation>(out var affinity));
-        Assert.Equal("gpu", affinity.NodePool.Config.Name);
+        Assert.True(container.Resource.TryGetLastAnnotation<KubernetesNodePoolAnnotation>(out var affinity));
+        Assert.Equal("gpu", affinity.NodePool.Name);
     }
 
     [Fact]
@@ -73,14 +74,14 @@ public class AzureKubernetesInfrastructureTests
         var cpuPool = aks.AddNodePool("cpu", "Standard_D4s_v5", 1, 10);
 
         var container = builder.AddContainer("myapi", "myimage")
-            .WithNodePoolAffinity(cpuPool);
+            .WithNodePool(cpuPool);
 
         await using var app = builder.Build();
         await ExecuteBeforeStartHooksAsync(app, default);
 
         // Explicit affinity should be preserved, not overridden
-        Assert.True(container.Resource.TryGetLastAnnotation<AksNodePoolAffinityAnnotation>(out var affinity));
-        Assert.Equal("cpu", affinity.NodePool.Config.Name);
+        Assert.True(container.Resource.TryGetLastAnnotation<KubernetesNodePoolAnnotation>(out var affinity));
+        Assert.Equal("cpu", affinity.NodePool.Name);
     }
 
     [Fact]

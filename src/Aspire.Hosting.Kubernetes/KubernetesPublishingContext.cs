@@ -105,6 +105,12 @@ internal sealed class KubernetesPublishingContext(
                     }
                 }
 
+                // Apply node pool nodeSelector if the resource has a node pool annotation
+                if (serviceResource.TargetResource.TryGetLastAnnotation<KubernetesNodePoolAnnotation>(out var nodePoolAnnotation))
+                {
+                    ApplyNodePoolSelector(serviceResource, nodePoolAnnotation.NodePool);
+                }
+
                 await WriteKubernetesTemplatesForResource(resource, serviceResource.GetTemplatedResources()).ConfigureAwait(false);
                 await AppendResourceContextToHelmValuesAsync(resource, serviceResource).ConfigureAwait(false);
             }
@@ -289,5 +295,16 @@ internal sealed class KubernetesPublishingContext(
         var outputFile = Path.Combine(OutputPath, "Chart.yaml");
         Directory.CreateDirectory(OutputPath);
         await File.WriteAllTextAsync(outputFile, chartYaml, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void ApplyNodePoolSelector(KubernetesResource serviceResource, KubernetesNodePoolResource nodePool)
+    {
+        var podSpec = serviceResource.Workload?.PodTemplate?.Spec;
+        if (podSpec is null)
+        {
+            return;
+        }
+
+        podSpec.NodeSelector[nodePool.NodeSelectorLabelKey] = nodePool.Name;
     }
 }

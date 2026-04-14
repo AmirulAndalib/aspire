@@ -7,6 +7,7 @@
 using System.Runtime.CompilerServices;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Azure.Kubernetes;
+using Aspire.Hosting.Kubernetes;
 using Aspire.Hosting.Utils;
 
 namespace Aspire.Hosting.Azure.Tests;
@@ -71,7 +72,7 @@ public class AzureKubernetesEnvironmentExtensionsTests
         Assert.Equal(0, gpuPool.Resource.Config.MinCount);
         Assert.Equal(5, gpuPool.Resource.Config.MaxCount);
         Assert.Equal(AksNodePoolMode.User, gpuPool.Resource.Config.Mode);
-        Assert.Same(aks.Resource, gpuPool.Resource.Parent);
+        Assert.Same(aks.Resource, gpuPool.Resource.AksParent);
     }
 
     [Fact]
@@ -270,7 +271,7 @@ public class AzureKubernetesEnvironmentExtensionsTests
     }
 
     [Fact]
-    public void WithNodePoolAffinity_AddsAnnotation()
+    public void WithNodePool_AddsAnnotation()
     {
         using var builder = TestDistributedApplicationBuilder.Create();
 
@@ -278,11 +279,11 @@ public class AzureKubernetesEnvironmentExtensionsTests
         var gpuPool = aks.AddNodePool("gpu", "Standard_NC6s_v3", 0, 5);
 
         var container = builder.AddContainer("myapi", "myimage")
-            .WithNodePoolAffinity(gpuPool);
+            .WithNodePool(gpuPool);
 
-        Assert.True(container.Resource.TryGetLastAnnotation<AksNodePoolAffinityAnnotation>(out var affinity));
+        Assert.True(container.Resource.TryGetLastAnnotation<KubernetesNodePoolAnnotation>(out var affinity));
         Assert.Same(gpuPool.Resource, affinity.NodePool);
-        Assert.Equal("gpu", affinity.NodePool.Config.Name);
+        Assert.Equal("gpu", affinity.NodePool.Name);
     }
 
     [Fact]

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Aspire.Hosting.Azure.Kubernetes" />
+    <InternalsVisibleTo Include="Aspire.Hosting.Azure.Kubernetes.Tests" />
     <InternalsVisibleTo Include="Aspire.Hosting.Kubernetes.Tests" />
   </ItemGroup>
 
