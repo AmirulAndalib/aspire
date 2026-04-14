@@ -67,7 +67,7 @@ internal static partial class ProcessUtil
                 return;
             }
 
-            if (String.IsNullOrEmpty(e.Data))
+            if (string.IsNullOrEmpty(e.Data))
             {
                 return;
             }
@@ -85,7 +85,7 @@ internal static partial class ProcessUtil
                 return;
             }
 
-            if (String.IsNullOrEmpty(e.Data))
+            if (string.IsNullOrEmpty(e.Data))
             {
                 return;
             }

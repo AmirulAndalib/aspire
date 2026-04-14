@@ -48,22 +48,6 @@ internal sealed class ProcessFailedException : DistributedApplicationException
     /// </summary>
     public string GetFormattedOutput(int maxLines = 50)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxLines);
-
-        if (BuildOutput.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var linesShown = Math.Min(maxLines, BuildOutput.Count);
-        IEnumerable<string> lines = BuildOutput.Skip(BuildOutput.Count - linesShown);
-        var formattedOutput = string.Join(Environment.NewLine, lines);
-
-        if (TotalBuildOutputLineCount > linesShown)
-        {
-            return $"Build output truncated: showing last {linesShown} of {TotalBuildOutputLineCount} lines.{Environment.NewLine}{formattedOutput}";
-        }
-
-        return formattedOutput;
+        return BuildOutputCapture.FormatOutput(BuildOutput, TotalBuildOutputLineCount, maxLines);
     }
 }

@@ -40,4 +40,44 @@ internal sealed class BuildOutputCapture(int maxRetainedLineCount = 256)
             return [.. _retainedLines];
         }
     }
+
+    /// <summary>
+    /// Returns the last <paramref name="maxLines"/> lines of output formatted for display.
+    /// </summary>
+    /// <param name="maxLines">The maximum number of lines to include.</param>
+    /// <param name="outputDescription">The label used when the output is truncated.</param>
+    /// <returns>The formatted output.</returns>
+    public string GetFormattedOutput(int maxLines = 50, string outputDescription = "Build output")
+    {
+        return FormatOutput(ToArray(), TotalLineCount, maxLines, outputDescription);
+    }
+
+    /// <summary>
+    /// Formats retained output lines for display.
+    /// </summary>
+    /// <param name="output">The retained output lines.</param>
+    /// <param name="totalLineCount">The total number of lines observed.</param>
+    /// <param name="maxLines">The maximum number of lines to include.</param>
+    /// <param name="outputDescription">The label used when the output is truncated.</param>
+    /// <returns>The formatted output.</returns>
+    internal static string FormatOutput(IReadOnlyList<string> output, int totalLineCount, int maxLines = 50, string outputDescription = "Build output")
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxLines);
+
+        if (output.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var linesShown = Math.Min(maxLines, output.Count);
+        IEnumerable<string> lines = output.Skip(output.Count - linesShown);
+        var formattedOutput = string.Join(Environment.NewLine, lines);
+
+        if (totalLineCount > linesShown)
+        {
+            return $"{outputDescription} truncated: showing last {linesShown} of {totalLineCount} lines.{Environment.NewLine}{formattedOutput}";
+        }
+
+        return formattedOutput;
+    }
 }
