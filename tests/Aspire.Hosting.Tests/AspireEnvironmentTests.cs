@@ -34,6 +34,42 @@ public class AspireEnvironmentTests
     }
 
     [Fact]
+    public void DotnetEnvironmentTakesPrecedenceOverAspNetCoreEnvironment()
+    {
+        var options = CreateEnvironmentOptions(dotnetEnvironment: "Production", aspNetCoreEnvironment: "Staging");
+
+        RemoteExecutor.Invoke(static () =>
+        {
+            var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions { DisableDashboard = true });
+            Assert.Equal("Production", builder.Environment.EnvironmentName);
+        }, options).Dispose();
+    }
+
+    [Fact]
+    public void AspireEnvironmentTakesPrecedenceOverAspNetCoreEnvironment()
+    {
+        var options = CreateEnvironmentOptions(aspireEnvironment: "Testing", aspNetCoreEnvironment: "Staging");
+
+        RemoteExecutor.Invoke(static () =>
+        {
+            var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions { DisableDashboard = true });
+            Assert.Equal("Testing", builder.Environment.EnvironmentName);
+        }, options).Dispose();
+    }
+
+    [Fact]
+    public void AspNetCoreEnvironmentDoesNotSetBuilderEnvironment()
+    {
+        var options = CreateEnvironmentOptions(aspNetCoreEnvironment: "Staging");
+
+        RemoteExecutor.Invoke(static () =>
+        {
+            var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions { DisableDashboard = true });
+            Assert.Equal("Production", builder.Environment.EnvironmentName);
+        }, options).Dispose();
+    }
+
+    [Fact]
     public void EnvironmentFlagTakesPrecedenceOverAspireEnvironment()
     {
         var options = CreateEnvironmentOptions(aspireEnvironment: "Staging");
