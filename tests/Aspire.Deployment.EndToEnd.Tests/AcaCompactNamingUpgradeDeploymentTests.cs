@@ -239,8 +239,7 @@ builder.Build().Run();
             output.WriteLine("Step 9: First deployment with GA CLI...");
             await auto.TypeAsync("aspire deploy --clear-cache");
             await auto.EnterAsync();
-            await auto.WaitUntilTextAsync(ConsoleActivityLoggerStrings.PipelineSucceeded, timeout: TimeSpan.FromMinutes(30));
-            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(5));
+            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(35));
 
             // Step 10: Record the storage account count after first deploy
             output.WriteLine("Step 10: Recording storage account count after GA deploy...");

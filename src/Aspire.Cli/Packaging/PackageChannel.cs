@@ -1,8 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.IO.Compression;
+using System.Xml.Linq;
 using Aspire.Cli.NuGet;
 using Aspire.Cli.Resources;
+using Aspire.Cli.Utils;
 using Semver;
 using NuGetPackage = Aspire.Shared.NuGetPackageCli;
 
@@ -191,6 +194,101 @@ internal class PackageChannel(string name, PackageChannelQuality quality, Packag
         });
 
         return filteredPackages;
+    }
+
+    public PackageChannel CreateScopedChannelForPackage(string packageId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
+
+        var mappings = Mappings;
+        if (!VersionHelper.IsPrChannel(Name) || Type is not PackageChannelType.Explicit || mappings is not { Length: > 0 })
+        {
+            return this;
+        }
+
+        var scopedMappings = mappings
+            .SelectMany(mapping => CreateScopedMappings(mapping, packageId))
+            .ToArray();
+
+        return new PackageChannel(Name, Quality, scopedMappings, nuGetPackageCache, ConfigureGlobalPackagesFolder, CliDownloadBaseUrl, PinnedVersion);
+    }
+
+    private static IEnumerable<PackageMapping> CreateScopedMappings(PackageMapping mapping, string packageId)
+    {
+        if (!IsScopedAspireMapping(mapping))
+        {
+            yield return mapping;
+            yield break;
+        }
+
+        var packageIds = GetScopedPackageIds(mapping.Source);
+        if (packageIds.Count == 0)
+        {
+            yield return new PackageMapping(packageId, mapping.Source);
+            yield break;
+        }
+
+        foreach (var scopedPackageId in packageIds)
+        {
+            yield return new PackageMapping(scopedPackageId, mapping.Source);
+        }
+    }
+
+    private static HashSet<string> GetScopedPackageIds(string source)
+    {
+        var packageIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!Directory.Exists(source))
+        {
+            return packageIds;
+        }
+
+        foreach (var packageFile in Directory.EnumerateFiles(source, "*.nupkg", SearchOption.TopDirectoryOnly))
+        {
+            if (TryGetPackageId(packageFile) is { Length: > 0 } packageId)
+            {
+                packageIds.Add(packageId);
+            }
+        }
+
+        return packageIds;
+    }
+
+    private static string? TryGetPackageId(string packageFile)
+    {
+        try
+        {
+            using var archive = ZipFile.OpenRead(packageFile);
+            var nuspecEntry = archive.Entries.FirstOrDefault(entry => entry.FullName.EndsWith(".nuspec", StringComparison.OrdinalIgnoreCase));
+            if (nuspecEntry is null)
+            {
+                return null;
+            }
+
+            using var stream = nuspecEntry.Open();
+            var document = XDocument.Load(stream);
+            var metadata = document.Root?.Elements().FirstOrDefault(e => e.Name.LocalName == "metadata");
+            var id = metadata?.Elements().FirstOrDefault(e => e.Name.LocalName == "id")?.Value;
+            return string.IsNullOrWhiteSpace(id) ? null : id;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+        catch (System.Xml.XmlException)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsScopedAspireMapping(PackageMapping mapping)
+    {
+        return mapping.PackageFilter.StartsWith("Aspire", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(mapping.PackageFilter, PackageMapping.AllPackages, StringComparison.Ordinal);
     }
 
     public static PackageChannel CreateExplicitChannel(string name, PackageChannelQuality quality, PackageMapping[]? mappings, INuGetPackageCache nuGetPackageCache, bool configureGlobalPackagesFolder = false, string? cliDownloadBaseUrl = null, string? pinnedVersion = null)

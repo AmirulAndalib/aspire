@@ -958,7 +958,10 @@ public class AddCommandTests(ITestOutputHelper outputHelper)
 
         var nuGetConfigPath = Path.Combine(appHostDirectory.FullName, "nuget.config");
         Assert.True(File.Exists(nuGetConfigPath));
-        Assert.Contains(expectedSource, File.ReadAllText(nuGetConfigPath), StringComparison.Ordinal);
+        var nuGetConfigContents = File.ReadAllText(nuGetConfigPath);
+        Assert.Contains(expectedSource, nuGetConfigContents, StringComparison.Ordinal);
+        Assert.Contains("""<package pattern="Aspire.Hosting.Redis" />""", nuGetConfigContents, StringComparison.Ordinal);
+        Assert.DoesNotContain("""<package pattern="Aspire*" />""", nuGetConfigContents, StringComparison.Ordinal);
     }
 }
 

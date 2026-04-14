@@ -213,7 +213,7 @@ internal sealed class AddCommand : BaseCommand
                 var nugetConfigPrompter = new NuGetConfigPrompter(InteractionService);
                 await nugetConfigPrompter.CreateOrUpdateWithoutPromptAsync(
                     effectiveAppHostProjectFile.Directory!,
-                    selectedNuGetPackage.Channel,
+                    selectedNuGetPackage.Channel.CreateScopedChannelForPackage(selectedNuGetPackage.Package.Id),
                     cancellationToken);
             }
 
