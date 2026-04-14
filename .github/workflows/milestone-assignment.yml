@@ -5,7 +5,6 @@ on:
     types: [closed]
 
 permissions:
-  pull-requests: write
   issues: write
 
 jobs:
@@ -40,13 +39,14 @@ jobs:
             }
 
             // Find the milestone number by title
-            const milestones = await github.rest.issues.listMilestones({
+            const milestones = await github.paginate(github.rest.issues.listMilestones, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
+              per_page: 100,
             });
 
-            const milestone = milestones.data.find(m => m.title === expectedTitle);
+            const milestone = milestones.find(m => m.title === expectedTitle);
             if (!milestone) {
               core.setFailed(`Milestone '${expectedTitle}' not found in the repository.`);
               return;
