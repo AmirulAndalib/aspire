@@ -59,6 +59,11 @@ public static class AzureKubernetesEnvironmentExtensions
         // default Helm deployment engine.
         var k8sEnvBuilder = builder.AddKubernetesEnvironment($"{name}-k8s");
 
+        // Scope the Helm chart name to this AKS environment to avoid
+        // conflicts when multiple environments deploy to the same cluster
+        // or when re-deploying with different environment names.
+        k8sEnvBuilder.Resource.HelmChartName = $"{builder.Environment.ApplicationName}-{name}".ToLowerInvariant().Replace(' ', '-');
+
         // Create the unified AKS environment resource
         var resource = new AzureKubernetesEnvironmentResource(name, ConfigureAksInfrastructure);
         resource.KubernetesEnvironment = k8sEnvBuilder.Resource;

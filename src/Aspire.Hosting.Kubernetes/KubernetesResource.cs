@@ -510,6 +510,26 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
                     return embedded ? inner?.ToString() ?? string.Empty : inner;
                 }
 
+                // Check if any value provider in the expression would fall through to
+                // ResolveUnknownValue (i.e., it's not an endpoint, parameter, connection string,
+                // or other known type). These are deferred value sources like BicepOutputReference.
+                // If found, defer the entire composite expression for deploy-time resolution.
+                if (expr is IValueProvider compositeValueProvider &&
+                    expr.ValueProviders.Any(IsUnresolvedAtPublishTime))
+                {
+                    var formattedName = expr.ValueExpression
+                        .Replace("{", string.Empty)
+                        .Replace("}", string.Empty)
+                        .Replace(".", "_")
+                        .ToHelmValuesSectionName();
+
+                    var helmExpression = formattedName.ToHelmConfigExpression(TargetResource.Name);
+                    return new HelmValue(helmExpression, expr.ValueExpression)
+                    {
+                        ValueProviderSource = compositeValueProvider
+                    };
+                }
+
                 var args = new object[expr.ValueProviders.Count];
                 var index = 0;
 
@@ -683,6 +703,27 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
         }
 
         return helmValue;
+    }
+
+    /// <summary>
+    /// Checks if a value provider would fall through to ResolveUnknownValue —
+    /// i.e., it's not a known type that can be resolved at publish time
+    /// (endpoint, parameter, connection string, etc.).
+    /// </summary>
+    private static bool IsUnresolvedAtPublishTime(object value)
+    {
+        return value switch
+        {
+            string => false,
+            EndpointReference => false,
+            EndpointReferenceExpression => false,
+            ParameterResource => false,
+            ConnectionStringReference => false,
+            IResourceWithConnectionString => false,
+            ReferenceExpression => false,
+            IManifestExpressionProvider provider when provider is IValueProvider => true,
+            _ => false
+        };
     }
 
     private static string GetKubernetesProtocolName(ProtocolType type)
