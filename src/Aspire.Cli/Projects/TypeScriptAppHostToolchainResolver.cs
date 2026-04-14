@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Security;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspire.Cli.Utils;
@@ -213,8 +214,7 @@ internal static class TypeScriptAppHostToolchainResolver
         var packageJsonPath = Path.Combine(appHostDirectory.FullName, PackageJsonFileName);
         if (!File.Exists(packageJsonPath))
         {
-            toolchain = default;
-            return false;
+            return SetUnknownToolchain(out toolchain);
         }
 
         try
@@ -224,8 +224,7 @@ internal static class TypeScriptAppHostToolchainResolver
                 !packageManagerValue.TryGetValue<string>(out var packageManager) ||
                 string.IsNullOrWhiteSpace(packageManager))
             {
-                toolchain = default;
-                return false;
+                return SetUnknownToolchain(out toolchain);
             }
 
             var packageManagerName = packageManager.Split('@', 2)[0];
@@ -233,13 +232,23 @@ internal static class TypeScriptAppHostToolchainResolver
         }
         catch (JsonException)
         {
-            toolchain = default;
-            return false;
+            return SetUnknownToolchain(out toolchain);
         }
         catch (IOException)
         {
-            toolchain = default;
-            return false;
+            return SetUnknownToolchain(out toolchain);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return SetUnknownToolchain(out toolchain);
+        }
+        catch (SecurityException)
+        {
+            return SetUnknownToolchain(out toolchain);
+        }
+        catch (NotSupportedException)
+        {
+            return SetUnknownToolchain(out toolchain);
         }
     }
 
@@ -263,5 +272,11 @@ internal static class TypeScriptAppHostToolchainResolver
                 toolchain = default;
                 return false;
         }
+    }
+
+    private static bool SetUnknownToolchain(out TypeScriptAppHostToolchain toolchain)
+    {
+        toolchain = default;
+        return false;
     }
 }

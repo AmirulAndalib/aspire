@@ -3,7 +3,7 @@
 
 namespace Aspire.Cli.Utils;
 
-internal static class AutomaticNpmInstallWarning
+internal static class MissingJavaScriptToolWarning
 {
     private static readonly string[] s_missingToolPrefixes =
     [

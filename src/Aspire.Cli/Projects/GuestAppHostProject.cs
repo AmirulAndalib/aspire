@@ -271,7 +271,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
             cancellationToken);
 
         // Step 5: Install dependencies using GuestRuntime (best effort - don't block code generation)
-        await InstallDependenciesAsync(directory, rpcClient, treatMissingNodeToolAsWarning: true, cancellationToken: cancellationToken);
+        await InstallDependenciesAsync(directory, rpcClient, treatMissingJavaScriptToolAsWarning: true, cancellationToken: cancellationToken);
 
         return true;
     }
@@ -453,7 +453,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
 
             // Step 7: Install dependencies (using GuestRuntime)
             // The GuestRuntime will skip if the RuntimeSpec doesn't have InstallDependencies configured
-            var installResult = await InstallDependenciesAsync(directory, rpcClient, treatMissingNodeToolAsWarning: false, cancellationToken: cancellationToken);
+            var installResult = await InstallDependenciesAsync(directory, rpcClient, treatMissingJavaScriptToolAsWarning: false, cancellationToken: cancellationToken);
             if (installResult != 0)
             {
                 context.BackchannelCompletionSource?.TrySetException(
@@ -919,7 +919,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
 
             // Step 5: Install dependencies if needed (using GuestRuntime)
             // The GuestRuntime will skip if the RuntimeSpec doesn't have InstallDependencies configured
-            var installResult = await InstallDependenciesAsync(directory, rpcClient, treatMissingNodeToolAsWarning: false, cancellationToken: cancellationToken);
+            var installResult = await InstallDependenciesAsync(directory, rpcClient, treatMissingJavaScriptToolAsWarning: false, cancellationToken: cancellationToken);
             if (installResult != 0)
             {
                 context.BackchannelCompletionSource?.TrySetException(
@@ -1390,7 +1390,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
 
             _guestRuntime = new GuestRuntime(runtimeSpec, _logger, _fileLoggerProvider);
 
-            _logger.LogDebug("Created GuestRuntime for {Language}: Execute={Command} {Args}",
+            _logger.LogDebug("Created GuestRuntime for {RuntimeDisplayName}: Execute={Command} {Args}",
                 runtimeSpec.DisplayName,
                 runtimeSpec.Execute.Command,
                 string.Join(" ", runtimeSpec.Execute.Args));
@@ -1407,7 +1407,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
     private async Task<int> InstallDependenciesAsync(
         DirectoryInfo directory,
         IAppHostRpcClient rpcClient,
-        bool treatMissingNodeToolAsWarning,
+        bool treatMissingJavaScriptToolAsWarning,
         CancellationToken cancellationToken)
     {
         await EnsureRuntimeCreatedAsync(directory, rpcClient, cancellationToken);
@@ -1446,7 +1446,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
                 _interactionService.DisplayError($"Failed to install {_resolvedLanguage?.DisplayName ?? "guest"} dependencies.");
             }
 
-            if (treatMissingNodeToolAsWarning && AutomaticNpmInstallWarning.IsMatch(lines))
+            if (treatMissingJavaScriptToolAsWarning && MissingJavaScriptToolWarning.IsMatch(lines))
             {
                 _interactionService.DisplayMessage(KnownEmojis.Warning, ErrorStrings.ProjectFilesCreatedButNodeToolsNotFound);
                 return 0;

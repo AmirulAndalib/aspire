@@ -203,7 +203,7 @@ internal sealed class ScaffoldingService : IScaffoldingService
         if (result != 0)
         {
             var lines = output.GetLines().ToArray();
-            if (AutomaticNpmInstallWarning.IsMatch(lines))
+            if (MissingJavaScriptToolWarning.IsMatch(lines))
             {
                 _interactionService.DisplayMessage(KnownEmojis.Warning, ErrorStrings.ProjectFilesCreatedButNodeToolsNotFound);
                 return 0;

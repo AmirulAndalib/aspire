@@ -5,7 +5,7 @@ using Aspire.Cli.Utils;
 
 namespace Aspire.Cli.Tests.Utils;
 
-public class AutomaticNpmInstallWarningTests
+public class MissingJavaScriptToolWarningTests
 {
     [Theory]
     [InlineData("npm is not installed or not found in PATH. Please install Node.js and try again.")]
@@ -20,7 +20,7 @@ public class AutomaticNpmInstallWarningTests
             (OutputLineStream.StdErr, message)
         };
 
-        Assert.True(AutomaticNpmInstallWarning.IsMatch(lines));
+        Assert.True(MissingJavaScriptToolWarning.IsMatch(lines));
     }
 
     [Fact]
@@ -32,6 +32,6 @@ public class AutomaticNpmInstallWarningTests
             (OutputLineStream.StdOut, "Installing packages...")
         };
 
-        Assert.False(AutomaticNpmInstallWarning.IsMatch(lines));
+        Assert.False(MissingJavaScriptToolWarning.IsMatch(lines));
     }
 }
