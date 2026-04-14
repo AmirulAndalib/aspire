@@ -1,0 +1,1687 @@
+number,title,labels,scenario
+969,"Support running and debugging Aspire service projects in Containers","area-app-model,area-orchestrator",S1
+1492,"Host Run Targets for jobs versus/web sites and no debugger by default with EASY attach to debug",area-app-model,S1
+2658,"Allow better modeling of external endpoints to enable resources to reference each other's non-external vs. external endpoints",area-app-model,S1
+4297,"Add tests that validate that playground app manifests are not broken","area-app-model,testing ☑️",S1
+4409,"Bug - Defaulting $(Platform) to Any CPU causes tests to hang indefinitely / time out.","area-app-model,area-app-testing,needs-retriage",S1
+5537,"Parameters in User Secrets containing `&` are converted to contain `\\u0026` instead",area-app-model,S1
+6615,"IResourceWithParent not supported with projects and executables",area-app-model,S1
+6640,"Requests not balanced across replicas when using WithReplicas(2)",area-app-model,S1
+6659,"Address in use error gets double logged","area-app-model,needs-retriage",S1
+6680,"NodeJs app in GitHub Codespaces missing environment variable with hyphen","documentation,area-orchestrator",S1
+7069,"Allow specifying MSBuild arguments to build project resources for in publish mode","area-app-model,area-deployment",S1
+7923,"Failing Aspire.Hosting tests on Windows for PR validation","area-app-model,testing ☑️,disabled-tests,needs-retriage",S1
+8884,"aspire samples: javascript",area-samples,S1
+8893,"AppHost secrets.json Gets reformatted/inconsistent formatting with duplicate keys breaking local dev",area-app-model,S1
+9043,"Add replayable events on eventing.",area-app-model,S1
+9047,"Executable Arguments on dashboard show raw manifest expression","area-app-model,‼️regression-from-last-release",S1
+9449,"Support complex objects as parameter types",area-app-model,S1
+9735,"Aspire use its own build configuration name for the project resources",area-app-model,S1
+9999,"Aspire AppHost/dashboard defaults no longer seem to apply",area-app-model,S1
+10002,"Aspire does not support using multiple projects with same name",area-app-model,S1
+10524,"Follow up on comments from PR 10493","help wanted,area-app-model",S1
+10921,"ExpressionResolver should throw when resolving endpoints that do not have AllocatedEndpoint infomration.",area-app-model,S1
+11541,"Document the way of sharing code between AppHost and its referenced projects",area-app-model,S1
+11550,"Windows ARM64: Health checks are performed over IPv6 only, while docker defaults to IPv4",area-app-model,S1
+12241,"Creation of DCP Service object times out (was: Allow configuration of timeouts for KubernetesService)","area-app-model,area-orchestrator,external",S1
+12247,"`dotnet run` fails with ""address already in use"" for fixed external ports via `.WithEndpoint`",area-app-model,S1
+12598,"Container image for JavaScript apps are huge",needs-area-label,S1
+12624,"Optimize node docker file",area-app-model,S1
+12834,"Add OTEL HTTP support for JS client apps","area-telemetry,javascript",S1
+13035,"Generate IProjectMetadata types even when not referencing projects from the AppHost",area-app-model,S1
+13095,"Intercept HTTP requests for observability","area-app-model,area-orchestrator",S1
+13451,"Add Rush as a package manager",area-integrations,S1
+13597,"Support setting resource endpoint ports from AppHost config & persist random assignments to user secrets",area-app-model,S1
+13625,"`AddViteApp` with `WithHttpsDeveloperCertificate` will silently skip HTTPS setup if Vite config is missing",area-polyglot,S1
+13640,"Should `GenerateParameterDefault` regenerate if stored value no longer meets complexity requirements?",area-app-model,S1
+13714,"Pits of failure using `WaitForResourceHealthyAsync` in tests.","area-app-model,area-app-testing",S1
+13907,"Node app build output files","area-integrations,javascript",S1
+14061,"Urls for endpoints on other resources render inconsistently",area-app-model,S1
+14416,"Add Yarn and Pnpm workspaces support","area-integrations,javascript",S1
+14603,"aspire-samples tests are failing on latest docker update",area-app-model,S1
+14828,"Polyglot ConfigureInfrastructure for Azure resources","area-integrations,area-polyglot",S1
+14880,"Aspire.Hosting.JavaScript - WithPnpm fails when using Scoop-installed pnpm",area-integrations,S1
+14887,"Consider emitting TypeScript APIs at build time","needs-area-label,area-polyglot",S1
+14911,"Generate custom API docs for polyglot SDKs","documentation,area-polyglot",S1
+14939,"PublishAsDockerFile() ignores DockerfileContext MSBuild property — Docker build context defaults to project directory instead of solution root",area-app-model,S1
+14952,"`OnBeforeResourceStart` events fired out of order",area-app-model,S1
+15101,"Create the TypeScript equivalent to Aspire.Hosting.Test",area-polyglot,S1
+15104,"We expose withEnvironmentCallback and withEnvironmentCallbackAsync",area-app-model,S1
+15119,"Bad error when integration doesn't support AspireExport",area-polyglot,S1
+15120,"Yarp addCluster(EndpointReference) doesn't work in polyglot",area-polyglot,S1
+15122,"aspire init should augment existing package.json for brownfield TypeScript apphosts",area-cli,S1
+15190,"Multiple AddCSharpApp calls to projects in the same repo can cause build contention",area-app-model,S1
+15219,"Add the resource name to ""Capability error"" messages",area-polyglot,S1
+15282,"Aspire polyglot should enable nuget signature verification on Linux",area-polyglot,S1
+15290,"[Blog post] Add Aspire 13.2 post for Bun support and container enhancements",blog-post,S1
+15303,"Guide polyglot users in the right direction",needs-area-label,S1
+15320,"Polyglot-Compatible Integration Discovery","area-integrations,area-polyglot",S1
+15399,"Polyglot (guest) AppHost restore does not isolate staging NuGet packages from global cache",area-cli,S1
+15412,"Replace SHA-256 with non-cryptographic hash for socket/pipe path naming",area-polyglot,S1
+15448,"apphost.ts `aspire publish` goes to ~/.aspire/bundle-hosts",area-polyglot,S1
+15486,"TypeScript AppHost: invalid endpoint name in getEndpoint()/withEnvironmentEndpoint() can cause silent FailedToStart with no diagnostics",area-app-model,S1
+15489,"TypeScript AppHost Node process does not trust dev certs","area-app-model,area-cli,area-polyglot",S1
+15509,"Kusto tests failing on CI","area-app-model,azure,disabled-tests,failing-test",S1
+15523,"Multiple AppHosts with the same port report they launch successfully at the same time",area-app-model,S1
+15539,"`aspire deploy` with typescript apphost should have better default Azure Resource Group","area-integrations,azure",S1
+15550,"template should indicate TS apphost [Starter App (Express/React)]","area-templates,area-polyglot",S1
+15581,"Aspire doesn't add development certificate to dev-certs storage",area-app-model,S1
+15623,"aspire new/run from workspace root uses root aspire.config.json (no packages) instead of project config","area-cli,area-polyglot",S1
+15687,"Infer AspireUnion metadata from C# union types in exported APIs","area-app-model,area-polyglot",S1
+15700,"Error message for port conflicts of dependencies is logged at a to low level","area-app-model,area-orchestrator",S1
+15703,"[ResourceName] could be an annotation on ATS exports",area-polyglot,S1
+15734,"Create [AspireExportObsolete]",area-polyglot,S1
+15782,"aspire otel commands fail with 'No such host is known' when using *.dev.localhost URLs (TypeScript AppHost)",area-cli,S1
+15785,"TypeScript codegen does not reliably pick up new integrations added via aspire add",area-polyglot,S1
+15812,"Support alternative JavaScript runtimes (Bun, Deno) for TypeScript AppHosts","area-polyglot,enhancement",S1
+15813,"[Feature Request] Enable Go-based Polyglot AppHost (apphost.go) via JSON-RPC","area-polyglot,enhancement",S1
+15831,"[Failing test]: Aspire.Cli.EndToEnd.Tests.ProjectReferenceTests.TypeScriptAppHostWithProjectReferenceIntegration","area-cli,quarantined-test,failing-test",S1
+15852,"TypeScript apphost scaffold: tsconfig.apphost.json not discovered by typescript-eslint project service","area-polyglot,aspirifriday",S1
+15853,"AddViteApp HTTPS config injection fails in yarn workspaces monorepos (node_modules hoisting)","area-app-model,aspirifriday",S1
+15858,"WithDockerfileBuilder not available in polyglot apphosts, and no publishAsDockerfile metho exists","area-app-model,area-polyglot,aspirifridays",S1
+15868,"EndpointPropertyExpression not exported/available in TypeScript SDK","area-app-model,bug,aspirifriday",S1
+15877,"Auto-generated Dockerfiles break yarn/npm workspaces monorepos","needs-area-label,aspirifriday",S1
+15902,"Add @internal JSDoc tags to generated *Impl and *PromiseImpl classes",area-polyglot,S1
+15967,"Store polyglot AppHost restore artifacts under the workspace instead of ~/.aspire/packages/restore","needs-area-label,enhancement",S1
+16015,"AddViteApp doesn't add pnpm-workspace.yaml in the docker context",needs-area-label,S1
+16026,"Add runtime unit tests for generated TypeScript transport code (trackPromise/flushPendingPromises)",area-polyglot,S1
+16032,"Unify E2E test helpers: centralized error handling, logging, and resource assertions",area-polyglot,S1
+16121,"CLI: TypeScript AppHost hardcodes npm install, ignoring packageManager field",area-cli,S1
+16124,"CLI: TypeScript AppHost top-level await fails in brownfield repos without type:module",area-app-model,S1
+2154,"Running a .NET project using `AddProject` with the csproj path fails if the project has not been previously built","area-tooling,needs-design",S10
+3481,"Overload AddProject in ProjectResourceBuilderExtensions for providing ProjectResource",area-app-model,S10
+4359,"Shared volumes for ProjectResource",area-app-model,S10
+4877,"Allow mock AddProject calls in external Hosting extensions tests",area-app-model,S10
+9575,"Dashboard reports ActivationFailed in ACA for ProjectResource that ran to completion","area-azure-aca,azure-container-apps",S10
+10439,"builder.AddProject(name, projectPath) overload",area-app-model,S10
+10638,"[Aspire 10] - Obsolete AddProject<>, replace with AddDotnetApp",area-app-model,S10
+11143,"Failing test: Aspire.Hosting.Tests.Backchannel.Exec.ProjectResourceExecTests.Exec_DotnetInfo_ProducesLogs_Success","testing ☑️,disabled-tests,area-cli,needs-retriage",S10
+11925,"Console app registered via AddProject does not execute Main() - Aspire 9.5.0 and .NET 10 RC1",needs-area-label,S10
+12938,"v13 - TargetFramework not respected in ProjectResource",area-tooling,S10
+12796,"Add support for poetry",needs-area-label,S12
+12852,"Include support OpenTelemetry automatic instrumentation with AddUvicornApp",area-integrations,S12
+13613,"WithUv doesn't work with just requirements.txt","area-integrations,python",S12
+14082,"Issues when launching apphost from within an active venv with python resource","needs-area-label,python",S12
+14408,"AddUvcornApp with HTTP endpoint does not take static port","needs-area-label,python",S12
+14775,"A python app gets exit code 1 when started from VS Code",area-tooling,S12
+2035,"Publish .tar.gz files instead of .zip files for Docker images",area-engineering-systems,S13
+3309,"Spin off configuration schema generator as a standalone package",area-integrations,S13
+3485,"Remove CopySrcInsteadOfClone override from Build.props",area-engineering-systems,S13
+4328,"Investigate what infrastructure do we need in order to have the ability of shipping a subset of packages on a release",area-engineering-systems,S13
+5414,"[tests] Improve reliability of functional tests","area-engineering-systems,testing ☑️,flaky-test",S13
+5689,"Podman testing in CI",area-engineering-systems,S13
+5883,"[tests] Fix Analyzers use in playground tests","area-engineering-systems,testing ☑️",S13
+6510,"Move Playwright deps & downloads out of /artifacts",area-engineering-systems,S13
+6633,"Have New projects require to Opt-in before they can be shipped as stable",area-engineering-systems,S13
+6866,"Flaky tests rollup: TestEndpointsReturnOk","area-engineering-systems,tracking,quarantined-test",S13
+7392,"Need to update the container image used for running tests",area-engineering-systems,S13
+7455,"Only write test output in GitHub actions for test failures",area-engineering-systems,S13
+7867,"Automatically update dotnet-docker repo (create a PR) for every new build of aspire",area-engineering-systems,S13
+7922,"Failing windows tests for PR validation","area-engineering-systems,testing ☑️,tracking",S13
+8388,"[tests] Explore dropping the test sdks for template tests","area-engineering-systems,testing ☑️",S13
+8620,"Dashboard and orchestrations shouldn't be packed on build",area-engineering-systems,S13
+8813,"[tests] Quarantined tests dashboard","area-engineering-systems,testing ☑️,tracking",S13
+9106,"Tests using DCP should force friendly names for DCP logs",area-engineering-systems,S13
+9198,"[tests] EndToEnd tests timing out on github actions/macOS","area-engineering-systems,testing ☑️",S13
+9257,"[CI] Handle failure to download Playwright dependencies",area-engineering-systems,S13
+9260,"inconsistent build/analyzer warning codes",area-engineering-systems,S13
+9453,"Improve Copilot setup steps",area-engineering-systems,S13
+9579,"[CI] Run template tests in Outerloop workflow","area-engineering-systems,testing ☑️",S13
+9580,"[CI] Template tests on the Arcade based test runner","area-engineering-systems,testing ☑️",S13
+9581,"[CI] Switch to Arcade based test runner","area-engineering-systems,testing ☑️",S13
+9582,"Consider posting GH rolling build, and test runs to Kusto",area-engineering-systems,S13
+9586,"[CI] Post tests summary to Github Checks",area-engineering-systems,S13
+9594,"[CI] Consider adding a Github App to enable a bot for build/test analysis",area-engineering-systems,S13
+9595,"[CI] CLI tool bundling tasks","area-engineering-systems,tracking,area-cli",S13
+9637,"[tests] Outerloop improvements",area-engineering-systems,S13
+9641,"Figure out where do we need to distribute the Aspire CLI bundle",area-engineering-systems,S13
+10175,"NU1510 on my machine after .NET 10 SDK update",area-engineering-systems,S13
+10288,"CLI Bundling follow up tasks","tracking,area-cli",S13
+10443,"Aspire.Cli.Tests should not reference to Aspire.Hosting and Aspire.Hosting.Testing",area-cli,S13
+10605,"Publish sha512 checksums for Aspire Dashboard",area-engineering-systems,S13
+10809,"[CI] Follow up to build cli native archives on GH",area-cli,S13
+10855,"Create a workflow to automatically upgrade aspire extension npm packages",needs-area-label,S13
+10889,"Bump patch version to 9.4.1 on the release branch",area-engineering-systems,S13
+10940,"Add a top level folder for Aspire cli archives on linux",area-engineering-systems,S13
+11020,"Failing test: Aspire.Hosting.Azure.Tests.AzureAppServiceTests.PublishAsAzureAppServiceWebsite_ThrowsIfNoEnvironment","area-engineering-systems,testing ☑️,flaky-test",S13
+11815,"Tracking issue for test failures on AzDO pipeline","area-engineering-systems,testing ☑️,tracking",S13
+12364,"Failing test: Aspire.Hosting.Tests.Pipelines.DistributedApplicationPipelineTests.ExecuteAsync_WhenStepFails_PipelineLoggerIsCleanedUp","area-engineering-systems,flaky-test",S13
+12433,"Failing test: Aspire.Hosting.Tests.WithUrlsTests.ExpectedNumberOfUrlsForReplicatedResource","area-engineering-systems,flaky-test",S13
+12725,"Failing test: Aspire.RabbitMQ.Client.Tests.AspireRabbitMQLoggingTests.TestInfoAndWarn","area-engineering-systems,flaky-test",S13
+13149,"Update Pr Issue Template for new doc templates?",area-engineering-systems,S13
+13185,"Introduce per channel override feeds into configuration.",area-cli,S13
+13321,"Running aspire update --self does work when the Aspire CLI is installed as a .NET global tool",area-cli,S13
+13635,"Update Security Policy",area-engineering-systems,S13
+13942,"CI Improvements","area-engineering-systems,tracking",S13
+13979,"NuGet package Aspire.Dashboard.Sdk.win-x86 is missing 13.1 release",needs-area-label,S13
+14034,"Onboard CLI telemetry",area-cli,S13
+14054,"CLI E2E recording workflow doesn't capture new test classes until PR is merged",needs-area-label,S13
+14265,"Repo Issue / PR auto labeller isn't working",area-engineering-systems,S13
+14776,"Installing Aspire CLI - access denied with running instances",area-cli,S13
+14938,"Consider removing the dotnet tool for aspire",area-cli,S13
+14965,"Staging feed too difficult to use",area-cli,S13
+15227,"Linux machines need to install ICU in order for aspire.exe to work",area-integrations,S13
+15241,"Migrate E2E tests to Hex1bTerminalAutomator API and build reusable automation helpers",area-engineering-systems,S13
+15335,"Automate version stabilization: dynamically compute package versions instead of hardcoding",area-integrations,S13
+15535,"[CI] Build Aspire cli for Windows/Arm natively","area-engineering-systems,area-cli",S13
+15538,"[CI] Add validation of bundles generated for the various OS/arch combinations",area-engineering-systems,S13
+15614,"Aspire CLI needs an uninstall/cleanup command for script and PR installs",area-cli,S13
+15615,"[CI] macOS runner scarcity is delaying rolling builds for hours and leading to cancellations",area-engineering-systems,S13
+15797,"Make the Aspire CLI dotnet tool package use the NativeAOT binary",area-cli,S13
+15818,"[CI] AzDO PR builds fail on WinGet/Homebrew installer URL validation",area-engineering-systems,S13
+15830,"[tests] `CLI Starter Validation` test getting terminated after 20mins","area-engineering-systems,testing ☑️",S13
+15889,"/create-issue: Add dedup check to prevent duplicate issue creation on concurrent runs",area-engineering-systems,S13
+15938,"Make CLI bundle self-extraction conditional based on distribution mode","area-cli,enhancement",S13
+16055,"Support arbitrary property pass-through from MSBuild test projects to GitHub workflows via runsheets",area-engineering-systems,S13
+16103,"localhive/build fails after cleaning artifacts: replace-text.cs script runner can't find cached exe",area-engineering-systems,S13
+16105,"[Failing test]: SmolSemVer Windows - process initialization failure (exit code -1073741502)","area-engineering-systems,failing-test",S13
+6966,"Add multi solutions support",area-app-model,S14
+2897,"Asserting OpenTelemetry data when using DistributedApplicationTestingBuilder","area-telemetry,area-app-testing",S15
+4138,"CreateHttpClient extension method in Aspire.Hosting.Testing defaults to the ""http"" endpoint",area-app-testing,S15
+4462,"Allow configuring volume behavior when using Aspire.Hosting.Testing ",area-app-testing,S15
+5442,"DistributedApplicationTestingBuilder does not work with Remote Testing on WSL","area-app-model,wsl",S15
+6788,"`AddStandardResilienceHandler` and healthchecks result in noisy logs with TestHost",area-app-testing,S15
+6857,"dotnet publish to folder for Aspire.Hosting.Testing projects",area-app-testing,S15
+6887,"Project Resource fails to start if AppHost started with `--artifacts-path`",area-app-testing,S15
+7795,"Developers should be able to build integration tests with Playwright",area-app-testing,S15
+7975,"Test Host does not accept trailing commas in `launchsettings.json`",area-app-testing,S15
+8078,"Concurrency error running tests in parallel",area-app-testing,S15
+8111,"Starting a resource (WithExplicitStart) in Aspire tests",area-app-testing,S15
+8147,"`WaitForResourceHealthyAsync` should fail fast if Resource does not exist",area-app-testing,S15
+8499,"Code coverage reporting using popular tools does not work with Aspire.Hosting.Testing",area-app-testing,S15
+8719,"Flaky test: Aspire.Hosting.Testing.Tests.TestingFactoryTests.SelectsFirstLaunchProfile","area-app-testing,disabled-tests,flaky-test",S15
+8773,"[Failing test]: ProxylessContainerCanBeReferenced","area-app-testing,failing-test",S15
+9087,"Support DistributedApplicationTestingBuilder with IsPublishMode == true",area-app-testing,S15
+9093,"PostgreSQL persistent lifetime not working when setting --environment in Integration test",area-app-testing,S15
+9110,"Test Host doesn't use ports specified in launchSettings",area-app-testing,S15
+10149,"Assign `DcpInstancesAnnotation` after `BeforeStartEvent`?","area-app-model,area-app-testing",S15
+10218,"Still missing crashing container logs in 9.3 & 9.4 preview in tests","area-orchestrator,area-app-testing",S15
+10711,"Testing broken network connections",area-app-testing,S15
+10888,"Persistent SQL server restarted every time when launching tests",needs-area-label,S15
+11021,"Since Aspire.Hosting.Testing 9.4 the tests throws TaskCanceledException",area-app-testing,S15
+11403,"Fill Testing Gaps highlighted by Community Toolkit",area-app-testing,S15
+11510,"ability to get logs from resoureses",area-app-testing,S15
+11797,"Using Aspire to programmatically assert OTLP telemetry is being emitted?",area-telemetry,S15
+11818,"Failing tests: Tests referencing TestProject.ServiceA which isn't available on helix","testing ☑️,area-app-testing",S15
+12273,"Simplify `aspire new` starter template test framework options",area-app-testing,S15
+13656,"[Testing] Add a possibility to inject / override services (especially auth) in the projects which are launched from the apphost",area-app-testing,S15
+13728,"`StartAsync` swallows `OperationCancelledException`s","area-app-model,area-app-testing",S15
+13739,"`AddTestProject` with a custom dashboard view",area-app-testing,S15
+13746,"Make it easier to use the Dashboard with `DistributedApplicationTestingBuilder`",area-app-testing,S15
+13761,"`AuxiliaryBackchannelService` concurrency error with parallel tests","area-app-testing,area-cli",S15
+13789,"Azure function not launched by Aspire when running test in normal test mode",area-app-testing,S15
+13842,"DistributedApplicationTestingBuilder unable to load sqlproj when attempting to apply","area-integrations,area-app-testing",S15
+14127,"Provide an API to wait for multiple resources at once in tests",area-app-testing,S15
+14518,"ExplicitStartupAnnotation added post-hoc to project resources is ignored during StartAsync",area-app-testing,S15
+14831,"Tests can require you to create `DcpOptions` to resolve environment variables",area-app-testing,S15
+14993,"WaitCommandTests times out in Docker-based E2E test infrastructure","area-app-testing,quarantined-test,failing-test",S15
+15116,"Easy access to app logs form tests",area-app-testing,S15
+15264,"Skip Interactive resources when running tests",area-testing,S15
+15575,"VS Code Extension + `DistributedApplicationTestingBuilder`",area-extension,S15
+15805,"DistributedApplicationTestingBuilder - Allow exporting logs and traces","area-app-testing,enhancement",S15
+16018,"`aspire ps` should include `DistributedApplicationOptions.DashboardApplicationName`","area-app-testing,enhancement",S15
+16058,"/create-issue: support multiple test names and fix underscore escaping in issue titles",area-app-testing,S15
+4256,"Aspire Dashboard - Persist dashboard data","area-dashboard,area-telemetry,needs-design,dashboard-persistence",S16
+8653,"Persistent Dashboard",area-dashboard,S16
+8742,"Remember user dashboard choices",area-dashboard,S16
+9363,"Provide a way to stop all Persistent Containers","area-dashboard,area-app-model,area-orchestrator,area-cli",S16
+9482,"Persist dashboard",area-dashboard,S16
+11121,"Provide CSV export option in dashboard console logs",area-dashboard,S16
+15286,"[Blog Post] Add new post for Aspire 13.2 dashboard export and telemetry features",blog-post,S16
+15648,"Dashboard: Use persistent notification pattern for command results instead of modal dialog",area-dashboard,S16
+303,"Allow specifying the project(s) on run",area-app-model,S17
+1435,"Support categorization in running the AppHost",area-app-model,S17
+12802,"[AspireE2E] Use ""aspire run"" command to run the project, It doesn't let you to select specific project to run",area-cli,S17
+1869,"Add AzureB2C component","area-integrations,azure",S18
+3552,"Blazor Aspire MS Identity combination",area-tooling,S18
+7047,"Support Managed Identity in AzureStorageResource emulator","area-integrations,azure,azure-storage",S18
+8116,"Implementors of `IResourceWithAzureFunctionsConfig` should set additional params for identity-based configuration.","area-integrations,azure-functions",S18
+8379,"Add a Roslyn analyzer for WithRoleAssignments when not using targeted role assignments infrastructure","area-integrations,azure",S18
+8480,"Aspire.Hosting.Azure.ApplicationInsights should configure Microsoft Entra authentication","area-integrations,azure,security 🔐",S18
+10024,"Centralize UI event loop for Aspire CLI",area-cli,S18
+10409,"Allow UAMI's to be added to container apps",area-app-model,S18
+10563,"Centralized management of container image versions",area-integrations,S18
+10920,"Centralized Build in for .NET projects",area-app-model,S18
+13271,"Aspire: FormatException with Azure PostgreSQL Flexible Server and Entra ID Authentication",area-integrations,S18
+13716,"Aspire + Nuxt + Entra support",area-integrations,S18
+15483,"Can't get Azure Cache for Redis integration to work with RBAC",area-integrations,S18
+1326,"Proposal for Keycloak integration","area-integrations,keycloak",S19
+4856,"Add Keycloak icon/logo","area-integrations,keycloak",S19
+5092,"Create KeycloakRealmResource to represent the address of a realm","area-integrations,keycloak",S19
+6004,"Keycloak container fails to start in Azure Container Apps","area-integrations,keycloak",S19
+6084,"Keycloak - Support WithReference for Sql Database","area-integrations,keycloak",S19
+7263,"Documentation lacking on how to connect to an existing keycloak","documentation,area-integrations,keycloak",S19
+8034,"[Keycloak Integration] How to setup database connection for Keycloak when deploying to Azure","area-integrations,keycloak",S19
+8064,"KeyCloak - Allow selection of Http/Https Schemes for the URL's this is for running KeyCloak on HTTPs","area-integrations,keycloak",S19
+14343,"[Keycloak] Support relative paths for health checks",area-integrations,S19
+4582,"Watch task over kubernetes Container resources terminated unexpectedly. Check to ensure dcpd process is running.","area-app-model,needs-retriage",S2
+4981,"Cannot rebuild projects due to exe file being locked",area-tooling,S2
+7112,"Use new 'dotnet run' 9.1 options for launching projects",area-app-model,S2
+7695,"Only rebuild / restart impacted resources when hot reload cannot be used (while debugging)",area-app-model,S2
+8077,"WaitFor compatibility with Node watch processes (non-exiting background process)",area-app-model,S2
+9450,"Aspire CLI --watch large environment variables",area-cli,S2
+9756,"WaitForCompletion seems incompatible with watch",area-tooling,S2
+11072,"Rebuild & Restart aspire project when restarting from aspire dashboard",area-tooling,S2
+12778,"`aspire run` for file-based AppHost doesn't rebuild project references",area-cli,S2
+12970,"`dotnet watch` on apphost does not start azure functions project",area-integrations,S2
+13142,"aspire run hangs on build errors when using defaultWatchEnabled",area-cli,S2
+13207,"Should AddCsharpApp with defaultWatchEnabled require a project reference or not?",area-app-model,S2
+13738,"[AspireE2E] When I run the aspire project again with .WithReplicas(2) added using dotnet watch, the project fails to run successfully.",area-tooling,S2
+13839,"Apphost Hot Reload Architecture for `aspire run`",area-orchestrator,S2
+13924,"Request for the hot reload on Aspire CLI similar as 'dotnet watch' kind of functionality",area-cli,S2
+13928,"[AspireE2E] When dotnet watch on Aspire Starter App (ASP.NET Core/Blazor) app, The dotnet watch information displays incorrect after editing the file",area-tooling,S2
+13929,"[AspireE2E][Aspire CLI]An unexpected error occurred: The JSON-RPC connection with the remote party was lost before the request could complete when dotnet watch on Aspire AppHost project",needs-area-label,S2
+14514,"Improve Kubernetes watch errors",area-app-model,S2
+15109,"Solution build in Visual Studio stops AppHost instead of restarting it",area-tooling,S2
+15710,"Aspire watch experience","area-app-model,area-orchestrator",S2
+15850,"VS Code: `Run with aspire` doesn't rebuilt app host if out of date",area-cli,S2
+8159,"`aspire add` should give next steps when package is installed.",area-cli,S3
+8369,"`aspire add` only supports adding hosting integrations",area-cli,S3
+9492,"Aspire CLI - show tags on aspire add",area-cli,S3
+10975,"Aspire CLI - Add to existing solution",area-cli,S3
+11689,"Add support for aspire add to create proj references",area-cli,S3
+13808,"Easy way to add service defaults from CLI",needs-area-label,S3
+14799,"Can't add Testing package via `aspire add`",area-cli,S3
+15263,"Smooth rough edges when publishing integration packages",area-integrations,S3
+15396,"aspire add --version should not prompt for a version",area-cli,S3
+15632,"in aspire.config.json, ""packages"" should be renamed ""integrations""",area-integrations,S3
+15880,"aspire add: support non-interactive search/filter for hosting integrations","area-integrations,aspirifriday",S3
+2515,"Kubernetes DnsSrv service discovery across namespace",area-service-discovery,S4a
+4054,"FEATURE: Kubernetes Probes - Sidecar - Source Generator",area-app-model,S4a
+5420,"Expose default health endpoints for Kubernetes probes",area-templates,S4a
+8028,"ObjectDisposedException in Dcp.KubernetesService.EnsureKubernetesAsync","area-app-model,needs-retriage",S4a
+9097,"Improve error reporting from Kubernetes Publisher","area-deployment,kubernetes",S4a
+9226,"Fix port mapping for bait and switch resources in Kubernetes","area-deployment,kubernetes",S4a
+9429,"Ability to create PVC without defining a PV","area-deployment,kubernetes",S4a
+9430,"Ability to define a PVC or use WithVolume on a ProjectResource","area-deployment,kubernetes",S4a
+9431,"Ability to override values in the helm values.yaml file.","area-deployment,kubernetes",S4a
+9605,"Add dashboard support for KubernetesEnvironmentResource","area-deployment,kubernetes",S4a
+9613,"Add support for Azure Kubernetes Service","azure,area-deployment,kubernetes",S4a
+9767,"More customization for PublishAsKubernetesService()","area-deployment,kubernetes",S4a
+9913,"Aspir8 and resolving service endpoints in kubernetes with DNS SRV","needs-area-label,kubernetes",S4a
+10994,"aspire publish produces invalid helm configuration for database secrets","area-deployment,kubernetes",S4a
+11140,"Aspire Cli K8s Build WithEnvironment() Values all missing in values.yaml","area-deployment,kubernetes",S4a
+11183,"Bug: aspire publish kubernetes Fails with Duplicate Endpoint Names and Port Resolution Errors","area-deployment,kubernetes",S4a
+11332,"HorizontalPodAutoscalerV2 generates invalid metrics block in Kubernetes manifest",area-app-model,S4a
+11365,"Feature Request: Remove values.yaml in Aspire Kubernetes Publish and Inline Configuration in ConfigMaps and Services.","area-deployment,kubernetes",S4a
+11383,"request feature : Add default namespace for all Kubernetes resources & auto‑PVC creation for resources with DefaultStorageClassName",area-integrations,S4a
+12562,"Question: Kubernetes publish support does not build or push containers to registry","needs-area-label,area-deployment",S4a
+13365,"Error on aspire publish when combining Kubernetes and NATS integrations",needs-area-label,S4a
+13871,"Errors discovered in K8s service",area-service-discovery,S4a
+14011,".WithContainerRegistry has no effect when deploying to Kubernetes",area-app-model,S4a
+14096,"(code provided): Kubernetes integration: specifying pvc as default storage type generates invalid YAML assets",needs-area-label,S4a
+14370,"Kubernetes publisher: cross-resource secret references generate broken Helm value paths","area-deployment,kubernetes",S4a
+14389,"K8s publisher: Helm secret value path mismatch between template expression and values.yaml",area-integrations,S4a
+14506,"Create Production grade Postgres Integration for K8s by integrating with cloudnative-pg",area-integrations,S4a
+14579,"Two BaseKubernetesResource with same Metadata.Name and then when running aspire publish the two resources overrides each other",needs-area-label,S4a
+15021,"Helm manifests not generating initContainers correctly in Kubernetes","area-integrations,kubernetes",S4a
+15229,"Kubernetes publisher fails with Unsupported value type: Boolean for Scalar env vars",area-deployment,S4a
+15789,"NATS container args incompatible with Kubernetes publishing - Command line args must be strings",area-deployment,S4a
+15795,"AddDatabase() databases are not created when deploying to Kubernetes","area-deployment,silent-failure",S4a
+15870,"[Failing test]: Aspire.Cli.EndToEnd.Tests.KubernetesPublishTests.CreateAndPublishToKubernetes","disabled-tests,area-cli,failing-test",S4a
+16099,"aspire destroy: Helm uninstall should throw on non-zero exit code",area-deployment,S4a
+16101,"IHelmRunner: Add typed methods for deploy, uninstall, verify",area-deployment,S4a
+16114,"Kubernetes Helm chart generation fails when resources reference Azure Bicep outputs",area-integrations,S4a
+6939,"Launching with AppHost adds OTEL_EXPORTER_OTLP_PROTOCOL=grpc environment variable which breaks exporting to Seq",area-integrations,S4b
+7188,"global.json override breaks azure function","area-integrations,azure,azure-functions",S4b
+7370,"Add Seq client Integration into an app with NSwag breaks the app.",area-integrations,S4b
+7685,"Aspire.Hosting.Azure.AppContainers breaks Qdrant Integration (ACA)","azure,area-deployment,azure-container-apps",S4b
+8306,"Add options argument to `IContainerRuntime` to allow tweaks to the way the image is generated.",area-deployment,S4b
+10823,"Adding a parent relationship to a container resource breaks `.WaitForCompletion()`",area-app-model,S4b
+11775,"using AddAzureFunctionsProject() in conjunction with openapi for azure functions breaks swagger ui",area-integrations,S4b
+15476,"Aspire CLI `aspire update` breaks project with Central Package Management (13.1.3)",area-acquisition,S4b
+15620,"CosmosDB preview emulator: HTTPS endpoint switch ignores certificate availability, breaks CI",area-integrations,S4b
+15845,"Plain `aspire logs` / telemetry output leaks ANSI fragments",area-cli,S4b
+16107,"aspire start --isolated breaks resource telemetry",area-app-model,S4b
+2711,"Consider deployment story for static web apps/spa","azure,area-deployment",S4d
+2866,"Add support for Azure Container Apps ""init containers""","azure,area-deployment,azure-container-apps",S4d
+3121,"Infrastructure versioning with CDK callbacks","azure,area-deployment",S4d
+3407,"Include a healthcheck binary for use in a docker compose environment",area-dashboard,S4d
+4341,"Deploy on Multiple Server with Control, Master-Slave database support",area-deployment,S4d
+4405,"Validate Sql database names that will get converted at deployment","area-integrations,azure,sqlserver,area-deployment",S4d
+4733,".NET Aspire application deployed to Azure Container App does not communicate over HTTP/2","documentation,azure,area-deployment,azure-container-apps",S4d
+5178,"Ability to set ASPNETCORE_ENVIRONMENT while executing azd up / azd deploy ","azure,area-deployment",S4d
+6559,"Support of .net aspire deployment using terraform","area-integrations,area-deployment",S4d
+6667,"Configure Environment of AppHost in Publish Mode","area-app-model,area-deployment",S4d
+6781,"Unable to deploy Blazor wasm project to Aspire",area-deployment,S4d
+7330,"Aspire incorrectly merges Azurite emulator bindings into production manifest, causing Bicep failure","azure,area-deployment,silent-failure",S4d
+7829,"Disable Custom Domain validation on deployment","area-deployment,azure-container-apps",S4d
+8063,"Windows Container Support",area-deployment,S4d
+8208,"Support docker healthchecks","area-app-model,area-orchestrator,docker-compose",S4d
+8262,"`azd pipeline config` is not asking for all parameters from Aspire app host",area-deployment,S4d
+8748,"Publishing Docker image for project resource to GitHub fails due to ContainerRepository","area-deployment,docker-compose",S4d
+8805,"Improve handling of `azd deploy` auth errors",area-deployment,S4d
+8842,"Add ability to configure container image when publishing by docker compose publisher","area-deployment,docker-compose",S4d
+8939,"ACA Container volumes use shared access keys","azure,external,security 🔐,area-deployment,azure-container-apps,Azure.Provisioning",S4d
+9019,"Debug publish mode","area-tooling,area-deployment",S4d
+9094,"Support existing ACA environment resource","azure,area-deployment,azure-container-apps",S4d
+9194,".WaitFor() not working for databases with Docker Compose Publisher","area-deployment,docker-compose,silent-failure",S4d
+9281,"Publishing to docker compose fails for a project with multiple RuntimeIdentifiers","area-deployment,docker-compose",S4d
+9299,"Publishers should emit assets to a separate directory",area-deployment,S4d
+9410,"Compose publish doesn't apply ownership for `ContainerFileSystemCallbackAnnotation` with existing files","area-deployment,docker-compose",S4d
+9651,"Make endpoints work across different compute environments",area-deployment,S4d
+9711,"Docker compose publisher doesn't take into account overridden image name for ProjectResource when generating .env file","area-deployment,docker-compose",S4d
+9824,"Postgres does not work with volumes when hosted on ACA","area-deployment,azure-container-apps",S4d
+9852,"Specify container registries for Aspire Publish - CICD",area-deployment,S4d
+9905,"Publishing docker compose fails if ProjectResource is excluded from manifest","area-deployment,docker-compose",S4d
+9914,"Allow change publish output path for a specific resource",area-deployment,S4d
+9932,"Customizing image names and tags when deploying with azd in Aspire",area-deployment,S4d
+9954,"Conflict between revisions using .WithDataVolume() and Qdrant integration in Azure Container Apps",area-deployment,S4d
+10039,"Customizing container CPU/Memory with .PublishAsAzureContainerApp() causes environment variables to break","area-integrations,azure,area-deployment,silent-failure",S4d
+10212,"Default ContainerRuntimeIdentifier to linux-x64 in ResourceContainerImageBuilder",area-deployment,S4d
+10492,"Implement parameter descriptions in all relevant locations","area-deployment,area-cli",S4d
+10693,"Default App container deployment encoded secrets","area-tooling,area-deployment",S4d
+10694,"Deploy container only solution",area-deployment,S4d
+10778,"Add EnableHostBindingPlaceholders flag to DockerComposeEnvironmentResource for host resource substitution","area-deployment,docker-compose",S4d
+10784,"Aspire.Hosting.Docker - Product Volumes aren't mapped properly.","area-deployment,docker-compose",S4d
+11033,"Implement GetValueAsync API on ContainerPortReference for build output port resolution",area-deployment,S4d
+11061,"Define interface for resolving deployment environment domain",area-deployment,S4d
+11086,"Add support for BYO certificate with `ConfigureCustomDomain(...)`","azure,area-deployment",S4d
+11096,"[META]: Azure Container Apps support",area-deployment,S4d
+11124,"📝Add Aspire CLI option to publish output file without building container images",area-deployment,S4d
+11201,"Docker compose env interpolation support","area-deployment,docker-compose",S4d
+11209,"Feature: SSH + Docker Compose remote deployment pipeline with automatic TLS and YARP ingress","area-deployment,docker-compose,yarp",S4d
+11269,"Provide API for deployment resources that product and push build artifacts",area-deployment,S4d
+11271,"Custom Domain should update bicep","azure,area-deployment",S4d
+11407,"ACA Container App Jobs break when launchSettings has kestrel settings","azure,area-deployment,silent-failure",S4d
+11408,"aspire deploy requires docker to be running, but azd up doesn't","azure,area-deployment",S4d
+11443,"Add `WithBuildSecret` overload that accepts a file path",area-deployment,S4d
+11487,"DistributedApplicationRunner unconditionally completes publish",area-deployment,S4d
+11501,"`aspire deploy` can hang on Docker health check if daemon is busy",area-deployment,S4d
+11517,"Aspire CLI - `aspire deploy` filter Azure subs/locs",area-deployment,S4d
+11542,"Docker Compose Image Tag for Projects",area-app-model,S4d
+11605,"Error Deploying .NET Aspire ViteApp Using azd in Azure DevOps Pipeline",area-deployment,S4d
+11622,"Docker compose published environment values computed incorrectly","area-deployment,silent-failure",S4d
+12009,"Support AsEnvironmentPlaceholder on DockerComposeEnvironmentResource",area-deployment,S4d
+12106,"Deployment diffs",area-deployment,S4d
+12122,"Aspire Publish with container in private GHCR.IO registry",area-deployment,S4d
+12183,"Follow up to supporting non-interactive mode for deployment",area-deployment,S4d
+12198,"`aspire publish` when trying to expose port/tcp & port/udp only exposes port in docker compose","area-deployment,docker-compose",S4d
+12222,"Publishing as dockerfile doesnt call right command to publish image",area-deployment,S4d
+12250,"Random provision error",area-deployment,S4d
+12282,"Support modeling status on pipeline steps",area-deployment,S4d
+12315,"Improve interface for passing flags from CLI to AppHost",area-deployment,S4d
+12329,"Harden collision checks in deployment state for nested hierarchies",area-deployment,S4d
+12348,"Spooky failure mode when container runtime is not running",area-deployment,S4d
+12376,"Add support for `aspire do --list-steps` flag",area-deployment,S4d
+12469,"Docker compose build secrets support.",area-deployment,S4d
+12470,"ProjectResource does not support ContainerImageTag MSBuild property",area-deployment,S4d
+12496,"Add a ""deploy all compute"" meta step to aspire deploy",area-deployment,S4d
+12498,"Split build-{resource} tag from build-{resource}-container in aspire deploy","refactoring,area-deployment",S4d
+12511,"App service Hostname should use DNS suffix generated by DNL",area-deployment,S4d
+12512,"Failing test: Aspire.Hosting.Azure.Tests.AzureDeployerTests.DeployAsync_WithSingleRedisCache_CallsDeployingComputeResources","azure,area-deployment,failing-test",S4d
+12784,"Introduce `aspire do publish-dockerfiles` step",area-pipelines,S4d
+12898,"Add infrastructure to build and verify generated Docker images in tests","area-engineering-systems,testing ☑️,area-app-testing,docker-compose",S4d
+12932,"Aspire.Host.Docker - resource published as docker-compose service, although PublishAsDockerComposeService not applied.","area-integrations,orleans",S4d
+12977,"Azure Container App Environment with AsExisting() creates new infrastructure instead of using existing resources",area-deployment,S4d
+13021,"Verify behavior when Azure deployment quota (800) is reached",area-deployment,S4d
+13067,".env is sorted alphabetically, leading to environment placeholders breaking","‼️regression-from-last-release,area-deployment,docker-compose,silent-failure",S4d
+13117,"Support resolving endpoints using known network ids in deployment",area-deployment,S4d
+13256,"Smart parallel deployments",area-deployment,S4d
+13259,"Restart redis when the password is changed","azure,area-deployment",S4d
+13337,"Requirements from App Service website resources bleed into unrelated compute resources",area-deployment,S4d
+13354,"During aspire deploy this error can show up",needs-area-label,S4d
+13472,"Azure Managed Redis fails to provision",area-deployment,S4d
+13491,"BuildKit caching arguments","area-integrations,area-pipelines",S4d
+13499," Feature Request: Add support for generating Bicep using Azure Verified Modules (AVM)","area-integrations,azure",S4d
+13602,"`aspire deploy` doesn't report failure when nothing was deployed",needs-area-label,S4d
+13690,"Pipeline Manifest Json",area-pipelines,S4d
+13757,"How to deploy Aspire as a service",area-samples,S4d
+13812,"Extract UserAssignedIdentity resource from AzureContainerAppEnvironmentResource and AzureAppServiceEnvironmentResource",area-deployment,S4d
+13900,"aspire deploy fails on ""process-parameters"" if parameter resource definition has changed",area-deployment,S4d
+13904,"Azure CLI Timeout Error on running Aspire Deployment using Github Actions.",area-cli,S4d
+13923,"pipelines: Using interaction service ConfirmationPrompt hangs the step",needs-area-label,S4d
+13960,"aspire deploy failing for a simple Azure Container App",needs-area-label,S4d
+13965,"[tests] Update tests to not depend on bicep compiler","testing ☑️,area-deployment",S4d
+13994,"Azure Managed Redis: Customize provisioning infrastructure docs example does not work / out of date.",area-deployment,S4d
+14002,"When using Foundry resources, errors will occur during deployment.",area-deployment,S4d
+14075,"aspire do prepare-compose fails if ContainerRegistry is specified in MSBuild",area-deployment,S4d
+14095,"Improve documentation for Docker Compose publishing",needs-area-label,S4d
+14231,"Publish via Visual Studio partially ignoring selected Enviroment",area-deployment,S4d
+14253,"azd up deploys Aspire Dashboard with pinned linuxFxVersion ignoring local .NET SDK version",area-deployment,S4d
+14286,"Azure Container App Environment (ACA) with external container registry",area-deployment,S4d
+14338,"[AspireE2E] When running aspire deploy and pressing Ctrl+C to cancel, the message ""The deployment was canceled."" appears on an incorrect line.",area-deployment,S4d
+14339,"[AspireE2E] After deployment to Docker, the env-dashboard cannot be accessed because no token is provided.",area-deployment,S4d
+14386,"Add option to execute generated EF migration bundle during deployment (configurable/extensible)","area-deployment,entityframework",S4d
+14387,"Create a container image for the generated EF migration bundle during publish","area-deployment,entityframework",S4d
+14529,"`aspire deploy` doesn't support npm authentication for private feeds","area-integrations,javascript",S4d
+14577,".env files being resorted by Docker Compose publisher",needs-area-label,S4d
+14617,"Extend HealthCheckAnnotation with a reference to an endpoint","area-deployment,docker-compose",S4d
+14695,"PostgreSQL PublishAsContainer + AddDatabase does not create database on deploy","area-deployment,silent-failure",S4d
+14731,"Default Values are not added into .env File DockerComposeEnvironment",docker-compose,S4d
+14789,"Feedback from working on AWS Deployment",area-deployment,S4d
+14829,"Gesture to generate parameter placeholders for CI/CD",area-deployment,S4d
+14830,"How to break up aspire deploy into multiple CI/CD pipelines",area-deployment,S4d
+14937,"aspire do push does not respect local image name",area-cli,S4d
+15057,"Aspire do prepare-compose + aspire do push generate different tags",area-deployment,S4d
+15078,"Docker Compose endpoint summary should tolerate compose CLI compatibility differences","area-deployment,failing-test",S4d
+15079,"Track non-image Azure DevOps failures from build 1325767",area-deployment,S4d
+15105,"Allow baking environment variables into Docker Image from AppHost",area-deployment,S4d
+15322,"Improve deploy pipeline step DX by introducing `skip` state",area-deployment,S4d
+15492,"Support for building multiple target platforms via `aspire do build-[resource]`",area-deployment,S4d
+15621,"aspire publish not working with Vite app",area-deployment,S4d
+15770,"RunAsEmulator/RunAsContainer are no-ops in publish mode — problematic for docker-compose targets","area-deployment,silent-failure",S4d
+15838,"Regression in Docker Compose publishing","area-deployment,docker-compose",S4d
+15872,"aspire deploy: az login check times out after ~10 seconds with no way to override","area-deployment,aspirifriday",S4d
+15876,"Docker Compose deploy fails when Dockerfile final stage has no CMD/ENTRYPOINT (FROM scratch)","area-deployment,aspirifriday",S4d
+15970,"Aspire.Hosting.Foundry should output a Summary after deployment",area-deployment,S4d
+16011,"AddContainer + PublishAsAzureContainerApp does not configure ACR identity for image pull","area-deployment,silent-failure",S4d
+16063,"Unified resource introspection for local and deployed environments","area-deployment,area-cli",S4d
+16073,"Pipeline step summary doesn't render errors clearly",area-deployment,S4d
+16090,"Improve parameter experience during deployment","area-deployment,area-cli",S4d
+16091,"Make parameters first-class in the CLI and deployment pipeline","area-deployment,area-cli",S4d
+16102,"aspire destroy: Purge soft-deleted Azure resources after resource group deletion",area-deployment,S4d
+16108,"Pipeline step messages and prompts should be localized",area-deployment,S4d
+16112,"aspire destroy: Add --no-wait flag for async Azure resource group deletion",area-deployment,S4d
+16119,"Show Azure Portal links in deployment summaries",area-deployment,S4d
+765,"[Template] Figure out solution for Shared project being tied directly to ASP.NET Core shared framework",area-templates,S5
+983,"[Preview] .NET Aspire - Incorrect configuration when ""Place project and solution in same folder"" was used",area-templates,S5
+1818,"Service -> OTEL fail with ""Requesting HTTP version 2.0 with version policy RequestVersionOrHigher while unable to establish HTTP/2 connection.""","area-templates,area-telemetry",S5
+2924,"Improve ergonomics of option in VS new project dialog for integration tests project","area-templates,area-tooling",S5
+3963,"Verify descriptions and tags for templates are correct for each language & not over translated",area-templates,S5
+5045,"Consider enabling exemplars in template service defaults",area-templates,S5
+5239,"Add aspire integration template",area-templates,S5
+7304,"Add ""Next Steps"" to Aspire Template Creation","area-templates,area-tooling",S5
+8011,"Failing test `Nunit_PerTestFrameworkTemplatesTests.TemplatesForIndividualTestFrameworks`","area-templates,disabled-tests",S5
+8149,"Additional template tests","area-templates,testing ☑️",S5
+8344,"Test failure in VS: System.UnauthorizedAccessException - StarterTemplateWithRedisCacheTests_PreviousTFM.ApiServiceWorks","area-templates,testing ☑️",S5
+8623,"[WebToolsE2E][Aspire] When using the 'aspire new' command on choosing the templates, input words that match using ""Type to Search"" and press enter, no specific template has been selected.",area-templates,S5
+8645,"Add test that verifies that service defaults templates filter out request tracing for health endpoints","area-templates,testing ☑️",S5
+8646,"No option for Adding .NET Aspire Support",area-tooling,S5
+8649,"[Failing test]: BuildAndRunStarterTemplateBuiltInTest.BuildAndRunStarterTemplateBuiltInTest_Test","area-templates,failing-test",S5
+8878,"HTTP Health check spam in telemetry when chaining health checks",area-templates,S5
+8914,"Add `aspire init` command to replicate enlist in orchestration features in VS/VSCode",needs-retriage,S5
+8998,"[AspireE2E] 'aspire new' doesn't support 'aspire new list'.",needs-retriage,S5
+9155,"[Failing test]: macOS: Aspire.Templates.Tests.BuildAndRunTemplateTests.ProjectWithNoHTTPSRequiresExplicitOverrideWithEnvironmentVariable","area-templates,disabled-tests,failing-test",S5
+9275,"[AspireE2E] Using the Aspire Starter App template, the ""Distributed application started. Press Ctrl + C to shutdown "" is missing when running the project using ""dotnet new"" command.",area-templates,S5
+9327,"aspire new doesn't explain invalid project name",needs-retriage,S5
+9367,"Aspire CLI: new command arg forwarding",area-cli,S5
+9576,"[Tests] Additional template tests","area-templates,testing ☑️",S5
+9972,"Add template options for publish integrations",area-templates,S5
+10192,"The solution file in the project template should use slnx",area-templates,S5
+10415,"[AspireE2E] ""Unset"" is not localized correctly after setting the Aspire dashboard language to French.",area-templates,S5
+10630,"Mcp aspire template project",area-templates,S5
+11189,"Templates from daily/PR channel/quality don't work by default with dotnet new or in VS because of missing NuGet.config",area-templates,S5
+11202,"Enhance aspire update command to update Aspire itself and fix developer environment state","area-templates,area-cli",S5
+11329,"aspire new triggered ArgumentOutOfRangeException","area-cli,needs-retriage",S5
+11494,"Calling `aspire new` on repo with existing files fails",area-cli,S5
+11535,"`aspire new` should show how `aspire new/init` will mutate filesystem.",area-cli,S5
+11595,"`aspire new` hangs on package install",area-templates,S5
+11686,"Running `aspire new` and then canceling with CTRL-C makes terminal cursor disappear",needs-retriage,S5
+11822,"Enable Discovery of 3rd Party Integrations and Templates in Aspire","area-templates,area-integrations",S5
+11842,"Support aspire init for Docker Compose files",area-cli,S5
+11993,"Creating Aspire projects should warn about space in the project names",area-tooling,S5
+12006,"[AspireE2E] Running Aspire Starter App with Redis project while docker is not installed or is disabled. The state of the cache in the health checks does not match the state displayed in the resources.",area-templates,S5
+12140,"ServiceDefaults in templates should not include OpenTelemetry.Instrumentation.Runtime for .NET9+",area-templates,S5
+12272,"`aspire new` lists ""yes"" and ""no"" options in inconsistent orders",needs-area-label,S5
+12275,"`aspire new` starter - what is `mtp` in xunit `v3mtp`",needs-area-label,S5
+12322,"[tests] Follow up tasks for templates for .NET 10","area-templates,testing ☑️,tracking",S5
+12407,"Failing test: Template tests randomly failing with ` The SDK 'Aspire.AppHost.Sdk/13.0.0-ci' specified could not be found.` not found.","area-templates,flaky-test",S5
+12815,"Add an output flag to aspire init",needs-area-label,S5
+13293,"Update aspire new blazor template",area-templates,S5
+13433,"`aspire new` fails with exception on Linux when nuget feed authentication fails",area-cli,S5
+13438,"`aspire new --version 9.5.2` does not work",area-cli,S5
+13446,"Onboarding feedback from user studies take 0",needs-area-label,S5
+13561,"[AspireE2E][Linux]Create Aspire Starter App ~ 10.0 ~MSTest, click Testing> Refresh Tests, no tests show up",area-templates,S5
+13925,"[AspireE2E] When `dotnet watch` on Aspire Starter App (ASP.NET Core/React) app, The command line does not get any update information, but the browser has updated automatically",area-templates,S5
+13957,"[WebToolsE2E][Aspire] Cannot use command '-f' to create an aspire project with target net11.0",area-templates,S5
+14045,"Aspire init does not work with slnx",needs-area-label,S5
+14140,"[AspireE2E] Some content in the Aspire MCP server interface is not localized.",area-templates,S5
+14270,"Aspire starter template fails on devcontainer",needs-area-label,S5
+14289,"[AspireE2E] When running ""dotnet new uninstall"", the templates are sorted incorrectly.",area-templates,S5
+14333,"[AspireE2E] ""Close"" is not localized when hovering over the Close button.",area-templates,S5
+14443,"[AspireE2E] Fail to create .NET MAUI for Aspire Service Defaults project with ""error NU1015: The following PackageReference item(s) do not have a version specified: Microsoft.Maui.Core"".",area-templates,S5
+14764,"[AspireE2E] With SDK 9 installed, the default TFM when creating an Aspire project is .NET 10.0.",area-templates,S5
+14798,"`aspire new` should set up open telemetry in Front End React app",area-templates,S5
+14800,"`aspire new` starter apps include gitignore for react but not .Net projects",area-templates,S5
+14802,"`aspire new` starter templates should include Aspire extension as a workspace recommendation and launch profile for aspire","area-templates,area-extension",S5
+15071,"Error when running aspire agent init from copilot CLI",area-cli,S5
+15260,"Backslash in `obj` folder name with `.esproj` projects on macOS",area-templates,S5
+15273,"[AspireE2E] The time format settings on the dashboard are not localized",area-templates,S5
+15430,"[AspireE2E] When running an Aspire project and stopping the backend service, the frontend page displays ""loading"" and there is no error information in the dashboard.",area-templates,S5
+15750,"Running aspire init in empty folder fails","‼️regression-from-last-release,area-cli",S5
+15841,"`aspire new ... --non-interactive` fails without `--output`",area-cli,S5
+15878,"Rethink 'aspire init' to optimize for coding agent success rather than file detection/scaffolding","needs-area-label,aspirifriday",S5
+15911,"Rollup: Tracking`aspire init` improvements and bug fixes","tracking,area-cli",S5
+15936,"aspire init --log-level debug : Select language does not appear at the bottom of the terminal.",area-cli,S5
+15986,"Single-file apphost.cs template in aspire new produces apphost.cs that doesn't work with `dotnet run`","‼️regression-from-last-release,area-cli",S5
+3936,"Dashboard is super chatty when it is running under a debugger","area-dashboard,perf,needs-retriage",S6
+4608,"Ability to automatically open a web project on debug","area-app-model,needs-retriage",S6
+4761,"AppHost configuration to not attach debugger to a project",area-tooling,S6
+4944,"Aspire, Visual Studio 2022 and Firefox Tabs - Closing a new Firefox Window can close your debugging session and vice versa",area-tooling,S6
+5257,"Unable to debug Aspire Resource project while testing","area-tooling,vs",S6
+5819,"Debugging a Blazor WASM  or JS Frontend doesn't hit breakpoints in IDE ","area-tooling,blazor-wasm",S6
+6416,"Add `DebuggerDisplay` attribute to `DistributedApplicationModel`","area-app-model,needs-retriage",S6
+6937,"Getting timeouts when debugging Aspire tests",area-app-testing,S6
+7010,"Azure function integration: An error occurred trying to start process 'func' with working directory 'bin\\Debug\\net9.0\\'. The system cannot find the file specified.","area-integrations,azure,azure-functions",S6
+7401,"Prevent Aspire AppHost from opening a new browser window when debugging","area-tooling,vs",S6
+7773,"Dashboard command to detach and reattach the debugger","area-dashboard,area-tooling,area-orchestrator",S6
+9288,"Aspire CLI should show PID when `--wait-for-debugger` passed",area-cli,S6
+11711,"Aspire 9.5: Debugging e2e DistributedApplicationTestingBuilder tests with Blazor Web (with wasm) projects spins up multiple browsers, times out","area-tooling,‼️regression-from-last-release,vs,blazor-wasm",S6
+12737,"Extension debugging not working Ubuntu/Linux daily builds",area-app-model,S6
+13336,"Aspire Debug with Dev Kit and Not the Aspire Plugin in Vs Code hangs",area-tooling,S6
+13490,"Support for Mutiple Envrioment Debugging",area-app-model,S6
+13530,"Dashboard client does not respond to ping causing browser refresh during debugging",area-dashboard,S6
+13820,"Bug/Discussion: VSCode Debugging inconsistencies & How to configure debug?",needs-area-label,S6
+13892,"Network Tunnel build failure shouldn't be a debug message",area-orchestrator,S6
+14503,"JavaScript resources launched by Aspire cannot automatically attach Visual Studio debugger (parity with .NET projects)",area-tooling,S6
+14540,"`aspire publish` / `deploy` / `do prepare-env` always uses Debug build",area-cli,S6
+14679,"Add two separate commands to restart a resource (with and without a debugger attached)",area-tooling,S6
+15576,"`aspire ps` hangs if app host is broken on a breakpoint",needs-area-label,S6
+15578,"VS Code - Debug doesn't work if app host fails before build",area-extension,S6
+15753,"CLI debug log level conflicts with pipeline debug output",area-cli,S6
+15895,"Auto-close Simple Browser tab when debug session ends","blocked,area-extension",S6
+788,"Add Azure Event Grid Aspire Integration","area-integrations,azure",S7
+2497,"Support for Azure Front Door and Azure DNS components","area-integrations,azure",S7
+6156,"Improve Default Network Isolation of Azure Services","area-integrations,azure,security 🔐",S7
+7813,"Azure Traffic Manager","area-integrations,azure",S7
+13063,"Azure VNet Scenarios","area-integrations,hardproblems",S7
+15368,"AzureDataLakeStorageFileSystemResource should implement IAzurePrivateEndpointTarget","area-integrations,untriaged",S7
+4558,"[WebToolsE2E][Aspire] On non-ENU OS, the description of the Aspire SDK component in the VS installer is not localized.","area-engineering-systems,area-tooling,area-acquisition",S8
+6184,"OS dependent packages update package.lock.json",area-acquisition,S8
+6855,"Failed to run Aspire.RuntimeIdentifier.Tool. Exit code: 1. Output: This program is blocked by group policy","documentation,area-acquisition",S8
+7530,"[WebToolsE2E][Aspire] Create an aspire 9.0 project and then add an aspire 9.1 project in the same solution and get a warning: ""The previously resolved SDK version ""9.0.0"" will be used and the version ""9.1.0"" will be ignored"".",area-acquisition,S8
+7593,"Visual Studio Warning after upgrading SDK to 9.1",area-acquisition,S8
+8242,"Aspire.Hosting.Sdk, Sdk.targets does not accept version pinning",area-acquisition,S8
+9350,"`aspire` CLI and NuGet authentication scenarios","area-acquisition,area-cli",S8
+11866,"aspire-starter Sample not running in aspire 9.5.1 (missing dcp.exe in nuget package)",area-acquisition,S8
+13403,"✨ Feature Request: Support Installing Aspire CLI via `winget`",area-acquisition,S8
+14203,"Sign `eng/scripts/get-aspire-cli.ps1`",area-acquisition,S8
+15284,"Installer work","area-acquisition,tracking",S8
+15366,"Cannot install a specific version",area-acquisition,S8
+15816,"Dogfood installation from PRs should be self-contained",area-acquisition,S8
+15817,"[CI] Add a new dedicated pipeline for publishing the install scripts","area-engineering-systems,area-acquisition",S8
+15932,"`aspire update --self` should support opt-out via `.aspire-update.json` next to the CLI binary",area-acquisition,S8
+15933,"Create AzDO pipeline for signing and publishing CLI acquisition scripts",area-acquisition,S8
+15935,"PR dogfooding should isolate all artifacts under `~/.aspire/pr/{prNumber}/`",area-acquisition,S8
+15937,"`get-aspire-cli.sh --version 13.1.0` returns 404 — stable versions still broken on ci.dot.net","area-engineering-systems,area-acquisition,bug",S8
+15947,"Embed distribution channel in CLI binary instead of relying on `aspire.config.json`","area-acquisition,area-cli",S8
+15949,"CLI packaging, distribution mode, and channel overhaul","area-acquisition,tracking,area-cli",S8
+7277,"Aspire not working with REACT Application",area-tooling,S9
+10045,"AddNpmApp does not build Next.js app before starting — missing '.next' build directory","area-integrations,javascript",S9
+10782,"JavaScript templates with ASP.NET Core backend and Aspire doesn't orchestrate the client project.",needs-area-label,S9
+12406,"Failing test: Aspire.Hosting.NodeJs.Tests.AddViteAppTests.VerifyDefaultDockerfile on AzDO","area-engineering-systems,flaky-test",S9
+13307,"vite app with react router has trouble resolving module references which are defiend in tsconfig.json paths",needs-area-label,S9
+14471,"Feature request: WithFrontendConfig API for passing Aspire parameters to SPA frontends",area-app-model,S9
+15426,"[AspireE2E] When creating and running the Aspire Starter App (Express/React) in VS Code, the app resources fail to stop on the dashboard page.",area-orchestrator,S9
+15874,"Auto-generated Dockerfile uses outdated Node.js version from engines field","needs-area-label,aspirifriday",S9
+16062,"[Failing test]: Aspire.Cli.EndToEnd.Tests.PythonReactTemplateTests.CreateAndRunPythonReactProject",failing-test,S9
+97,"Consider modeling the OTLP endpoint as a resource in the application model",area-app-model,UNMAPPED
+293,"Service discovery should enrich activity with incoming service name before resolution",area-service-discovery,UNMAPPED
+350,"Dashboard: Metrics: Dimension display","area-dashboard,area-telemetry",UNMAPPED
+431,"Add Service Bus Administration Client API","area-integrations,azure",UNMAPPED
+521,"Allow defining service groups where cross cutting configuration can be applied","area-app-model,needs-design,📎papercut",UNMAPPED
+583,"Enable Metrics for RabbitMQ Component","area-integrations,rabbitmq",UNMAPPED
+601,"Consider using Roslyn Analyzer (Source generator) for `IServiceMetadata` gen.","area-app-model,needs-retriage",UNMAPPED
+625,"Add support for sidecar containers","area-app-model,needs-design",UNMAPPED
+666,"Enable Logging for CosmosDB Component","area-integrations,azure,azure-cosmosdb",UNMAPPED
+667,"CosmosDB Components should allow for CosmosClientOptions to be configured via IConfiguration","area-integrations,azure,azure-cosmosdb",UNMAPPED
+668,"Ensure CosmosDB Components have enough testing","area-integrations,azure,testing ☑️,azure-cosmosdb",UNMAPPED
+846,"Allow the dashboard to be added to an existing project",area-dashboard,UNMAPPED
+850,"AddContainer does not have support for docker network","area-app-model,area-orchestrator",UNMAPPED
+889,"Add health check status to the dashboard","area-dashboard,area-app-model,needs-retriage",UNMAPPED
+896,"Standardize sorting, filtering, & searching UX for dashboard views","area-dashboard,dashboard-filter-sort",UNMAPPED
+898,"Add extension methods to make adding HTTP & gRPC service references + optionally health checks easier",area-service-discovery,UNMAPPED
+992,"Replica Support For Container Resource","area-app-model,needs-retriage",UNMAPPED
+1048,"Analyzers/Warnings for consistent non-localized CSS string generation","area-dashboard,area-tooling,localization",UNMAPPED
+1105,"Console logs: Link detection does not properly parse full URLs",area-dashboard,UNMAPPED
+1149,"Relationship between AspireComponentSettings.Tracing and Azure client options config","area-integrations,azure",UNMAPPED
+1209,"Add Aspire related analyzers for improved developer experience",area-tooling,UNMAPPED
+1336,Keda,area-integrations,UNMAPPED
+1339,"Proposal for adding Azure Cosmos DB Distributed Cache component","area-integrations,azure,azure-cosmosdb",UNMAPPED
+1356,"SignalR client address resolution","documentation,area-service-discovery",UNMAPPED
+1424,"Sync ConfigurationSchemaGenerator code from dotnet/runtime",area-integrations,UNMAPPED
+1425,"Support more type specs in ConfigurationSchemaGenerator",area-integrations,UNMAPPED
+1426,"Investigate loading ReadyToRun version of Roslyn in ConfigurationSchemaGenerator",area-integrations,UNMAPPED
+1511,"Disable ConfigureAwait analyzer in server projects with no sync context.",area-dashboard,UNMAPPED
+1536,"Is there any way to use ServiceDiscovery for client (aka browser) apps?","area-samples,area-service-discovery,blazor-wasm",UNMAPPED
+1644,"Consider getting known properties for resource details panel from resource server","area-dashboard,needs-retriage",UNMAPPED
+1647,"Display of trace name on the Traces page is missing important details to help understand what it is without drilling into trace details view",area-dashboard,UNMAPPED
+1693,"RabbitMQ Stream Client component","area-integrations,rabbitmq",UNMAPPED
+1708,"Support restart on fail for executables and containers","area-app-model,needs-retriage",UNMAPPED
+1769,"Validation of resources and annotations",area-app-model,UNMAPPED
+1868,"Extensibility of the Dashboard","area-dashboard,feature-dashboard-extensibility",UNMAPPED
+1898,"Add possibility to prefix EnvVar Names",area-app-model,UNMAPPED
+2116,"Make PgAdmin, RedisCommander, and MyPhpAdmin usable for remote resources","area-integrations,postgres,redis",UNMAPPED
+2130,"Support Azure MySQL as a deployment option for mysql in Aspire.Hosting.Azure","area-integrations,azure,mysql",UNMAPPED
+2138,"Support tags for Health Checks added by Components",area-integrations,UNMAPPED
+2203,"Support for Azure File Share","area-integrations,azure,azure-storage",UNMAPPED
+2348,"Support provisioning MongoDB via CosmosDB on Azure","area-integrations,azure,azure-cosmosdb,mongodb",UNMAPPED
+2350,"Investigate metrics table update","area-dashboard,area-telemetry",UNMAPPED
+2405,"Add support for multiple bicep modules","area-integrations,azure",UNMAPPED
+2408,"Support Kafka in Azure","area-integrations,azure,kafka",UNMAPPED
+2427,"Add OpenTelemetry tracing instrumentation for SqlClient ","area-integrations,sqlserver",UNMAPPED
+2514,"`Rejoining the server...` modal should not be an overlay (or it can be closable)",area-dashboard,UNMAPPED
+2516,"Configuring an index for Azure AI Search","area-integrations,azure",UNMAPPED
+2549,"Create `IConfiguration` extension methods to get Aspire convention-based values ",area-service-discovery,UNMAPPED
+2570,"_CSharpWriteProjectMetadataSources property/information",area-app-model,UNMAPPED
+2571,"Standardize filter options and display between Resource and Structured Logs view","area-dashboard,dashboard-filter-sort",UNMAPPED
+2629,"Replica information not part of deployment manifest",needs-retriage,UNMAPPED
+2788,"Revisit path normalization in Aspire.Hosting","area-app-model,needs-retriage",UNMAPPED
+2793,"Do we have a grafana dashboard for the built-in metrics of ResourceMonitoring",area-telemetry,UNMAPPED
+2802,"[feature] Add Azure Communications Services","area-integrations,azure",UNMAPPED
+2874,"The project doesn't know how to run command WSL from launchsettings.json","area-tooling,wsl",UNMAPPED
+2884,"Dashboard shows the sum of measurement values of Gauge","area-dashboard,area-telemetry",UNMAPPED
+2896,"gRPC client doesn't work with Service Discovery scheme resolution syntax",area-service-discovery,UNMAPPED
+2926,"Redis component tracing doesn't include an error span when operations against Redis fail","area-integrations,redis",UNMAPPED
+2962,"Add support for multiple TFMs `<TargetFrameworks>`","area-app-model,area-tooling,blazor-wasm",UNMAPPED
+2967,"RabbitMQ logging issues","help wanted,area-integrations,rabbitmq",UNMAPPED
+2972,"Don't clear selected log entry in structured logs if filters are removed","area-dashboard,area-telemetry,dashboard-filter-sort",UNMAPPED
+2981,"More DefaultAzureCredential diagnostics information with AddAzureProvisioning","area-integrations,azure",UNMAPPED
+3010,"Consinder adding WithConfBindMount method for configured conf directory for Redis resource","area-integrations,redis",UNMAPPED
+3043,"[WebToolsE2E][Aspire] Building a multi-target project from the App Host (e.g., .NET MAUI App with "".NET Aspire Orchestrator Support"") fails with error MSB4057: The target ""GetTargetPath"" does not exist in the project.",area-app-model,UNMAPPED
+3052,"Add support for PgVector extension to postgres resource","area-integrations,postgres",UNMAPPED
+3105,"Support Testcontainers for resource definition",area-integrations,UNMAPPED
+3126,"Hide nonexistent combinations when filtering metrics on dashboard","area-dashboard,area-telemetry,dashboard-filter-sort",UNMAPPED
+3137,"Dashboard metrics filter popup extends beyond browser window and disappears when I try to scroll the page","area-dashboard,dashboard-metrics,needs-retriage",UNMAPPED
+3145,"Aspire project with Blazor WASM/server project opens by itself","area-tooling,blazor-wasm",UNMAPPED
+3174,"Tooltips provided for the controls present in the ""Resource"" page are not available while navigating using keyboard TAB/ arrow keys: A11y_.NetAspireDashboard_Resource_Resource_keyboard","area-dashboard,a11y,A11ySev3",UNMAPPED
+3262,"Allow all warnings from Kestrel to be bubbled in the AppHost",area-app-model,UNMAPPED
+3298,"AzureProvisioner output saves connection strings to user secrets even if it did nothing","good first issue,area-integrations,azure,needs-retriage",UNMAPPED
+3337,"Environment variables containing new line character not supported","area-app-model,needs-retriage",UNMAPPED
+3349,"OTLP configuration is still injected into resources when the dashboard is disabled",needs-retriage,UNMAPPED
+3386,"Gauge graph should not default to 0","area-dashboard,area-telemetry",UNMAPPED
+3466,"[AzureTools][Aspire][Suggestion] It would be better if the instrument group automatically expands and automatically jumps to the clicked instrument in the instrument list when we click an instrument from the instrument group page and the instrument group is collapsed",area-dashboard,UNMAPPED
+3479,"Service discovery refresh query timeout",area-service-discovery,UNMAPPED
+3670,"Standalone Dashboard doesn't support disabling certificate validation in the resource service client","area-dashboard,security 🔐",UNMAPPED
+3706,"EndToEnd testproject doesn't have ServiceDefaults","area-integrations,testing ☑️",UNMAPPED
+3746,"ServiceEndPointResolver.GetEndPointsAsync not work with net.tcp scheme",area-service-discovery,UNMAPPED
+3761,"FEATURE: scaling/replication trigger configuration",area-app-model,UNMAPPED
+3764,"Reuse browser tab on ctrl+f5 from VS","area-dashboard,area-tooling",UNMAPPED
+3783,"Consider adding Azure Private Dns Zone resolver functionality for http and non-http Service Discovery","area-service-discovery,azure",UNMAPPED
+3809,"Incorrect synthesizing of multi-line strings with Bicep","area-integrations,azure",UNMAPPED
+3853,"Provisioner emitting bicep that uses functions that generate warnings","area-integrations,azure",UNMAPPED
+3877,"Add component for Azure Resource Manager","area-integrations,azure",UNMAPPED
+3889,"Add User Agent for Azure Components","area-integrations,azure",UNMAPPED
+3890,"Azure Components don't support keyed and unkeyed services","area-integrations,azure",UNMAPPED
+3910,"Using custom schema registry for Kafka component requires custom hostname","area-integrations,kafka",UNMAPPED
+3945,"WithBindMount is broken on Fedora, RHEL and derivatives.","area-orchestrator,podman",UNMAPPED
+3960,"Dashboard: Reversing the rendering order of new logs and traces","area-dashboard,area-telemetry,dashboard-settings",UNMAPPED
+3968,"Allow extending the IProjectMetadata via another package",area-app-model,UNMAPPED
+3985,"Operate as a config server",area-integrations,UNMAPPED
+3987,"Introduction of Microsoft.Extensions.ServiceRegistration.* packages",area-service-discovery,UNMAPPED
+4008,"`ContainerRegistryHook ` can't add image prefix",area-app-model,UNMAPPED
+4010,"Unable to use Azure table-storage with Orleans reminders","area-integrations,orleans",UNMAPPED
+4016,"Dashboard / OTel : Provide summary/stats of how much data is being emitted","area-dashboard,area-telemetry",UNMAPPED
+4021,"Cosmos DB resource `RunAsEmulator()`: ""The evaluation period has expired""","area-integrations,azure-cosmosdb",UNMAPPED
+4038,"EndpointReference always resolves to container host when evaluated in context of a container resource","area-app-model,needs-retriage",UNMAPPED
+4084,"Request: Add support for Azure Batch (and pools)","area-integrations,azure",UNMAPPED
+4087,"Change PhpMyAdmin support in MySql resource to use a single container.","area-integrations,mysql",UNMAPPED
+4099,"`UserNameParameter` should be populated like `PasswordParameter` on Postgres resource","area-integrations,postgres",UNMAPPED
+4116,"Split up WithOrleansReference to differentiate between client and server scenarios.","area-integrations,orleans",UNMAPPED
+4132,"Feature: Make Certificates first class citizens",area-meta,UNMAPPED
+4159,"Hosting Dashboard from child path (https://domain/my/child/path) does not appear to work correctly",area-dashboard,UNMAPPED
+4190,"Add configurable timestamp sorting","area-dashboard,dashboard-filter-sort",UNMAPPED
+4228,"Enable setting default endpoint to start from dashboard","area-app-model,needs-retriage",UNMAPPED
+4229,"Have ServiceEndpointResolver implement an interface",area-service-discovery,UNMAPPED
+4261,"Allow customization of the dashboard title",area-app-model,UNMAPPED
+4357,"Replica support for PostgreSQL","area-integrations,postgres",UNMAPPED
+4358,"Ability to change replica count on dashboard in Runtime","area-dashboard,area-app-model",UNMAPPED
+4381,"Aspire Dashboard Metrics: Exponential Histograms do not display","area-dashboard,area-telemetry",UNMAPPED
+4419,"Allow configuring of the ServiceProvider on DistributedApplicationBuilder",area-app-model,UNMAPPED
+4423,"ServiceEndpointWatcher should be creating activities",area-service-discovery,UNMAPPED
+4425,"Add origin labels to containers",needs-retriage,UNMAPPED
+4431,"Service discovery with DNS SRV is broken when using AutoFac",area-service-discovery,UNMAPPED
+4483,"Dashboard: Tracing: Events - move the time offset to the top of its cell","area-dashboard,area-telemetry",UNMAPPED
+4497,"Error updating database using dotnet ef database update when using postgresql","area-integrations,postgres",UNMAPPED
+4502,"Support for Azure Postgres Cluster","area-integrations,azure,azure-cosmosdb,postgres",UNMAPPED
+4523,"Add Default Labels to `FromDockerfile `","area-app-model,needs-retriage",UNMAPPED
+4528,"Add PathBaseMiddleware to Aspire Dashboard ",area-dashboard,UNMAPPED
+4553,"[tests] Consider moving Azure specific component tests to Azure sdk repo","area-integrations,azure,testing ☑️",UNMAPPED
+4559,"Dynamic port allocation not supported for containers",needs-retriage,UNMAPPED
+4580,"Improve visual treatment of stderr and stdout streams in dashboard",area-dashboard,UNMAPPED
+4596,"Update Azure provisioning to use SecretsStore","area-integrations,azure",UNMAPPED
+4597,"Enable logging in DistributedApplicationBuilder before the app is built",area-app-model,UNMAPPED
+4626,"Resource service client certificate testing","area-dashboard,testing ☑️",UNMAPPED
+4683,"Ensure all hosting resources have at least one `example`  in XML docs","documentation,area-app-model",UNMAPPED
+4699,"Support for azure arc based custom locations is missing while building app container environments","area-tooling,azure,azure-container-apps",UNMAPPED
+4732,"Getting sporadic ""context deadline exceeded"" or ""Catastrophic failure"" in Aspire GA with Azure Function Isolated Worker (.Net 8)","area-tooling,area-orchestrator",UNMAPPED
+4748,"make PostgresServerResource.AddDatabase public for extensibility","area-integrations,postgres",UNMAPPED
+4785,"Aspire doesn't replace http client Uri with actual address in blazor webassembly standalone app because it don't have appsettings.json","area-service-discovery,blazor-wasm",UNMAPPED
+4825,"Aspire telemetry configuration should include a sampling policy by default",area-telemetry,UNMAPPED
+4834,"Improve CheckDashboardHasResourcesAsync in workload tests","area-dashboard,testing ☑️",UNMAPPED
+4854,"[WebToolsE2E][Aspire][Safari] Opening the ""Aspire Dashboard"" URL of a deployed Aspire project fails with error ""Misdirected Request"" on Mac.","azure,area-azure-aca,azure-container-apps",UNMAPPED
+4890,"Please open the internal interface Microsoft.Extensions.ServiceDiscovery.LoadBalance.IServiceEndPointSelector",area-service-discovery,UNMAPPED
+4906,"Dashboard: Metrics: Need an option to split a metric based on a dimension","area-dashboard,area-telemetry,dashboard-metrics",UNMAPPED
+4928,"Ability to temporaraly remove spans of x type from the trace gant view",area-telemetry,UNMAPPED
+4984,"Support legacy Asp.Net MVC and console (e.g. topshelf) projects for simpler upgrade from NetFX to Net Core/8",area-meta,UNMAPPED
+5022,"When there are no environment variables set, you get every environment variable on your local machine",area-app-model,UNMAPPED
+5044,"OracleDatabaseServerResource data mounts issues","area-integrations,oracle",UNMAPPED
+5060,"Duplicate Errors when adding executable with invalid path",area-orchestrator,UNMAPPED
+5062,"OTLP appmodel component","area-integrations,area-telemetry",UNMAPPED
+5094,"ApplicationExecutor shouldn't conflate `stderr` with LogLevel.Error",area-app-model,UNMAPPED
+5096,"Service discovery endpoint env vars won't override appsettings.json",area-service-discovery,UNMAPPED
+5101,"Custom time interval selection filtering in all Aspire Dashboard telemetry tabs","area-dashboard,area-telemetry,dashboard-filter-sort",UNMAPPED
+5117,"Windows with docker WSL, having issues with file mapping","area-app-model,wsl",UNMAPPED
+5134,"Make it possible to run the dashboard behind a reverse proxy or load balancer",area-dashboard,UNMAPPED
+5162,"Service Discovery Erroneously Calling HTTP-Only Endpoints Using HTTPS Protocol",area-service-discovery,UNMAPPED
+5190,"OracleDatabaseServerResource.WithDbSetupBindMount has no effect","area-integrations,testing ☑️,oracle",UNMAPPED
+5191,"`OracleDatabaseServerResource.WithDataBindMount(useVolume: false)` not working","area-integrations,testing ☑️,oracle",UNMAPPED
+5192,"API Proposal: builder.When(predicate, callback)",area-app-model,UNMAPPED
+5203,"Reenable Azure Key Vault Health check tests","area-integrations,blocked,testing ☑️,disabled-tests",UNMAPPED
+5209,"Add support for launching multiple browser windows for specific resource URLs in addition to the dashboard",area-app-model,UNMAPPED
+5238,"MongoDB  Transactions  requires replicas","area-integrations,mongodb",UNMAPPED
+5297,"Global dashpages","area-dashboard,dashboard-dashpages",UNMAPPED
+5299,"Support showing metrics as deltas","area-telemetry,dashboard-metrics,dashboard-dashpages",UNMAPPED
+5308,"[WebToolsE2E][Aspire] After successfully publishing an Aspire project, the Container app Start time doesn't match the current time after restarting the project in the 'Aspire Dashboard'","area-azure-aca,azure-container-apps",UNMAPPED
+5356,"Opening details in mobile view loses scroll position","area-dashboard,needs-retriage",UNMAPPED
+5362,"Oracle function tests don't work on CI","area-integrations,testing ☑️,oracle",UNMAPPED
+5364,"CosmosDB Emulator Hangs When Connecting via Connection String","area-integrations,azure,azure-cosmosdb",UNMAPPED
+5378,"mapping docker host path fails under WSL","area-app-model,area-orchestrator,wsl",UNMAPPED
+5461,"Dashboard should use X509CertificateLoader instead of obsolete X509Certificate2 constructor","area-dashboard,security 🔐,needs-retriage",UNMAPPED
+5508,"Provide a non-localhost domain for Aspire project & service endpoints",area-app-model,UNMAPPED
+5513,"Playwright test Open ID connect authentication","area-dashboard,security 🔐,testing ☑️",UNMAPPED
+5548,"IDE Certificate Expires When Visual Studio is Open For a Long Time",area-tooling,UNMAPPED
+5555,"Give custom resources friendly names [Prev: Simplify SqlServerDatabase Resource Type]",area-integrations,UNMAPPED
+5565,"Subscribing to interface or base class in `IDistributedApplicationEventing`",area-app-model,UNMAPPED
+5625,"Should `WaitFor` / `WaitForCompletion` block pulling container resources",area-orchestrator,UNMAPPED
+5633,"Should `WaitFor` have a default timeout?","area-app-model,needs-retriage",UNMAPPED
+5680,"Issue when creating EF Core Migration",area-integrations,UNMAPPED
+5683,"Support injecting `ExtraInterfaces` on generated project metadata during build","area-integrations,azure,azure-functions",UNMAPPED
+5727,"Add an ""AcceptEula"" API to containers that use environment variables to signal EULA acceptance.","area-integrations,breaking-change,sqlserver",UNMAPPED
+5833,"Add a provision/deprovision command for azure resources","area-integrations,azure",UNMAPPED
+5885,"[WebToolsE2E][Aspire] After installing Aspire 8.2.1, run an existing 8.2.0 aspire project, Dashboard version shows 8.2.0 instead of 8.2.1","area-dashboard,needs-retriage",UNMAPPED
+5890,"Can't configure Kafka health check timeouts","area-integrations,kafka",UNMAPPED
+5901,"Allow to use AddBicepTemplate on subscription level, controlling target scope","area-integrations,azure",UNMAPPED
+5904,"AddKafkaConsumer wrong health check configuration","area-integrations,kafka",UNMAPPED
+5949,"[WebToolsE2E][Aspire] After successfully publishing an Aspire project, the page keeps flashing when double clicking any instrument group in the ""Aspire Dashboard"" Metrics on the physical machine.","dashboard-metrics,area-azure-aca,azure-container-apps",UNMAPPED
+5959,"[playground-tests] Flaky `EventHubs` test in `TestEndpointsReturnOk`","area-integrations,testing ☑️,azure-eventhubs,quarantined-test",UNMAPPED
+5962,"Add `/disableRateLimiting` to cosmos integration","area-integrations,azure,azure-cosmosdb",UNMAPPED
+5971,"[WebToolsE2E][Aspire] After adding Aspire.Confluent.Kafka component and related codes, there are some messages ""localhost:xxxxx/bootstrap: Disconnected while requesting ApiVersion"" in CMD when running the aspire project.","area-integrations,kafka",UNMAPPED
+5990,"Aspire Dashboard: Full text search","area-dashboard,dashboard-filter-sort",UNMAPPED
+5992,"Source column in Dashboard not populated for Waiting resoruces","area-dashboard,needs-retriage",UNMAPPED
+6038,"Distributed application started message in app host console is delayed based on wait fors","area-app-model,breaking-change,needs-retriage",UNMAPPED
+6055,"Add interfaces to PostgreSQL, Redis, and SqlServer Hosting Resources","area-integrations,postgres,redis",UNMAPPED
+6105,"Simplify generating configuration files",area-app-model,UNMAPPED
+6120,"Add annotation to manually specify project command line arguments. (Needed for AWS Lambda support)",area-app-model,UNMAPPED
+6138,HideFromDashboardAnnotation,area-app-model,UNMAPPED
+6139,"Resource grouping annotation for dashboard",area-dashboard,UNMAPPED
+6144,"No logs before `BeforeStartEvent`","area-app-model,needs-retriage",UNMAPPED
+6155,"Ensure all containers are password protected","area-integrations,security 🔐",UNMAPPED
+6207,"failed to connect to IDE run session notification endpoint, retrying...   {""error"": ""tls: failed to verify certificate: x509: certificate has expired or is not yet valid: current time XYZ is after XYZ ""}",area-tooling,UNMAPPED
+6217,"Resource with unknown status doesn't have status in resource details","area-dashboard,📎papercut,dashboard-resource-details,needs-retriage",UNMAPPED
+6232,"OpenAIClient is not respecting HttpClient from DI","area-integrations,area-meta,ai",UNMAPPED
+6234,"Expose API on AzureStorageResource to get the emulator connection string","area-integrations,azure,azure-storage",UNMAPPED
+6239,"cannot set metrics temporality preference to use exponential bucket histogram","area-dashboard,area-telemetry",UNMAPPED
+6251,"Have a hosting package for Azure SQL that uses LocalDB during dev","area-integrations,sqlserver",UNMAPPED
+6256,"Add method to allow changing the build stage used when using AddDockerfile, e.g. WithBuildStage(""base"")",area-app-model,UNMAPPED
+6277,"Hide Aspire internal/automatic env vars",area-dashboard,UNMAPPED
+6279,"Display more friendly error message for common health checks errors",area-app-model,UNMAPPED
+6280,"Add a way for a resource to hide sections in resource details","area-dashboard,area-app-model,dashboard-resource-details",UNMAPPED
+6281,"Bad experience when viewing console logs for a resource with a lot of logs","area-dashboard,area-app-model",UNMAPPED
+6283,"Simplify health check code in .NET Aspire hosting integrations.","area-app-model,area-integrations",UNMAPPED
+6296,"Event Hubs should allow reuse of an existing storage resource","area-integrations,azure,azure-eventhubs",UNMAPPED
+6326,"WithPgAdmin(c => c.WithLifetime(...)) not resulting in persistent PgAdmin container.","area-integrations,postgres",UNMAPPED
+6329,"Feature Request: .WithOtlpExporter() can pass in otel http endpoint for client-side browser apps",area-telemetry,UNMAPPED
+6345,"Add support for Azure Sql Elastic Pool","area-integrations,azure",UNMAPPED
+6352,"Add an analyzer to prevent indexing a localized value instead of member name","area-dashboard,localization",UNMAPPED
+6424,IResourceWithLifetime,area-app-model,UNMAPPED
+6466,"Expand `WithLifetime` support to `ExecutableResource`","area-dashboard,area-app-model,area-orchestrator",UNMAPPED
+6501,"SQL Server Support Full Text Search","area-integrations,sqlserver",UNMAPPED
+6515,"`TransportOptionsValidator` doesn't validate properly if AllowUnsecuredTransport=true","area-app-model,needs-retriage",UNMAPPED
+6543,"Allow Configuring RabbitMQ to use TLS","area-integrations,security 🔐",UNMAPPED
+6551,"Consider grouping & collapsing identical sequential activities in the trace view and annotating with a count badge",area-dashboard,UNMAPPED
+6553,"Dashboards: following Span Links works in unexpected ways",area-telemetry,UNMAPPED
+6573,"Not able to bind RabbitMQ Configuration for Ssl property (Client integration)","area-integrations,rabbitmq",UNMAPPED
+6599,"Remove experimental opentelemetry-dotnet environment args","area-app-model,area-telemetry,needs-retriage",UNMAPPED
+6616,"Support for PII Redaction Containers (AI Services)","area-integrations,azure",UNMAPPED
+6617,"Support writing to structured logs from resource commands",area-app-model,UNMAPPED
+6622,"Functions fails to enable Aspire Orchestration unless AppHost SDK is in local cache","area-tooling,vs",UNMAPPED
+6651,"Persistent Kafka getting restarted","area-integrations,kafka",UNMAPPED
+6661,"Azure function rewriting environment problem","area-tooling,azure,azure-functions",UNMAPPED
+6673,"Aspire AzureStorage (and others) should allow non-container mode","area-integrations,azure,sqlserver,azure-storage",UNMAPPED
+6715,"Dashboard does not shut down when running Java play framework application",area-orchestrator,UNMAPPED
+6740,"Issue with Persistent Cosmos DB Container Restart in Aspire (.NET 9)","area-integrations,azure,azure-cosmosdb",UNMAPPED
+6760,"Support for durable functions","area-integrations,azure,azure-functions",UNMAPPED
+6807,"Learnings from the Community Toolkit",area-integrations,UNMAPPED
+6809,"[AzureTools][Aspire] The resized column width resets to the default size after closing the ""View Details"" tab on display size lower than 1920x1080","area-dashboard,📎papercut,dashboard-resize",UNMAPPED
+6817,"Extend ContainerLifetime enum to destroy the containers on IDE close","area-app-model,area-orchestrator",UNMAPPED
+6838,"[WebToolsE2E][Aspire] Updating an existing 9.0.0 aspire project to 9.1.0 gives a warning: ""Multiple versions of the same SDK ""Aspire.AppHost.Sdk"" cannot be specified. The previously resolved SDK version '9.0.0' will be used.""","area-tooling,external",UNMAPPED
+6859,"Preserve endpoint name case sensitivity in Microsoft.Extensions.ServiceDiscovery",area-service-discovery,UNMAPPED
+6868,"Allow to define the default order of resources listed in the dashboard (or help identifying important resources)","area-dashboard,dashboard-filter-sort,dashboard-resource-details",UNMAPPED
+6869,"Allow to proxy from HTTPS to HTTP",area-app-model,UNMAPPED
+7009,"`AfterResourcesCreatedEvent` is inconsistently fired","area-app-model,breaking-change,needs-retriage",UNMAPPED
+7016,"npgsql ef integration doesn't provide a callback that accepts an `IServiceProvider`","area-integrations,postgres",UNMAPPED
+7020,"Add another parameter in the AddSqlServerDbContext configureDbContextOptions to receive the scoped service provider","area-integrations,sqlserver",UNMAPPED
+7025,"efcore9 reports an error when there are multiple migrations","area-integrations,entityframework",UNMAPPED
+7042,".NET Aspire solutions can't build when their projects are in folders with source trees inclusive of other Aspire App Host/Defaults projects",area-tooling,UNMAPPED
+7046,"Sql Server container port is not accessible after Aspire is shutdown","area-app-model,area-orchestrator",UNMAPPED
+7063,"ContainerLifetime.Persistent roll issue roll up","area-app-model,area-integrations,area-orchestrator",UNMAPPED
+7066,"Azure ServiceBus emulator is not reliable in CI","area-integrations,azure,external,disabled-tests,flaky-test,azure-servicebus",UNMAPPED
+7074,"Add support for executing commands inside of a container on start",area-app-model,UNMAPPED
+7078,"WithBindMount issues with file permissions and mapping cross OS","area-integrations,area-orchestrator",UNMAPPED
+7088,"[Functions] Add support for RabbitMQ triggers","area-integrations,azure,azure-functions",UNMAPPED
+7089,"[Functions] Add support for Redis triggers","area-integrations,azure,azure-functions",UNMAPPED
+7090,"[Functions] Add support for Azure SQL triggers","area-integrations,azure,azure-functions",UNMAPPED
+7106,"EF Migrations Tracking","area-integrations,tracking",UNMAPPED
+7158,"Running mongo resource on mac OS fails","area-integrations,mongodb",UNMAPPED
+7178,"[tests] Cosmos emulator issue - AddAzureCosmosDB_RunAsEmulator_CreatesDatabase","area-integrations,testing ☑️,disabled-tests,azure-cosmosdb,flaky-test",UNMAPPED
+7182,"SqlServer WithVolume access denied","area-integrations,sqlserver",UNMAPPED
+7190,"Aspire launches the client of a hosted Blazor WebAssembly app on a different random port every time the AppHost is launched","area-app-model,blazor-wasm",UNMAPPED
+7197,"IDE execution protocol: need a way to specify browser launch URL for projects",area-tooling,UNMAPPED
+7213,"Aspire Dashboard is not showing the updated start time and Actions (Stop/Start) only working from Dashboard. (Multiple Bugs)","area-azure-aca,azure-container-apps",UNMAPPED
+7216,"Add grafana dashboard for Runtime and Process metrics","area-dashboard,area-telemetry",UNMAPPED
+7255,"Show docker pull progress in dashboard","area-dashboard,area-orchestrator",UNMAPPED
+7257,"Add first class JSON log viewer support","area-dashboard,dashboard-logs",UNMAPPED
+7265,"EF Cosmos tracing data missing","area-integrations,azure-cosmosdb",UNMAPPED
+7281,"Unable to add package Aspire.Hosting.MongoDB to AppHost, dependencies don't support any target frameworks",area-tooling,UNMAPPED
+7287,"Report a better status when a container is deleted for a container resource",area-orchestrator,UNMAPPED
+7307,"Yarp ServiceDiscovery not working in azure app service",area-service-discovery,UNMAPPED
+7311,"flaky test: MilvusFunctionalTests.WithDataShouldPersistStateBetweenUsages","area-integrations,testing ☑️,milvus",UNMAPPED
+7320,"Add DocumentDB support in .NET Aspire",area-integrations,UNMAPPED
+7326,"OIDC authn and authz not working with roles array (like ['Admin', 'ReadAll']",area-dashboard,UNMAPPED
+7346,"Consider exposing WaitForText* methods",area-app-model,UNMAPPED
+7351,"Expose details about underlying base image","area-dashboard,area-orchestrator",UNMAPPED
+7365,"[Proposal] Add APIs to configure DCP options",area-app-model,UNMAPPED
+7373,"When Resource is Project and is terminated due to an exception the state is Finished with exit code 0",area-app-model,UNMAPPED
+7505,"[Dashboard][Metrics] - add rate of change view",area-dashboard,UNMAPPED
+7506,"[Dashboard][Metrics] Add support to not-aggregate a dimension but instead show multiple ""series"" per dimension values",area-dashboard,UNMAPPED
+7514,"Consider supporting subscription IDs in existing resource scope","area-integrations,azure,Azure.Provisioning",UNMAPPED
+7521,"launchSettings are ignored when AppDesignerFolder has been defined",needs-retriage,UNMAPPED
+7524,"Allow Aspire service discovery to work in a hosted Blazor WebAssembly project","area-app-model,blazor-wasm",UNMAPPED
+7528,"Reduce exceptions thrown in Aspire.Hosting",area-app-model,UNMAPPED
+7534,"ServiceDiscover - No DNS records were found for service",area-service-discovery,UNMAPPED
+7557,"[AzureTools][Aspire] Succeed to start the Azure Function container with an error","area-integrations,azure,azure-functions",UNMAPPED
+7563,"Support for NATS Cluster Configuration in Aspire.Hosting.AppHost","area-integrations,nats",UNMAPPED
+7590,"Improve logging of `ResourceReadyEvent` failures",needs-retriage,UNMAPPED
+7598,"Make `ReferenceExpressionBuilder` Fluent",area-app-model,UNMAPPED
+7612,"Protect against using `ReferenceExpression` in a regular interpoalted string",area-app-model,UNMAPPED
+7620,"[RabbitMQ Hosting] Allow setting a default vhost","area-integrations,rabbitmq",UNMAPPED
+7627,"Allow configuring/overriding dashboard and other endpoint certificates (BYO SSL)",area-dashboard,UNMAPPED
+7644,"[WebToolsE2E][Aspire] When publishing the Aspire project in ACA, there is a 'stdout F' in the Resources section of the Console logs.","area-azure-aca,azure-container-apps",UNMAPPED
+7655,"[Aspire.Hosting.SqlServer] Allow specifying a user in the connection string","area-integrations,sqlserver",UNMAPPED
+7660,"Supress `The request was aborted` errors from AppHost logs",area-orchestrator,UNMAPPED
+7679,"[WebToolsE2E][Aspire] On the Help page and Settings page, '关闭' is displayed incorrectly due to the font","area-dashboard,needs-retriage",UNMAPPED
+7740,"Codespace URL remapping doesn't complete until all resources are running.",area-app-model,UNMAPPED
+7750,"AddKeyedKafkaConsumer/Producer: have separate argument for name (serviceKey) and connection name","area-integrations,kafka",UNMAPPED
+7774,"Dashboard columns: more love to Actions/Commands",area-dashboard,UNMAPPED
+7793,"Docker image doesn't start when using WithDataVolume + WithDataBindMount",area-integrations,UNMAPPED
+7816,"Aspire uses the 'Release' folder to find the Dacpac file of the referenced SqlProject",area-tooling,UNMAPPED
+7818,"WithCommandResource menu order",area-app-model,UNMAPPED
+7828,"Durable Functions work correctly locally, but not when deployed?","area-integrations,azure",UNMAPPED
+7831,"Location parameter no longer works in Aspire 9.1 for `AddAzureOpenAI`","area-integrations,azure,ai",UNMAPPED
+7835,"RabbitMQ resource builder should properly encode passing parameters",area-integrations,UNMAPPED
+7843,"Introduce new state for resources without a lifetime outside of ""Running""",area-app-model,UNMAPPED
+7848,"Hanging tests: Aspire.Oracle.EntityFrameworkCore.Tests","area-integrations,oracle,flaky-test",UNMAPPED
+7859,"[WebToolsE2E][Aspire] After successfully publishing an Aspire project, the Console log does not have any logs after restarting the project in the 'Aspire Dashboard'.","external,area-azure-aca,azure-container-apps",UNMAPPED
+7883,"Azure service bus emulator destroys secret.json file when adding its own configuration","area-integrations,azure-servicebus",UNMAPPED
+7903,"Error with naming format like Name_X_Y_Z","area-app-model,needs-retriage",UNMAPPED
+7905,DcpInstancesAnnotation,area-app-model,UNMAPPED
+7931,"Tracing for OpenAI integrations","area-integrations,ai",UNMAPPED
+7974,"[WebToolsE2E] Using VS Code C# Dev Kit, when we add Aspire orchestration to function app, it missed adding the function app project to the IDistributedApplicationBuilder and the package 'Aspire.Hosting.Azure.Functions' was missing.","area-tooling,azure-functions",UNMAPPED
+7984,"Add auto-auth to WithHttpCommand",area-app-model,UNMAPPED
+7995,"MongoDB integration - connectionstring parameters","area-integrations,mongodb",UNMAPPED
+8004,"dashboard menu command ordering",area-dashboard,UNMAPPED
+8027,"Text viewer pane should be resizeable",area-dashboard,UNMAPPED
+8032,"[WebToolsE2E] Using VS Code C# Dev Kit, there is no IntelliSense for JSON editing when configuring Aspire integrations","area-tooling,area-extension",UNMAPPED
+8070,"Validate Codespaces support for `WithHttpCommand`",area-app-model,UNMAPPED
+8075,"Aspire Host cannot be started normally.",needs-area-label,UNMAPPED
+8076,"WaitFor circular reference","area-app-model,needs-retriage",UNMAPPED
+8090,"Unable to add a migration with Aspire.Pomelo.EntityFrameworkCore.MySql","area-integrations,entityframework",UNMAPPED
+8129,"QR Code visualizer for dashboard",area-dashboard,UNMAPPED
+8146,"File Content Viewer for Bind Mounts",area-dashboard,UNMAPPED
+8173,"Error disposing log descriptor log level",area-orchestrator,UNMAPPED
+8177,"Azure Cosmos DB Preview Emulator with EF Core and Enrich API fails writing to the database","area-integrations,azure,azure-cosmosdb",UNMAPPED
+8193,"Failing tests - `Aspire.Pomelo.EntityFrameworkCore.MySql.Tests.ConformanceTests.CanRegisterMultipleInstancesUsingDifferentKeys`","area-integrations,mysql,flaky-test,failing-test",UNMAPPED
+8233,"Kusto hosting & integration libraries","area-integrations,azure",UNMAPPED
+8246,"Codespaces Aspire Failed to bind to address already in use.","area-app-model,area-orchestrator,needs-retriage",UNMAPPED
+8261,"Consider enabling benchmarkdotnet integration",needs-area-label,UNMAPPED
+8268,"[WebToolsE2E][Aspire] In the Aspire Dashboard, there was no tool tip when you hover the Actions and some columns under Structured Logs and Traces.","area-dashboard,needs-retriage",UNMAPPED
+8286,"Can't reach docker container services through service discovery","area-app-model,area-orchestrator",UNMAPPED
+8342,"[Failing test]: Aspire.Azure.Messaging.WebPubSub.Tests.ConformanceTests.LoggerFactoryIsUsedByRegisteredClient","area-integrations,flaky-test,failing-test",UNMAPPED
+8377,"ConfigurationSchema only adds a schema for the main resource, not named resources","area-integrations,azure-eventhubs",UNMAPPED
+8383,"Aspire.Hosting.Azure.Sql - Deployment of Database Project not working","area-app-model,needs-retriage",UNMAPPED
+8398,"aspire dashboard returns 404 response when forbidden","area-dashboard,needs-retriage",UNMAPPED
+8409,"PublishAsConnectionString only works with manifest publisher",area-app-model,UNMAPPED
+8415,"Flaky test: AppHostExitsWhenCliProcessPidDies","area-cli,needs-retriage",UNMAPPED
+8426,"Handle resource relationships that get resolved in argument and environment variable callbacks",area-app-model,UNMAPPED
+8437,"Dashboard - Allow bi-directional sorting and configurable filtering based on trace duration",area-dashboard,UNMAPPED
+8440,".NET Console App Orchestration","area-app-model,area-orchestrator",UNMAPPED
+8454,"[WebToolsE2E][Aspire] In the Aspire Dashboard, the label of 'select instrument' displayed when you double click any instrument in the Metrics Menu.","area-dashboard,blocked,needs-retriage",UNMAPPED
+8464,"Aspire.OpenAI's AddChatClient API should have a way to indicate whether to use the responses endpoint","area-integrations,ai",UNMAPPED
+8466,"[Failing test]: Aspire.Hosting.Python.Tests.AddPythonAppTests.PythonResourceFinishesSuccessfully","area-integrations,disabled-tests,python,failing-test",UNMAPPED
+8467,"[Failing test]: Aspire.Hosting.Tests.MSBuildTests.EnsureWarningsAreEmittedWhenProjectReferencingLibraries","area-app-model,testing ☑️,disabled-tests,needs-retriage",UNMAPPED
+8486,"Enlisting a Blazor WebAssembly Standalone App in a .NET Aspire orchestration doesn't add the app to the AppHost","area-tooling,blazor-wasm",UNMAPPED
+8501,"[WebToolsE2E][Aspire] Running two Aspire projects with Azure Functions at the same time will cause the 'functionapp1' to stop after a few seconds for one of the projects.","area-integrations,azure,azure-functions",UNMAPPED
+8521,"Allow referencing .http file as multiple commads for a web api service",needs-area-label,UNMAPPED
+8522,"otel service name is not taken into account in Azure, locally it is working",needs-area-label,UNMAPPED
+8553,"Add buton to delete volumes within stopped docker container",area-dashboard,UNMAPPED
+8554,"Kafka Consumer traces show waiting time instead of actual receiving time","area-integrations,kafka",UNMAPPED
+8559,"Service Discovery doesn't resolve http endpoints correctly",area-service-discovery,UNMAPPED
+8561,"Transform connectionstring to multiple env. vars",area-app-model,UNMAPPED
+8590,"Add support for EventHubs PluggableCheckpointStoreEventProcessor","area-integrations,azure-eventhubs",UNMAPPED
+8633,"Volume names required in manifest, but not always written in code",area-app-model,UNMAPPED
+8648,"Make DCP container runtime logs in tests more accessible",area-orchestrator,UNMAPPED
+8656,"On dashboard startup, check if ports are in use before starting Kestrel",area-dashboard,UNMAPPED
+8672,"[WebToolsE2E][Aspire] The icons color in the CMD isn't correct during creation and running of the project.","help wanted,area-cli",UNMAPPED
+8678,"Not able to create EF migrations when using Aspire environment variables",area-integrations,UNMAPPED
+8679,"More concise way of adding dependencies",area-app-model,UNMAPPED
+8684,"Allow resources to specify custom icons to use when displayed in the dashboard","help wanted,area-dashboard,area-app-model",UNMAPPED
+8693,"[WebToolsE2E][Aspire] The webfrontend of the Aspire project with Azure Service Bus integration remains in the 'Running (Unhealthy)' state and has some errors in the console logs.",area-integrations,UNMAPPED
+8724,"Set defaults on Sql server instances","area-integrations,breaking-change,azure-sqlserver",UNMAPPED
+8728,"Flaky test: Aspire.Hosting.Tests.DistributedApplicationTests.ProxylessEndpointWorks","flaky-test,quarantined-test",UNMAPPED
+8735,"Allow configuration of Azure container app resource allocation in code","area-app-model,area-orchestrator",UNMAPPED
+8739,"Failure to copy file into container should show in resource logs",area-app-model,UNMAPPED
+8747,"Cannot select the resource as it's empty in the Structured, Traces and Metrics pages","area-dashboard,needs-retriage",UNMAPPED
+8757,"Allow control over which URL shows up in the dashboard resource graph view",area-dashboard,UNMAPPED
+8766,"Add a way to load RabbitMQ container with a predefined configuration in AppHost.","area-integrations,rabbitmq",UNMAPPED
+8768,"SQL AddDatabase WithCreationScript incompatible with sqlproj output","area-integrations,sqlserver",UNMAPPED
+8780,"Allow Kafka healthchecks to write to a custom topic name","area-integrations,kafka",UNMAPPED
+8795,"AppHost fails to start unless all profiles are ""correct""",needs-retriage,UNMAPPED
+8803,".NET services intermittently fail to start with timeout error from VS Code",area-tooling,UNMAPPED
+8829,"[Failing test]: Aspire.Hosting.Tests.Eventing.DistributedApplicationBuilderEventingTests.ResourceEventsForContainersFireForSpecificResources",needs-retriage,UNMAPPED
+8853,"Link unclickable in Container Runtime Unavaialble tooltip","area-dashboard,needs-retriage",UNMAPPED
+8890,"PostgreSqlFlexibleServerVersion enum missing Ver16, PostgreSQL 16",area-integrations,UNMAPPED
+8895,"Release Port from DCP if Resource is not running",area-orchestrator,UNMAPPED
+8906,"Change ACA containerPort parameter to int instead of string","area-integrations,azure-container-apps",UNMAPPED
+8984,"Annotation-Based Open Discriminated Union for Aspire Resources","area-app-model,breaking-change",UNMAPPED
+8990,"Build caching for `aspire` CLI",area-cli,UNMAPPED
+8999,"Provide a way to detect if a service is running in the context of NET Aspire host",area-app-model,UNMAPPED
+9000,"Unhealthy Azure Storage Emulator on some devices","area-integrations,azure,azure-storage",UNMAPPED
+9004,"Include resource name in 'unsupported resource type' error",needs-retriage,UNMAPPED
+9013,"Support altering the default script for AzurePostgresFlexibleServer in .NET Aspire","area-integrations,azure,postgres",UNMAPPED
+9039,"Colors in dashboard should aim to be stable for resource",area-dashboard,UNMAPPED
+9040,"Remove all should reset all applied filters","area-dashboard,needs-retriage",UNMAPPED
+9042,"Add TrySubscribeOnce API in IDistributedApplicationEventing",area-meta,UNMAPPED
+9061,"SSL client error in GitHub Actions for DistributedApplicationTesting test",area-integrations,UNMAPPED
+9083,"Flaky test: Aspire.Playground.Tests.ProjectSpecificTests.KafkaTest","area-integrations,flaky-test,quarantined-test",UNMAPPED
+9126,"Menu item to pull container images","area-app-model,area-orchestrator",UNMAPPED
+9143,"Add support for custom configuration for CosmosDB","area-integrations,azure,azure-cosmosdb",UNMAPPED
+9146,"Tightening the resource lifecycle",area-app-model,UNMAPPED
+9156,"`aspire get-cs [resource name]`","area-app-model,area-cli",UNMAPPED
+9158,"SSL Connection - authenticationexception",area-app-model,UNMAPPED
+9171,"Flaky test: Aspire.Playground.Tests.ProjectSpecificTests.WithDockerfileTest","area-app-model,flaky-test,needs-retriage",UNMAPPED
+9188,"Consider not publishing the InitializeResourceEvent for resources implementing IResourceWithParent",area-app-model,UNMAPPED
+9189,"EventHub BlobContainer is not created if it doesn't exist",needs-area-label,UNMAPPED
+9228,"`WithCreationScript(...)` should provide feedback in resource logger.",area-integrations,UNMAPPED
+9243,"[Failing test]: Aspire.Playground.Tests.ProjectSpecificTests.AzureFunctionsTest","area-integrations,azure-functions,failing-test",UNMAPPED
+9248,"Use service discovery for connection strimgs",area-service-discovery,UNMAPPED
+9276,"[AspireE2E] Created an Aspire version of 9.2.1 templates and run the ""aspire run"" command, an error ""The app host is not compatible. Consider upgrading the app host or Aspire CLI"" displayed.","area-cli,needs-retriage",UNMAPPED
+9279,"Allow to choose Service Bus emulator SQL instance","area-integrations,azure,azure-servicebus",UNMAPPED
+9311,"[nit]: ""Operation cancelled by user action"" log is too incessant",area-cli,UNMAPPED
+9321,"Add Suspended state for projects/Executables","area-dashboard,area-app-model,area-tooling,area-orchestrator",UNMAPPED
+9340,"[Failing test]: Aspire.Hosting.Tests.DistributedApplicationTests.TestServicesWithMultipleReplicas","area-app-model,flaky-test,quarantined-test,failing-test,needs-retriage",UNMAPPED
+9352,"container imagePullSecret",area-orchestrator,UNMAPPED
+9354,"Make writeable Volumes work for non root users","area-app-model,area-orchestrator",UNMAPPED
+9357,"Error when exposing multiple ports on Docker container",area-orchestrator,UNMAPPED
+9358,"Unable to connect to a service when Kestrel url is configured in appsettings.json and appsettings.Development.json.","area-app-model,needs-retriage",UNMAPPED
+9362,"Consider making CreateParameter methods as static on ParameterResource",area-app-model,UNMAPPED
+9377,"SQL Persistent lifetime not respected",area-integrations,UNMAPPED
+9386,"Support launching the dashboard on aspire run",needs-retriage,UNMAPPED
+9390,"Don't restart container if exit code was `0` and `WithLifetime` is set to persistent",area-orchestrator,UNMAPPED
+9418,"The Consolidate() and Validate() methods on KafkaProducerSettings should both do null-checks or both check for empty string",area-integrations,UNMAPPED
+9426,"how to support python azure function developers with  builder.AddDockerfile()","area-integrations,azure-functions",UNMAPPED
+9441,"When adding a WebAssembly project with Blazor server to an Aspire project, the port for the launched application changes on each launch","area-app-model,blazor-wasm",UNMAPPED
+9451,"Copilot coordination with in-VS copilot agent",area-dashboard,UNMAPPED
+9463,"Unable to test HTTP triggered Azure Functions","area-integrations,azure,azure-functions",UNMAPPED
+9468,"After add AzureRedis to my Host deploy freezies for ever.",area-integrations,UNMAPPED
+9478,"PostgreSql Unable to change ownership of database or tables","area-integrations,azure,postgres,‼️regression-from-last-release",UNMAPPED
+9486,"Yarp with Replicas does not distribute requests","area-integrations,yarp",UNMAPPED
+9519,"[AspireE2E] The start time displayed in the ACA dashboard does not refresh or update correctly when using the Start button to restart a stopped project.","area-azure-aca,azure-container-apps",UNMAPPED
+9534,"Telemetry issues",area-telemetry,UNMAPPED
+9540,"AddCosmosDbContext does not work with Azure Functions project without explicitly specifying database name",area-integrations,UNMAPPED
+9622,"Error logs output from the apphost and dcp don't show up during `aspire run`","area-orchestrator,area-cli",UNMAPPED
+9671,"Flaky test: Aspire.Hosting.Tests.SlimTestProgramTests.TestPortOnEndpointAnnotationAndAllocatedEndpointAnnotationMatch","needs-area-label,flaky-test,quarantined-test",UNMAPPED
+9672,"Flaky test: Aspire.Hosting.Tests.SlimTestProgramTests.TestProjectStartsAndStopsCleanly","needs-area-label,flaky-test,quarantined-test",UNMAPPED
+9673,"Flaky test: Aspire.Hosting.Tests.SlimTestProgramTests.TestPortOnEndpointAnnotationAndAllocatedEndpointAnnotationMatchForReplicatedServices","needs-area-label,flaky-test,quarantined-test",UNMAPPED
+9682,"azure functions not working while running aspire in github workflow",area-integrations,UNMAPPED
+9693,"[VS Code] Add Orchestration in VS Code should use CLI ",area-tooling,UNMAPPED
+9708,".AddServiceDiscovery override any  http client timeouts",area-service-discovery,UNMAPPED
+9717,"Resource proxy port conflict isn't reflected in resource dashboard","area-app-model,area-orchestrator",UNMAPPED
+9725,"Failing test: Aspire.Hosting.Tests.WithHttpCommandTests.WithHttpCommand_ResultsInExpectedResultForHttpMethod","area-integrations,disabled-tests,flaky-test",UNMAPPED
+9736,"Unable to F5 .NET Aspire Starter app from VS","area-tooling,needs-further-triage,vs",UNMAPPED
+9746,"Add overload to WithEndpoint WithHttpEndpoint etc that allows you to set DisplayText outside of WithUrl",area-app-model,UNMAPPED
+9749,"CLI command to clear existing apphost cache",needs-area-label,UNMAPPED
+9755,"Add `WithRDBPersistence` and `WithAOFPersistence` to Redis resource",area-integrations,UNMAPPED
+9768,"Redis v8's default modules aren't loaded","area-integrations,redis",UNMAPPED
+9769,"Exceptions in `ResourceEndpointsAllocatedEvent` are swallowed",area-app-model,UNMAPPED
+9787,"`GetEnvironmentVariableValuesAsync` doesn't pass `IServiceProvider` through to `EnvironmentCallbackContext`",area-app-model,UNMAPPED
+9795,"Add WithMonitoringEndpoint to NatsServerResource","area-integrations,nats",UNMAPPED
+9796,"Disable Local Auth on Azure ApplicationInsights","area-integrations,breaking-change,azure,security 🔐",UNMAPPED
+9797,"Disable Local Auth on Azure LogAnalyticsWorkspace","area-integrations,breaking-change,azure,security 🔐",UNMAPPED
+9831,"Not able to get Azure Functions + Cosmos DB working when using emulator","area-integrations,azure,azure-functions",UNMAPPED
+9860,"Failing test: Aspire.Hosting.Azure.Tests.AzureSignalREmulatorFunctionalTest.VerifyAzureSignalREmulatorResource","area-integrations,flaky-test,azure-signalr",UNMAPPED
+9866,"Aggregate Traces by Http Route",area-dashboard,UNMAPPED
+9879,"WebApi doesn't start When Running Aspire via dotnet run",area-tooling,UNMAPPED
+9890,"WithLaunchSettings() extension to override or create a launch profile",area-app-model,UNMAPPED
+9900,"Add namespace descriptions to docs",needs-area-label,UNMAPPED
+9919,"Vs.net Stable, Rider Stable, VS Code Stable (less) periodically cause ports to not get closed - Crash on restart","area-orchestrator,‼️regression-from-last-release",UNMAPPED
+9929,"AddParameter with random value",area-app-model,UNMAPPED
+9935,"Is there a way to have a visible console window?","area-tooling,area-orchestrator",UNMAPPED
+9957,"Deadlock in ServiceDiscovery library leading to thread pool starvation",area-service-discovery,UNMAPPED
+9964,"Production-First focus right from the start",area-meta,UNMAPPED
+10011,"Add Azure Managed Grafana Integration","area-integrations,azure",UNMAPPED
+10016,"Published Yarp doesn't copy config file",area-integrations,UNMAPPED
+10022,"AzureAppConfiguration().AsExisting fails with ""missing subscription configuration"" despite correct env vars and ARM read permissions",area-integrations,UNMAPPED
+10049,"InteractionService should expose `InteractionInput`-based APIs for requesting confirmation","area-cli,interaction-service",UNMAPPED
+10057,"aspire config set --secret?",area-cli,UNMAPPED
+10065,"AspireSqlServerEFCoreSqlClientExtensions: Allow to configure SqlServerDbContextOptions",area-integrations,UNMAPPED
+10087,"Failing test: Aspire.Hosting.Azure.Tests.AzureEnvironmentResourceTests.WhenUsedWithAzureContainerAppsEnvironment_GeneratesProperBicep","area-integrations,azure,failing-test",UNMAPPED
+10093,"DockerComposeInfrastructure should only configure OTLP for resources attached to that environment",area-app-model,UNMAPPED
+10098,"Failing test: Microsoft.Extensions.ServiceDiscovery.Dns.Resolver.Tests.TcpFailoverTests.TcpFailover_Simple_Success",area-service-discovery,UNMAPPED
+10099,"Failing test: Microsoft.Extensions.ServiceDiscovery.Dns.Resolver.Tests.TcpFailoverTests.TcpFailover_ServerClosesWithoutData_EmptyResult",area-service-discovery,UNMAPPED
+10118,"Sort and Resize buttons are not accessible using the keyboard keys: A11y_Aspire Dashboard_Resources_Keyboard.","area-dashboard,external",UNMAPPED
+10119,"Keyboard focus does not return to the parent control after closing the Help, Github copilot and settings dialog: A11y_Aspire Dashboard_ResourcesFocusOrder.","area-dashboard,external",UNMAPPED
+10129,"Unexpected backward focus navigation triggered by Shift + Tab: A11y_Aspire Dashboard_FocusOrder","area-dashboard,a11y,external",UNMAPPED
+10146,"Flakey tests if running Tests `WithEndpointProxySupport(false)` in parallel",needs-retriage,UNMAPPED
+10147,"Regression: Metrics / Tracing not visible in dashboard when using a custom service name",needs-area-label,UNMAPPED
+10150,"Support `.env` within the `WithEnvironment` API.",area-app-model,UNMAPPED
+10160,"Version check: Storage of persistent information",area-app-model,UNMAPPED
+10162,"Navigating back between traces while a trace detail is open",area-dashboard,UNMAPPED
+10174,"RabbitMQ Username/Password Issue",area-integrations,UNMAPPED
+10177,"Considerations for revisiting parameters",area-app-model,UNMAPPED
+10199,"Officially support Rancher Desktop as a supported container runtime",needs-area-label,UNMAPPED
+10201,"Add serialization context for RPC on apphost side","area-app-model,area-cli",UNMAPPED
+10202,"Allow configuration of health check polling interval in Aspire Dashboard",area-app-model,UNMAPPED
+10221,"Enable static files and configuration file support in YARP integration",area-integrations,UNMAPPED
+10225,"Azure Functions - OpenTelemetry host.json log filtering and excessive log noise from host","area-integrations,azure-functions",UNMAPPED
+10239,"Add a feature flag in the aspire cli for disabling https",area-cli,UNMAPPED
+10248,"Change the state of resources waiting for values to Waiting for X",area-app-model,UNMAPPED
+10255,"builder.AddServerDefaults() and builder.MapDefaultEndpoints() not placed in the correct spot",needs-retriage,UNMAPPED
+10261,"When running with aspire project console logs are not filtered properly",area-app-model,UNMAPPED
+10282,"User Interface for SqlServer via vscode extension",area-integrations,UNMAPPED
+10286,"Add IResourceWithServiceDiscovery to ContainerResource",area-app-model,UNMAPPED
+10294,"Make OTLP Configuration Optional Instead of Disabled in Publish Mode","area-telemetry,needs-further-triage,dashboard-metrics",UNMAPPED
+10297,"Model selector options are not accessible using the keyboard: A11y_Aspire Dashboard_Copilot_Keyboard","area-dashboard,area-copilot",UNMAPPED
+10299,"Screen reader is not announcing the checked/unchecked status for helpful/unhelpful buttons :A11y_Aspire Dashboard_Resources_Screenreader",area-dashboard,UNMAPPED
+10301,"Support executing commands inside container resources","area-app-model,area-cli,pod-e2e",UNMAPPED
+10304,"Yarp can not resolve service name","area-integrations,yarp",UNMAPPED
+10322,"[AspireE2E] The 'Type to search' option is not localized on non-ENU machines when creating an Aspire CLI project.",area-cli,UNMAPPED
+10332,"InvalidOperationException ""CommandText property has not been initialized"" when creation script contains 2 consecutive GO statements","area-integrations,sqlserver",UNMAPPED
+10355,"Parameters are shown as isolated nodes in graph view; not recognized as related resources",area-app-model,UNMAPPED
+10356,"Support parameter descriptions & validation",area-app-model,UNMAPPED
+10364,"Improve Azure local provisioning: detect and facilitate first time login, show credential choices","area-integrations,azure",UNMAPPED
+10365,"Improve custom resource authoring: WithInitialState defaults, property helpers, and dashboard display",area-app-model,UNMAPPED
+10366,"Add progress as a first class state for resources (indeterminate and percentage-based progress support)","area-dashboard,area-app-model",UNMAPPED
+10377,"Aspire AppHost does not shut down projects gracefully",area-tooling,UNMAPPED
+10389,"[CLI] Some of the command help information have an extra ] character",needs-retriage,UNMAPPED
+10395,"Add a notification to the dashboard to show when the HTTPS development cert is untrusted with a button to trust it",area-app-model,UNMAPPED
+10420,"[AspireE2E] Some buttons in the Unresolved Parameters option don't have tooltips.",area-integrations,UNMAPPED
+10427,"The message bar intent styles could be improved","area-dashboard,interaction-service",UNMAPPED
+10457,"Collapsible child resources in Graph View",area-dashboard,UNMAPPED
+10461,"`IInteractionService` API limitations in the CLI","area-app-model,area-cli,interaction-service",UNMAPPED
+10483,"[CLI] Config commands should only work locally unless -g is passed for global.",area-cli,UNMAPPED
+10488,"When using azd infra generate with PublishAsAzureContainerApp, bicep module and param files are in split locations and point to incorrect file paths","area-integrations,azure",UNMAPPED
+10494,"High-level Trace Graph Visualization for Resource Interactions in Aspire Dashboard",area-dashboard,UNMAPPED
+10510,"Allow setting SSH flag when using containers",area-orchestrator,UNMAPPED
+10534,"When running two AppHosts Aspire.Hosting.Dcp reports a proxy error when both AppHosts have the same .AddContainer",needs-area-label,UNMAPPED
+10537,"Optimize Docker Image Creation by Reusing Image Across The Same Project",area-integrations,UNMAPPED
+10547,"Support for optional parameters in Aspire",area-app-model,UNMAPPED
+10549,"Default .NET web API template does not play well with Aspire service discovery",area-app-model,UNMAPPED
+10551,"YARP integration: unable to proxy to an external service running on localhost",area-app-model,UNMAPPED
+10559,"Improve Aspire compatibility error message to be more specific and actionable",area-cli,UNMAPPED
+10589,"aspire exec - CTRL+C experience",area-cli,UNMAPPED
+10590,"aspire exec - Slowness and error when running in home directory",area-cli,UNMAPPED
+10608,"Package 'Aspire.AppHost.Sdk 9.3.1' has a package type 'DotnetPlatform' that is not supported by project 'Tickets'",needs-area-label,UNMAPPED
+10615,"Pick the last 8 characters of `service.instance.id` rather than the first to show in the UI",area-dashboard,UNMAPPED
+10616,"Customize HealthCheck for ExternalServiceResource",area-app-model,UNMAPPED
+10621,"Docker availability warnings should be more prominent in `aspire run` output",area-cli,UNMAPPED
+10646,"Button to toggle on/off all environment variables visiblity",area-dashboard,UNMAPPED
+10650,"[AspireE2E] After using WithReplicas(2), when restarting a resource in the dashboard, the status of another resource changes to waiting, and starting it again does not make it run.",area-app-model,UNMAPPED
+10651,"OnResourceReady callback",needs-area-label,UNMAPPED
+10653,"Dashboard > Metric > Filters: add ability to filter by clicking the tag box",area-dashboard,UNMAPPED
+10654,"Dashboard > Metrics: add color legend to the graph based on a tag",area-dashboard,UNMAPPED
+10668,"Unable to disable PGWeb default Healthcheck",needs-area-label,UNMAPPED
+10670,"Recognizable Volume Names",area-app-model,UNMAPPED
+10672,"Enhance Azure ServiceBus client integration to support deep linking and specific client injection","area-integrations,azure-servicebus",UNMAPPED
+10675,"Label containers using a new `WithLabel(s)` API",area-app-model,UNMAPPED
+10683,"Support isExternal parameter on WithHttpEndpoint and WithHttpsEndpoint ",area-app-model,UNMAPPED
+10685,"Enrich existing Mongo client with telemetry instrumentation",area-integrations,UNMAPPED
+10707,"ConfigureCustomDomain should check for empty customDomain parameter","area-integrations,azure",UNMAPPED
+10719,"Keeping referenced containers automatically up to date","area-app-model,area-orchestrator",UNMAPPED
+10721,"Azure Function url is different from the Aspire defined url","area-integrations,azure,azure-functions",UNMAPPED
+10723,"CosmosDB emulator fails","area-integrations,azure-cosmosdb",UNMAPPED
+10743,"Feature Proposal: WithEnvFile for Aspire resources",area-app-model,UNMAPPED
+10758,"[Proposal] First party support for the Azure Key Vault Emulator","area-integrations,azure-keyvault",UNMAPPED
+10770,"YARP extension functions should support `ReferenceExpression`","area-integrations,yarp",UNMAPPED
+10774,"[AspireE2E] After installing 10.0 P7, running an existing 9.0/10.0 P6 Aspire project, an exception occurs in the CLI and the dashboard cannot be loaded correctly.","area-dashboard,needs-retriage",UNMAPPED
+10804,"CosmosDB Extension and Emulator Support Gremlin API","area-integrations,azure,azure-cosmosdb",UNMAPPED
+10840,"Azure SQL database provisioning after initial deployment","area-integrations,azure",UNMAPPED
+10841,"Traces Page jittering and jumping around while scrolling (in larger traces)",area-dashboard,UNMAPPED
+10871,"Aspire AI Foundry permissions","area-integrations,ai",UNMAPPED
+10872,"AI Foundry Integration, deploy/integrate Foundry features: Projects, Agents, Document Intelligence etc.","area-integrations,ai,Azure.Provisioning",UNMAPPED
+10876,"Add asynchronous overload for WithCreationScript to support deferred value resolution for MySQL, PostgreSQL, and SQL Server",area-integrations,UNMAPPED
+10879,"Gracefully handle connection error between dashboard and app host",area-dashboard,UNMAPPED
+10885,"Ability to define Capabilities","area-app-model,area-orchestrator",UNMAPPED
+10916,"No table in dynamoDblocal after creating it via ResourceReadyEvent","area-integrations,external",UNMAPPED
+10925,"[AspireE2E]This two codes ""parallels@ubuntu-linux-22-04-02-desktop:~$ "" and ""(Type to search)"" are on the same line.",needs-retriage,UNMAPPED
+10937,"AI Foundry Local and .NET Aspire in WSL2 / Linux","area-integrations,ai",UNMAPPED
+10951,ContainerExecutableResource,area-app-model,UNMAPPED
+10953,"Configure AI chat client OpenTelemetry settings","area-integrations,ai",UNMAPPED
+10969,"Unclear error if executable has a long arguments",area-orchestrator,UNMAPPED
+10970,"Analyzer to detect ReferenceExpressions ending up as regular interpolated strings rather than `ReferenceExpressions`",area-app-model,UNMAPPED
+10977,"[Failing test]: DependentResourceWaitsForOpenAIModelResourceWithHealthCheckToBeHealthy","area-integrations,flaky-test,quarantined-test",UNMAPPED
+10995,"Containers stuck in ""unhealthy"" state when starting multiple dependencies with wait-for in Aspire 9.3",area-orchestrator,UNMAPPED
+10996,"Support either `netstandard` or `net472` on `Microsoft.Extensions.ServiceDiscovery`",area-service-discovery,UNMAPPED
+11045,"Optional prefix in `WithOtlpExporter`",area-app-model,UNMAPPED
+11071,"Parameterise the Prometheus Data Source in Grafana Dashboards",area-grafana,UNMAPPED
+11077,"Lots of logs in a single trace looks noisy in trace graph",area-dashboard,UNMAPPED
+11119,"Resource Filter in Structured Logs not respected after restart",area-dashboard,UNMAPPED
+11122,"Add a text filter to the console logs page",area-dashboard,UNMAPPED
+11128,".NET location cannot be found in Linux on a Clean Template of AppHost Console",area-tooling,UNMAPPED
+11151,"Describing resources","area-dashboard,area-app-model",UNMAPPED
+11152,"AddAzureBlobClient ignores WithName when creating Health Check",area-integrations,UNMAPPED
+11153,"Support for Speech services","area-integrations,azure,ai",UNMAPPED
+11166,"Support EF Core Migrations with Aspire’s Environment Configuration without Forcing WebApp Startup","area-integrations,entityframework",UNMAPPED
+11184,"Updating Milvus docker image tag is blocked due to a segfault","area-integrations,external",UNMAPPED
+11214,"Dashboard not loading ""Internal server error.""",area-azure-aca,UNMAPPED
+11215,"Versions after 9.0.2 all create some kind of circular distributed cache dependency in my codebase",needs-area-label,UNMAPPED
+11218,"WithAccessKeyAuthentication/WithPasswordAuthentication doesn't work correctly with AsExisting resources in another resource group","area-integrations,azure",UNMAPPED
+11238,"Persistent mongodb container recreated on every run","area-integrations,mongodb",UNMAPPED
+11256,"Role Assignment for Existing Azure Container Registry Fails Due to Bicep Scope Limitation","area-integrations,azure,azure-container-apps",UNMAPPED
+11263,"[AspireE2E] Notification in the Aspire Dashboard does not localize when switching languages in the Dashboard settings.",area-dashboard,UNMAPPED
+11274,"DCP names showing up in telemetry without replicas",area-dashboard,UNMAPPED
+11277,"Suggestion: Separate Parameters from Active Resources in Aspire Dashboard",area-dashboard,UNMAPPED
+11299,"Improve Exception Message for Missing Project Metadata Annotation in ResourceContainerImageBuilder.cs",area-app-model,UNMAPPED
+11306,"Log entry spread across multiple lines is reported as one line",area-orchestrator,UNMAPPED
+11307,"Support for native Azure Functions deployment in .NET Aspire (serverless model, not only ACA)","area-integrations,azure,azure-functions",UNMAPPED
+11337,"PostgreSQL container fails with SCRAM auth when started by Aspire if data volume exists: “password authentication failed for user 'postgres'”","area-integrations,postgres",UNMAPPED
+11341,"Dev tunnels integration improvements","area-integrations,devtunnels",UNMAPPED
+11343,"Generate and pass an access token to resources consuming a dev tunnel resource","area-integrations,devtunnels",UNMAPPED
+11345,"Add more tests for dev tunnel hosting integration","area-integrations,devtunnels",UNMAPPED
+11346,"Enable on-demand devtunnel for any resource via a resource command","area-integrations,devtunnels",UNMAPPED
+11350,"Enable granting Microsoft tenants & GitHub orgs access to dev tunnels","area-integrations,devtunnels",UNMAPPED
+11351,"Enable support in dev tunnels for customizing forwarded headers","area-integrations,devtunnels",UNMAPPED
+11353,"Add new `ResourceStartedEvent`",area-app-model,UNMAPPED
+11354,"Update dashboard support for uninstrumented peers to support non-leaf spans","area-dashboard,devtunnels",UNMAPPED
+11356,"Verify behavior when calling WithReference to same target multiple times with dev tunnels","area-integrations,devtunnels",UNMAPPED
+11357,"Support issuing dev tunnel tokens via a resource command","area-integrations,devtunnels",UNMAPPED
+11358,"Investigate running concurrent AppHosts with the same devtunnel IDs","area-integrations,devtunnels",UNMAPPED
+11366,"VS .NET Aspire Orchestrator Support failes with Can't find program main in the .NET Aspire hosting project",area-tooling,UNMAPPED
+11370,"Code block in InteractionService MessageBox overflows","area-dashboard,interaction-service",UNMAPPED
+11371,"Using `InteractionSerivce` in `BeforeStart` deadlocks",area-integrations,UNMAPPED
+11377,"Support exposing Dashboard via a devtunnel resource","area-app-model,area-integrations,devtunnels",UNMAPPED
+11378,"Use community toolkit instead of npm restore task",area-samples,UNMAPPED
+11389,"Should DCP fail fast / log warnings if Docker is in Windows container mode?",area-orchestrator,UNMAPPED
+11392,"Add InheritedBehaviorAnnotation to control parent-child state/event inheritance",area-app-model,UNMAPPED
+11401,"`GetEnvironmentVariableValuesAsync ` doesn't properly resolve `HostUrl`",area-app-model,UNMAPPED
+11413,"Docker pull from container registry image fails due to Proxy Usage / docker bug","area-orchestrator,external",UNMAPPED
+11428,"ExternalServiceResource should implement IResourceWithEndpoints",area-app-model,UNMAPPED
+11430,"Enable restarting the apphost from the aspire cli run command",needs-area-label,UNMAPPED
+11434,"Docker Model Runner (DMR) Support",area-app-model,UNMAPPED
+11440,"Devtunnel port resources can take a long time to move to ""Running"" state after tunnel is established","area-integrations,devtunnels",UNMAPPED
+11447,"Support installing the devtunnel CLI from the dashboard notification","area-integrations,devtunnels",UNMAPPED
+11456,"Yarp static files proxying does not support handling 404s","area-integrations,yarp",UNMAPPED
+11458,"`aspire update` doesn't fully upgrade sdk",area-cli,UNMAPPED
+11519,"Default Azure Kusto SKU",area-integrations,UNMAPPED
+11534,"Support configuring HTTPS endpoint in YARP via extension methods","area-integrations,yarp",UNMAPPED
+11589,"`aspire update` should fail gracefully when .NET is not found",area-cli,UNMAPPED
+11590,"Enhance `aspire update` so it can handle multi-apphost repos like Community Toolkit",area-cli,UNMAPPED
+11596,"Investigate using `NuGet.Configuration` package for NuGet.config parsing logic.",area-integrations,UNMAPPED
+11602,"Add Custom Icons to built in resources","area-dashboard,area-integrations",UNMAPPED
+11603,"Have Mangement UIs add `Manage` links to the resources they manage",area-integrations,UNMAPPED
+11604,"Urls column on dashboard is not helpful with multiple endpoints.",area-dashboard,UNMAPPED
+11606,"`IProjectMetadata` abstraction should be generalized outside of `Aspire`",area-app-model,UNMAPPED
+11608,"Hide dev tunnel authentication expired notification once user is logged in again","area-integrations,devtunnels",UNMAPPED
+11636,"Kusto emulator health check fails on MacOS","area-integrations,azure",UNMAPPED
+11650,"`aspire update` fails on https://github.com/azure/eshoponazure","area-cli,aarea-cl",UNMAPPED
+11655,"Usefulness of `aspire update` is limited when we don't update other dependencies when CPM is in use.",area-cli,UNMAPPED
+11658,"Dev tunnels and device code login does not show up in the dashboard","area-integrations,devtunnels",UNMAPPED
+11659,"Implement a first time dashboard tour",area-dashboard,UNMAPPED
+11676,"Add ACA Container App Jobs extension methods for Event Triggers","area-integrations,azure,area-azure-aca",UNMAPPED
+11696,"RabbitMq V7 Client library missing readme",area-integrations,UNMAPPED
+11708,"Add possibility to add a SqlFilter to Azure ServiceBus subscription","area-integrations,azure,azure-servicebus",UNMAPPED
+11709,"Azure Storage Change Feed","area-integrations,azure,azure-storage",UNMAPPED
+11710,"Add Support for Postgres v18 and DataVolume","area-integrations,postgres",UNMAPPED
+11716,"Support exposing dashboard OTLP endpoint via a dev tunnel","area-integrations,devtunnels",UNMAPPED
+11760,"ResourceUrlAnnotation.DisplayOrder is a field, not a property","area-app-model,breaking-change",UNMAPPED
+11764,"Running aspire run in the repo root of dotnet/aspire caues a ""Too many open files"" error",area-cli,UNMAPPED
+11769,"Cannot select specific resource instance in standalone dashboard",area-dashboard,UNMAPPED
+11773,"Expose `NoLaunchProfile` in `DistributedApplicationOptions` to disable using launchProfile.json permanently",area-app-model,UNMAPPED
+11787,"BeforeStartEvent is too early in the pipeline for ACA / AppService resources to process compute resources",area-app-model,UNMAPPED
+11794,"Invalid endpoint should fail to start resource",area-app-model,UNMAPPED
+11795,"`LogLine` should provide Timestamp as a seperate field, rather than fudge it into the log content","area-app-model,breaking-change",UNMAPPED
+11798,"Structured log filter on existence of attribute",area-dashboard,UNMAPPED
+11816,"Aspire update rollup",area-cli,UNMAPPED
+11837,"Aspire cannot start the same azure function multiple times","area-tooling,azure-functions,vs",UNMAPPED
+11882,"Error on running Multiple Instances of the Same Project",needs-area-label,UNMAPPED
+11899,"Broken link - https://aspire.dev/ in ""Aspire Roadmap""",needs-area-label,UNMAPPED
+11907,"Allow enabling just _some_ (checkbox) resources in traces/... views",needs-area-label,UNMAPPED
+11913,"Different failure cross's in CLI",area-cli,UNMAPPED
+11948,"Add `WithEnvironmentFromConfiguration` as an API to forward env var",area-app-model,UNMAPPED
+11949,"Unable to escape arguments containing spaces when using `aspire exec`",area-cli,UNMAPPED
+11967,"Aspire Storage integration does not work due to ;; part in connection string",area-integrations,UNMAPPED
+11980,"Aspire Postgres postgres.AddDatabase(""mydatabase"") generates FATAL log entry using .WithCreationScript",area-integrations,UNMAPPED
+11981,"Make `WithBindMount` idempotent",area-app-model,UNMAPPED
+11983,"Running test project with command `dotnet test` leads to exception: Configuration is missing the 'HostEndpoint' information.",area-integrations,UNMAPPED
+11996,"Support underscore '_' character for snake_case in Aspire PostgreSQL database names",area-integrations,UNMAPPED
+12004,"Versioning scheme of docker dashboard image",area-dashboard,UNMAPPED
+12036,"[tests] Oracle EF Core Tests Hang During Container Initialization","needs-area-label,testing ☑️,oracle",UNMAPPED
+12045,"Not clear which resources to start with ExplicitStart() and WaitFor()",area-dashboard,UNMAPPED
+12053,"`aspire update` doesn't updating the testing project's dependencies",needs-area-label,UNMAPPED
+12054,"`aspire update` is slow due to using `dotnet package search` - using the nuget API directly would be faster",area-cli,UNMAPPED
+12063,"Support using Aspire MCP with non-local clients","area-dashboard,ai",UNMAPPED
+12064,"[Failing test]: Aspire.Hosting.Yarp.Tests.YarpConfigGeneratorTests.GenerateEnvVariablesConfiguration","needs-area-label,testing ☑️,failing-test",UNMAPPED
+12066,"Using Aspire MCP server with VS Code","needs-area-label,ai",UNMAPPED
+12100,"Custom Icons configured via WithIconName do not render in Graph View",needs-area-label,UNMAPPED
+12154,"Failing test: Aspire.Hosting.Tests.Pipelines.DistributedApplicationPipelineTests.ExecuteAsync_WithLongAndShortBranches_DoesNotBlockShortBranch","needs-area-label,testing ☑️,flaky-test",UNMAPPED
+12155,"Failing test: Aspire.Hosting.Tests.Dcp.DcpExecutorTests.PlainExecutable_NoExtensionMode_RunInProcess","area-orchestrator,testing ☑️,flaky-test",UNMAPPED
+12179,"Add builder pattern API for multiple blob containers in Aspire.Azure.Storage.Blobs",area-integrations,UNMAPPED
+12180,"Add builder pattern API for multiple senders/processors in Aspire.Azure.Messaging.ServiceBus",area-integrations,UNMAPPED
+12181,"Add builder pattern API for multiple Event Hubs in Aspire.Azure.Messaging.EventHubs",area-integrations,UNMAPPED
+12186,"AllowResourceGroupCreation is ignored","area-integrations,azure",UNMAPPED
+12190,"Internal server error: The method or operation is not implemented.",needs-area-label,UNMAPPED
+12200,"Failing test: Aspire.Hosting.Tests.Pipelines.DistributedApplicationPipelineTests.ExecuteAsync_WithMixOfSuccessfulAndFailingStepsAtSameLevel_ThrowsAggregateException","needs-area-label,testing ☑️",UNMAPPED
+12203,"Failing test: Aspire.Hosting.Azure.Tests.AzureDeployerTests.DeployAsync_ShowsEndpointOnlyForExternalEndpoints","area-integrations,testing ☑️",UNMAPPED
+12207,"Failing test: Aspire.Hosting.Tests.Pipelines.DistributedApplicationPipelineTests.ExecuteAsync_WithMixOfSuccessfulAndFailingStepsAtSameLevel_ThrowsAggregateException",needs-retriage,UNMAPPED
+12208,"Failing test: Aspire.Hosting.Python.Tests.AddPythonAppTests.WithVirtualEnvironment_CanBeChainedWithOtherExtensions",needs-retriage,UNMAPPED
+12221,"Simple local provisioning fails in devcontainer on first launch",needs-area-label,UNMAPPED
+12244,"Setup step is copying system data file 'C:\\templatedata\\master.mdf' to '/var/opt/mssql/data/master.mdf'",needs-area-label,UNMAPPED
+12274,"VS refuses to load AppHost unless I install ""Desktop Experience"" workload.","area-tooling,vs",UNMAPPED
+12276,"[AspireE2E] Aspire project fails to run successfully after installing the Aspire CLI extension in VSCode.",needs-area-label,UNMAPPED
+12307,"Aspire dashboard - URL column click shows details",area-dashboard,UNMAPPED
+12328,"Share your apphost",needs-area-label,UNMAPPED
+12339,"YARP container not starting because of too many routes","area-integrations,yarp",UNMAPPED
+12344,"Local support for hostname and mac address overrides",area-app-model,UNMAPPED
+12357,"Emit OTEL_PYTHON_EXCLUDED_URLS to Python webapps to exclude WithHttpHealthCheck URL",area-integrations,UNMAPPED
+12372,"Add GitHub Action to build .NET MAUI playground",needs-area-label,UNMAPPED
+12374,"Wrong `Start time` on AppHost 9.5.2",needs-area-label,UNMAPPED
+12386,"Failing test: Aspire.Hosting.Azure.Tests.AzureDeployerTests.DeployAsync_ShowsEndpointOnlyForExternalEndpoints","needs-area-label,azure,testing ☑️,flaky-test",UNMAPPED
+12389,"Failing test: Aspire.Azure.Npgsql.Tests.ConformanceTests.BothDataSourceAndConnectionCanBeResolved","needs-area-label,flaky-test",UNMAPPED
+12394,"Enable Aspire MCP server on GitHub Coding Agent","area-dashboard,area-mcp",UNMAPPED
+12400,"Api Endpoint for consuming Otel  data",area-dashboard,UNMAPPED
+12410,"AzureSearch Injection of SearchIndexerClient",area-integrations,UNMAPPED
+12425,"Aspire Run fails silently if a container uses parameter-less .WithHttpEndpoint()",area-app-model,UNMAPPED
+12428,"[WebToolsE2E][Aspire][GB18030] When creating a Razor Pages project with a Chinese name and checking Aspire, an error message appears: Resource name '项目' is invalid. Name must contain only ASCII letters, digits, and hyphens.",area-app-model,UNMAPPED
+12448,"Aspire.dev - Add Copy Page As Markdown",area-aspire.dev,UNMAPPED
+12493,"AddBlobContainer creates a default blob service",needs-area-label,UNMAPPED
+12505,"Failing test: Aspire.Hosting.Tests.WithUrlsTests.MultipleUrlsForSingleEndpointAreIncludedInUrlSnapshot","area-app-model,flaky-test,needs-retriage",UNMAPPED
+12519,"NullReferenceException when using AddAzureStorage with DefaultAzureCredential in Aspire.Hosting.Azure.Storage 9.5.2",area-integrations,UNMAPPED
+12586,"Please add AddDotNetAppResouce",needs-area-label,UNMAPPED
+12595,"Detect if containerd image store is used for multi-arch builds","needs-area-label,‼️regression-from-last-release",UNMAPPED
+12599,"Change WithDockerfileFactory to take a mutable context instead of returning a string",area-app-model,UNMAPPED
+12625,"UvicornApp fails to reload with --reload flag present on Windows","area-orchestrator,python",UNMAPPED
+12645,"MongoDB: AddCollection on MongoDBDatabaseResource",area-integrations,UNMAPPED
+12660,"Regression project locator does not re-search for apphost when it does not find the file in .aspire/settings.json","needs-area-label,‼️regression-from-last-release",UNMAPPED
+12664,"Need to make project name can be a domain name include dot",needs-area-label,UNMAPPED
+12672,"Avoid per-command CLI update check in commands",area-cli,UNMAPPED
+12719,"CLI update prompt during package update has weird interaction pattern",area-cli,UNMAPPED
+12730,"Failing test: Aspire.Dashboard.Components.Tests.Controls.ResourceDetailsTests.ClickMaskAllSwitch_NewResource_MaskChanged","area-dashboard,flaky-test,needs-retriage",UNMAPPED
+12743,"[AspireE2E] When the dashboard is minimized, you cannot scroll by left-clicking the scroll bar on the Settings page.","area-dashboard,needs-retriage",UNMAPPED
+12744,"Expose an `OnClientReady` method on resources for interacting with the service",needs-area-label,UNMAPPED
+12745,"[AspireE2E] When creating an Aspire Python Starter App in VS Code and opening the apphost.cs file, some warnings appeared.","area-app-model,external",UNMAPPED
+12750,"AzureAIFoundry RunAsFoundryLocal() stuck in 'Downloading' state even when model is already cached","area-integrations,ai",UNMAPPED
+12751,"RabbitMQ container could not start because of multip calling of WithEndpoint method.",needs-area-label,UNMAPPED
+12757,"AddAzureServiceBus(""test"").RunAsEmulator().AddServiceBusQueue(""testqueue"") does not create a queue",needs-area-label,UNMAPPED
+12763,"Aspire.Hosting.SqlServer v9.5.2 causes Permissions error on Apple Silicon device",area-integrations,UNMAPPED
+12764,"Aspire MCP server VS Code limitation More information link doesn't go anywhere",needs-area-label,UNMAPPED
+12774,"Provide the capability to pipe steps in the Aspire CLI",needs-area-label,UNMAPPED
+12786,"Add feature flag to suppress An update is available for the Aspire CLI. Would you like to update it now?",area-cli,UNMAPPED
+12791,"[AspireE2E] When running a project with '.dev.localhost TLD' checked for the first time, you will need to enter a token.",area-tooling,UNMAPPED
+12809,"In dashboard's resource list, show ""starting"" until it starts, errors, or we give up",area-dashboard,UNMAPPED
+12824,"Add OpenCLI support to Aspire CLI",area-cli,UNMAPPED
+12851,"Project fails to launch if project does not exist instead of showing dashboard.",area-app-model,UNMAPPED
+12856,".venv created even if there's no py file","area-integrations,python",UNMAPPED
+12857,"Adding multiple python apps in the same folder without a venv will try to create a venv multiple times","area-integrations,python",UNMAPPED
+12859,"Poll /metrics for otel metrics",needs-area-label,UNMAPPED
+12866,"The remote server returned an error: (503) Server Unavailable | https://json.schemastore.org/",needs-area-label,UNMAPPED
+12899,"Github Copilot unavailable with Rider",area-tooling,UNMAPPED
+12914,"`--non-interactive` doesn't work on cli with `aspire update`",area-cli,UNMAPPED
+12929,"Crush when click on the Aspire dashboard MCP Server icon",area-dashboard,UNMAPPED
+12934,"Add healthcheck to CosmosDB integration","needs-area-label,azure-cosmosdb",UNMAPPED
+12940,"Large project with Visual Studio 2026 crashes but works in VS 2022",area-tooling,UNMAPPED
+12941,"[Aspire.Hosting.MAUI][Windows] Unable to start Windows app if WindowsPackageType is MSIX",needs-area-label,UNMAPPED
+12943,"[Aspire.Hosting.MAUI][Windows | Android] AddAndroidEmulator runs the windows version of a MAUI app",area-integrations,UNMAPPED
+12958,"[Aspire.Hosting.Maui] Nest the device resources under the main app",needs-area-label,UNMAPPED
+12967,"Add support for setting MSBuild Property",needs-area-label,UNMAPPED
+12984,"Make it possible to set a parameter value programmatically",area-app-model,UNMAPPED
+12985,"Aspire integration test with a protected api(via AddMicrosoftIdentityWebApi) failing",area-integrations,UNMAPPED
+12987,"Add support for OpenBao",area-integrations,UNMAPPED
+12988,"Support asyncronous connection creation in DI","area-integrations,redis",UNMAPPED
+13011,"Remove experimental status from AddCSharpApp",area-app-model,UNMAPPED
+13015,"Return reference from interaction service methods",area-app-model,UNMAPPED
+13027,"ConnectionStringParameterResource does not publish ConnectionStringAvailableEvent",needs-area-label,UNMAPPED
+13033,"Include a generic extension method to add a .NET MAUI project to the Aspire orchestration pipeline",area-tooling,UNMAPPED
+13060,"Specific Testing and AI suggested features to add",needs-area-label,UNMAPPED
+13084,"Azure SQL Image `2022-latest` does not support `json` column type","area-integrations,sqlserver",UNMAPPED
+13120,"`WithServerAuthenticationCertificateConfiguration` should allow args & env vars `ReferenceExpression`s to be specified as inline interpolated stringin",area-app-model,UNMAPPED
+13130,"Should `HostUrl` remap `*.dev.localhost` urls?",area-app-model,UNMAPPED
+13136,"Enable CosmosDB Emulator OpenTelemetry Integration","area-integrations,azure,azure-cosmosdb",UNMAPPED
+13143,"Customize the base image for project resources",area-app-model,UNMAPPED
+13144,"Dashboard unclear when resource health checks have passed, but ResourceReady event has not completed",area-app-model,UNMAPPED
+13148,"Generated names for azure resources with global name scope aren't always unique","area-integrations,azure",UNMAPPED
+13163,"OpenTelemetry Traceparent Propagation from Container to Aspire AppHost",needs-area-label,UNMAPPED
+13194,"Add the ability to change and reset parameter resources from the apphost / cli",area-cli,UNMAPPED
+13198,"Ability to set CORS policy for the Blob Storage emulator",area-integrations,UNMAPPED
+13199,"Support for Configuring Public Access Levels for Azure Blob Containers in Aspire",needs-area-label,UNMAPPED
+13205,"`aspire run` fails for Azure Functions due to CS8802",area-cli,UNMAPPED
+13208,"Update vendored OpenTelemetry code",needs-area-label,UNMAPPED
+13232,domain.dev.local,needs-area-label,UNMAPPED
+13235,"Docs: Don't advertise 'Update Now' on Dashboard until documentation is available",needs-area-label,UNMAPPED
+13246,"[Aspire CLI] aspire do install",needs-area-label,UNMAPPED
+13247,"Easier to write pipeline steps",needs-area-label,UNMAPPED
+13265,"Support for AddAzureStorage extensions with RunAsEmulator to have multiple accounts","area-integrations,azure,azure-storage",UNMAPPED
+13273,"Are azure resources really ""Starting"", if Azure subscription is not available?","area-integrations,azure",UNMAPPED
+13285,"Azure Key Vault AddSecret validation mismatch",area-integrations,UNMAPPED
+13286,"Azure Service Bus subscriptions with rules can prevent deployment",area-integrations,UNMAPPED
+13291,"Multiline inputs don't work in the CLI with the interaction service",area-cli,UNMAPPED
+13300,"Failing test: Aspire.Hosting.Azure.Tests.AzureDeployerTests.DeployAsync_WithDockerfile_Works","needs-area-label,flaky-test",UNMAPPED
+13311,"HostUrl doesn't handle 0.0.0.0 or * bind addresses, causing incorrect container endpoint URLs",area-app-model,UNMAPPED
+13318,"Add Dashboard:Mcp:Stateless configuration option to enable stateless HTTP transport Labels: area-mcp, area-dashboard",area-dashboard,UNMAPPED
+13342,"Integrating with an existing Azure OpenAI model with an API Key",area-integrations,UNMAPPED
+13345,"[AspireE2E]There is a warning ""AppHost file was specified in '\\.aspire\\settings.json' but it does not exist at '\\.aspire../Aspire02.AppHost.csproj'.""when running the aspire app in aspire CLI after enable showAllTemplates",area-cli,UNMAPPED
+13350,"Add DbContextOptions lifetime configuration support to Aspire.Microsoft.EntityFrameworkCore.SqlServer",area-integrations,UNMAPPED
+13357,"Agent-mode research: Agent struggles with persistent containers","area-cli,area-mcp",UNMAPPED
+13359,"Add AddSqlServer().AddDatabase()AddSqlCommander() support",area-integrations,UNMAPPED
+13383,"[AspireE2E] The structured logs displayed in the results list do not match the set Level",needs-area-label,UNMAPPED
+13388,"[AspireE2E] The restart button in the console page is grayed out and disabled after restarting the project for web app project with Aspire 13.1.0","area-dashboard,needs-retriage",UNMAPPED
+13397,"Remove `InternalsVisibleTo` dependency between Container Registry package and `Aspire.Hosting.Azure`","area-integrations,azure",UNMAPPED
+13404,"Support further restricting resource/endpoint naming from hosting integrations",area-app-model,UNMAPPED
+13428,"Parameters shouldn't have the option to view console logs","area-dashboard,needs-retriage",UNMAPPED
+13430,"Follow up on parameters page","area-dashboard,needs-retriage",UNMAPPED
+13460,"Add support for host IP binding in Aspire.Hosting.Docker port mappings",area-app-model,UNMAPPED
+13464,"Aspire.Hosting.OpenAI incorrectly applies status to health check",area-integrations,UNMAPPED
+13465,"Running (Degraded) should not stop dependent resources from running with WaitFor",area-app-model,UNMAPPED
+13466,"The OpenAI resource should show the logs that it is connecting to the openai status url",area-dashboard,UNMAPPED
+13480,"Ability to tag items and they would be shown in folders on dashboard",area-dashboard,UNMAPPED
+13494,"launchBrowser: true not working (dashboard does not launch)",area-tooling,UNMAPPED
+13533,"Unable to retrieve value for secret in already provisioned Key Vault",area-integrations,UNMAPPED
+13545,"`aspire update --non-interactive` still prompts for approval and NuGet.config location",area-cli,UNMAPPED
+13546,"`aspire update` fails to handle Windows-style path separators in project references on Linux/WSL",area-cli,UNMAPPED
+13551,"Make lists in the dashboard ""Multi-Select""",needs-area-label,UNMAPPED
+13552,"Add support for Logic Apps (standard)",needs-area-label,UNMAPPED
+13554,"Extend provisioning code for Aspire.Hosting.Azure.ApplicationInsights",needs-area-label,UNMAPPED
+13588,"Feature Request: GitOps-oriented Configuration Provider for Aspire",area-integrations,UNMAPPED
+13592,"after updating to Aspire 13, the dashboard no longer launches",area-tooling,UNMAPPED
+13609,"Add support for sovereign (non-public) clouds in Aspire CLI","area-integrations,azure",UNMAPPED
+13616,"13.1.0 can no longer resolve cosmosDb connection string from resource",area-integrations,UNMAPPED
+13633,"Make `WithInitialState()` callable multiple times",area-app-model,UNMAPPED
+13634,"Add ResourceBuilder extensions to make it easy to hide resources from the Dashboard",area-app-model,UNMAPPED
+13642,"Too Many Resources","area-dashboard,area-app-model",UNMAPPED
+13647,"`ResourceSnapshotBuilder` overwrites resource state, rather than merging with other customisations","area-app-model,area-orchestrator",UNMAPPED
+13654,"Restarts cause exception since 13.1",needs-retriage,UNMAPPED
+13668,"Aspire CLI does not properly detect when terminal supports emiojis",area-cli,UNMAPPED
+13683,"Aspire Azure SQL provisioning fails","area-integrations,azure,sqlserver",UNMAPPED
+13685,"[AspireE2E]After installing aspire extension in vs code, aspire run the project, in dashboard, select console> select apiservice > click ""stop resource"" button. dotnet watch information show up","area-tooling,needs-further-triage,area-extension",UNMAPPED
+13689,"Make the `AzureServiceBusEmulatorResource` field `AzureServiceBusResource _innerResource` a public property","area-integrations,azure-servicebus",UNMAPPED
+13692,"Yarp: Enable 301/302 redirects","area-integrations,yarp",UNMAPPED
+13695,"[AspireE2E] Press ""Ctrl + Shift + P"", select ""Aspire: Open Aspire terminal"" then type ""aspire run"", click ""Chat with GitHub Copilot"" in dashboard, It shows ""GitHub Copilot unavailable""","needs-author-action,area-extension",UNMAPPED
+13698,"[AspireE2E] After opening the URL of the resource 'api-tunnel-webfrontend-http', the page cannot be found.",area-app-model,UNMAPPED
+13700,"The aspire mcp does not launch in the official codespace",area-mcp,UNMAPPED
+13709,"Public API for resolving the internal Docker hostname",area-app-model,UNMAPPED
+13712,"`PostgresBuilderExtensions.WithInitFiles()` only works for the default DB name","area-integrations,postgres",UNMAPPED
+13717,"AddKey support for Azure Key Vault integration","area-integrations,azure,azure-keyvault",UNMAPPED
+13719,"Yarp - Support Custom Transforms",area-integrations,UNMAPPED
+13720,"Concurrency issue with password generation of persistent containers",area-app-model,UNMAPPED
+13724,"Add toggle to show/hide Parameters in Graph view",area-dashboard,UNMAPPED
+13725,"Container `WithExplicitStart()` fails `StartAsync` when container runtime is unavaialble - even if it's never started.",area-app-model,UNMAPPED
+13730,"Aspire takes a while to notice a container has failed to start",area-orchestrator,UNMAPPED
+13740,"Closing the InputFile (with file or cancel) dialog in Firefox crashes Aspire",needs-area-label,UNMAPPED
+13749,"Add PR-time documentation audit workflow with docs issue filing",area-integrations,UNMAPPED
+13756,"No Logs if container fails to start due to bad bind mount",area-orchestrator,UNMAPPED
+13760,"Container considered `FailedToStart` if it starts then immediately exists",area-orchestrator,UNMAPPED
+13772,"Add `WithCredentialsLogin` extension for `ContainerRegistryResoure`",needs-area-label,UNMAPPED
+13777,"Unresolved diagnostics aka.ms links","documentation,area-app-model",UNMAPPED
+13782,"RabbitMQ Container Name Override Issue in Azure Container Apps",area-integrations,UNMAPPED
+13788,"Aspire not working on Fedora Silverblue since .NET 10",needs-retriage,UNMAPPED
+13817,"When running blazor project via aspire.cli (not Aspire in VS, not separately), blazor.web.js 404s",area-tooling,UNMAPPED
+13818,"Add ability to pass build args to build process of `aspire run`",area-cli,UNMAPPED
+13834,"[pull requests] Review required",needs-area-label,UNMAPPED
+13846,"Failing test: Aspire.Hosting.Azure.Tests.AzureDeployerTests.DeployAsync_WithAzureFunctionsProject_Works","area-integrations,failing-test",UNMAPPED
+13851,"Enhance Aspire Graph Visualization with Communication Protocol",area-dashboard,UNMAPPED
+13852,"stderr: [sys] run session could not be started: IDE returned a response indicating failure",area-tooling,UNMAPPED
+13854,"Failing test: Aspire.Cli.Tests.Commands.ExecCommandTests.ExecCommand_WhenProjectFileDoesNotExist_ReturnsFailedToFindProject","flaky-test,area-cli,needs-retriage",UNMAPPED
+13867,"builder.AddConnectionString stores single quotes as Unicode escape sequences in user secrets, causing password recognition failure.",needs-area-label,UNMAPPED
+13875,"Aspire CLI output uses fixed column width on Jenkins",area-cli,UNMAPPED
+13894,"Kafka Integration: provide a way to spin Production grade Kafka on Azure","area-integrations,kafka",UNMAPPED
+13898,"Improve proxy resource MCP server error handling",area-cli,UNMAPPED
+13905,"[macOS] Cannot launch dashboard",needs-retriage,UNMAPPED
+13909,"Resource state isn't updating on replica state",area-dashboard,UNMAPPED
+13914,"Set Container Apps Ingress.TargetPortHttpScheme in PublishAsAzureContainerApp",needs-area-label,UNMAPPED
+13927,"Using `WithReference` on a resource that depends on another resource annoated `ExcludeFromManifest` fails",needs-area-label,UNMAPPED
+13933,"Tests with DistributedApplicationTestingBuilder fail in CI/CD due to principalType: 'User'",needs-area-label,UNMAPPED
+13937,"Update icon for downloading Console Logs in dashboard",area-dashboard,UNMAPPED
+13964,Aspire.Hosting.Tests.Publishing.ResourceContainerImageBuilderTests.CanBuildImageFromDockerfileResource_WithAllOptionsSet,"needs-area-label,failing-test",UNMAPPED
+13975,"Missing docker `buildx` throws an unclear `Container runtime Docker is not running or is unhealthy` message",needs-retriage,UNMAPPED
+13989,"libhostpolicy.dylib not found on start of standalone Blazor WASM project in VS Code on macOS",area-tooling,UNMAPPED
+13997,"CircularBuffer.cs Item was not correctly removed.",needs-area-label,UNMAPPED
+14041,"Service Bus Emulator 2.0.0 integration should expose admin connection string",area-integrations,UNMAPPED
+14046,"[Aspire] Success notification shown in Aspire 13.2 when canceling or submitting empty value in Set Parameter dialog",needs-area-label,UNMAPPED
+14050,"RedisCommander should be child of Redis",needs-area-label,UNMAPPED
+14056,"Add nuget MCP to `.vscode/mcp.json`",needs-area-label,UNMAPPED
+14076,"[AspireE2E] When I clicked install, the Aspire MCP server was not installed.",area-tooling,UNMAPPED
+14083,"Global Commands","area-dashboard,area-app-model",UNMAPPED
+14085,"dcp `Starting Process` message shows up after application output has been written",area-orchestrator,UNMAPPED
+14091,"Service with multiple replicas is never reported healthy unless all replicas are healthy",area-app-model,UNMAPPED
+14111,"[Devtunnel] Aspire.Hosting.DevTunnels - Add Region option to DevTunnelOptions",area-integrations,UNMAPPED
+14116,"Azure Functions when run locally with `defaultWatchEnabled=true` expects IDE connection",area-integrations,UNMAPPED
+14120,"Allow loading of external ServiceDefaults",needs-area-label,UNMAPPED
+14131,"Scroll in the context menu custom resource commands",needs-area-label,UNMAPPED
+14152,"`WithEnvironment` does not override actual environment variable in runtime",area-app-model,UNMAPPED
+14159,"cli: Workflows feel very chatty/alerty mixing terminal and notifications",needs-area-label,UNMAPPED
+14175,"AddRedis times out on Windows but works in WSL - Aspire 13.1.0 / .NET 10",needs-area-label,UNMAPPED
+14184,"Fast Environment Configuration Updates",area-app-model,UNMAPPED
+14236,"Aspire localhost TLD (*.dev.localhost) URLs break Codespaces port forwarding",area-app-model,UNMAPPED
+14250,"ASPIRE Yarp AuthorizationPolicy",area-integrations,UNMAPPED
+14255,"Azure Container App that is offline for to long makes the custom domain result in a connection reset error.",azure-container-apps,UNMAPPED
+14257,"Don't spam windows event logs","area-integrations,external",UNMAPPED
+14272,"Docs: Security Review For Aspire Mcp",documentation,UNMAPPED
+14294,RunAsDocker,"area-dashboard,area-app-model,area-tooling,area-orchestrator",UNMAPPED
+14298,"Devtunnel no longer forwarding Authorization header from source",devtunnels,UNMAPPED
+14302,"WithHttpProbe throws duplicate health check error when using same path for different probe types",area-app-model,UNMAPPED
+14313,"[Deployment E2E] Nightly test failure - 2026-02-03","area-testing,deployment-e2e",UNMAPPED
+14318,"Aspire MCP install and start for mcp configs",needs-area-label,UNMAPPED
+14330,"[Deployment E2E] Nightly test failure - 2026-02-04","area-testing,deployment-e2e",UNMAPPED
+14342,"WithDataBindMount fails using PostgreSQL on Podman on Windows","external,podman",UNMAPPED
+14346,"Docs cache file name is weird",area-cli,UNMAPPED
+14354,"[Deployment E2E] Nightly test failure - 2026-02-05","area-testing,deployment-e2e",UNMAPPED
+14366,"[Deployment E2E] Nightly test failure - 2026-02-06","area-testing,deployment-e2e",UNMAPPED
+14382,"PublishAsExisting on AzureAppServiceEnvironmentResource doesn't use existing",needs-area-label,UNMAPPED
+14384,"Enable Vector Indexing on CosmosDB emulator",area-integrations,UNMAPPED
+14385,"Add “Add and Apply Migration” command support (EF Core 11)","area-integrations,entityframework",UNMAPPED
+14388,"Trigger project recompilation automatically after adding/removing a migration","area-integrations,entityframework",UNMAPPED
+14390,"[Deployment E2E] Nightly test failure - 2026-02-07","area-testing,deployment-e2e",UNMAPPED
+14393,"OTel resources duplicated if you quickly stop then restart app host","area-dashboard,area-app-model",UNMAPPED
+14406,"Add a log and telemetry search command",area-dashboard,UNMAPPED
+14414,"Markdown Code block in Interaction Service notification looks odd","area-dashboard,interaction-service",UNMAPPED
+14435,"aspire update should warn about stale #:package versions in apphost.cs",area-cli,UNMAPPED
+14436,"The `TargetFramework` environment variable isn’t honored when using the dotnet run command with the Interactive TFM option in .NET 11 Preview 1",needs-area-label,UNMAPPED
+14445,"Producer fails to connect to broker on custom port 53377 connection closed by peer POLLHUP","area-integrations,kafka",UNMAPPED
+14466,"Service Bus Emulator doesn't respect persistent lifetime",area-app-model,UNMAPPED
+14477,"AppConfiguration Emulator authentication not compatible with App Configuration SDK",area-integrations,UNMAPPED
+14479,"AddPostgres: GSSAPI security context warnings spam console logs on Windows",needs-area-label,UNMAPPED
+14516,"Aspire 13.1.1 not detected",needs-area-label,UNMAPPED
+14522,"Copilot icon not shown",needs-area-label,UNMAPPED
+14527,"CORS blocked HotReload module when using Aspire DevTunnel with Blazor WebAssembly (dynamic import fails)","area-integrations,blazor-wasm",UNMAPPED
+14535,"Audit usages of Path.GetTempPath","area-app-model,area-cli",UNMAPPED
+14553,"Update JsonPatch.Net and JsonSchema.Net together to latest versions",needs-area-label,UNMAPPED
+14554,"Migrate Pomelo MySqlConnector logging away from obsolete MySqlConnectorLogManager.Provider",area-integrations,UNMAPPED
+14565,"[agentics] Failed runs",agentic-workflows,UNMAPPED
+14580,"list_traces MCP tool doesn't work well with deep spans","area-dashboard,area-mcp",UNMAPPED
+14595,"Update Spectre.Console to latest version (blocked by hyperlink rendering change)",needs-area-label,UNMAPPED
+14598,"restore.cmd -mauirestore fails with MSB1001",needs-area-label,UNMAPPED
+14607,"[Deployment E2E] Nightly test failure - 2026-02-22","area-testing,deployment-e2e",UNMAPPED
+14671,"[Deployment E2E] Nightly test failure - 2026-02-25","area-testing,deployment-e2e",UNMAPPED
+14681,"Add a database resource property with real connection string",area-app-model,UNMAPPED
+14718,"[Deployment E2E] Nightly test failure - 2026-02-26","area-testing,deployment-e2e",UNMAPPED
+14740,"Aspire Dev Tunnel creates duplicate tunnel name if file paths are the same across developer workstations","area-integrations,devtunnels",UNMAPPED
+14761,"[Deployment E2E] Nightly test failure - 2026-02-27","area-testing,deployment-e2e",UNMAPPED
+14769,"Postgres healthcheck failing",area-integrations,UNMAPPED
+14793,"[Deployment E2E] Nightly test failure - 2026-02-28","area-testing,deployment-e2e",UNMAPPED
+14810,"The parameters tab does not populate on refresh, only on navigation",area-dashboard,UNMAPPED
+14812,"Can't force start a resource for a second time","area-dashboard,area-app-model",UNMAPPED
+14813,"Should be able to cancel a `Waiting` resource's startup","area-dashboard,area-app-model",UNMAPPED
+14823,"Flaky test: AzureEventHubsExtensionsTests.VerifyAzureEventHubsEmulatorResource times out under CI load","area-integrations,azure-eventhubs,flaky-test",UNMAPPED
+14835,"[Deployment E2E] Nightly test failure - 2026-03-02","area-testing,deployment-e2e",UNMAPPED
+14842,"Connecting locally to an Aspire-provisioned Azure Posgres Flexible server","area-integrations,azure,postgres",UNMAPPED
+14849,"No API to configure a custom storage account for Durable Functions","area-integrations,azure-functions",UNMAPPED
+14873,"[Deployment E2E] Nightly test failure - 2026-03-03","area-testing,deployment-e2e",UNMAPPED
+14876,"Single File App Host logs are more verbose than non single file apps",area-app-model,UNMAPPED
+14888,"Dockerfile support for multiple build contexts","area-app-model,area-orchestrator",UNMAPPED
+14932,"[Deployment E2E] Nightly test failure - 2026-03-04","area-testing,deployment-e2e",UNMAPPED
+14964,"[Deployment E2E] Nightly test failure - 2026-03-05","area-testing,deployment-e2e",UNMAPPED
+14971,"Dashboard and cli state disagree",area-dashboard,UNMAPPED
+14987,"IDE protocol should have means to notify DCP that the IDE endpoint is shutting down",area-orchestrator,UNMAPPED
+14995,"[Deployment E2E] Nightly test failure - 2026-03-06","area-testing,deployment-e2e",UNMAPPED
+15020,"Flaky: LogTests.Subscription_MultipleUpdates_MinExecuteIntervalApplied timing assertion fails under CPU contention","area-dashboard,flaky-test",UNMAPPED
+15024,"Oracle integration does not create named database","area-integrations,oracle",UNMAPPED
+15026,"Oracle integration claims to support username parameter, but does not","area-integrations,oracle",UNMAPPED
+15034,"[Deployment E2E] Nightly test failure - 2026-03-07","area-testing,deployment-e2e",UNMAPPED
+15041,"[Container Tunnel] OtlpEndpointReferenceGatherer hangs forever for containers with OtlpExporterAnnotation when no containers are tunnel-dependent","area-orchestrator,‼️regression-from-last-release",UNMAPPED
+15049,"[Deployment E2E] Nightly test failure - 2026-03-08","area-testing,deployment-e2e",UNMAPPED
+15056,"[Deployment E2E] Nightly test failure - 2026-03-09","area-testing,deployment-e2e",UNMAPPED
+15065,"Running AppHost through visual studio adds rogue `ASPNETCORE_URLS` env var","area-tooling,vs",UNMAPPED
+15090,"[Deployment E2E] Nightly test failure - 2026-03-10","area-testing,deployment-e2e",UNMAPPED
+15096,"CreateHttpClient when explicitly requesting the ""http"" endpoint give HTTP scheme with HTTPS port (from testing project)",area-app-model,UNMAPPED
+15113,"[Failing test]: Aspire.Cli.EndToEnd.Tests.MultipleAppHostTests.DetachFormatJsonProducesValidJson","flaky-test,area-cli",UNMAPPED
+15126,"[Deployment E2E] Nightly test failure - 2026-03-11","area-testing,deployment-e2e",UNMAPPED
+15150,"ATS capability scanner drops overloaded methods with same MethodName instead of disambiguating",needs-area-label,UNMAPPED
+15159,"[Deployment E2E] Nightly test failure - 2026-03-12","area-testing,deployment-e2e",UNMAPPED
+15165,"Improve error handling when the apphost server has an error",area-cli,UNMAPPED
+15173,"Resource menu disappears behind the browser bottom","area-dashboard,a11y",UNMAPPED
+15188,"Bug: `aspire deploy` Azure resource group selection",area-integrations,UNMAPPED
+15198,"Validate the aspire CLI for agents against",area-cli,UNMAPPED
+15201,"[Deployment E2E] Nightly test failure - 2026-03-13","area-testing,deployment-e2e",UNMAPPED
+15213,"Azure SQL provisioning adds user identity to all databases not just referenced","area-integrations,azure-sqlserver",UNMAPPED
+15223,Aspire.Hosting.Tests.DistributedApplicationTests.BeforeResourceStartedEvent_FiredForNormalResourcesOnInitialStartup,flaky-test,UNMAPPED
+15234,"Add an event that is fired after all dependencies are ready","area-app-model,area-integrations",UNMAPPED
+15239,"Clean up legacy CLI configuration file support (settings.json, apphost.run.json, globalsettings.json)",area-cli,UNMAPPED
+15243,"[Deployment E2E] Nightly test failure - 2026-03-14","area-testing,deployment-e2e",UNMAPPED
+15248,"AddAndroidEmulator() / AddAndroidDevice() fails with ""Error: Unexpected argument(s): run"" — duplicate `run` in generated dotnet command",needs-area-label,UNMAPPED
+15250,"Aspire Dashboard Copilot Submit Button Issue",area-dashboard,UNMAPPED
+15252,"`aspire update --self` doesn't update `.config/dotnet-tools.json`",area-cli,UNMAPPED
+15253,"`aspire update --self --non-interactive` fails without `--channel`",area-cli,UNMAPPED
+15255,"First-class package-backed executable resources in Aspire.Hosting",area-app-model,UNMAPPED
+15258,"[Deployment E2E] Nightly test failure - 2026-03-15","area-testing,deployment-e2e",UNMAPPED
+15271,"[Deployment E2E] Nightly test failure - 2026-03-16","area-testing,deployment-e2e",UNMAPPED
+15274,"[AspireE2E]The health check details show an exception ”System.Threading.Tasks.TaskCanceledException: A task was canceled.“ after rebuilding the project",needs-area-label,UNMAPPED
+15287,"[Blog post] Add post for running multiple Aspire projects without port conflicts",blog-post,UNMAPPED
+15288,"[Blog post] Add post for Detached Mode and Process Management in Aspire 13.2","area-meta,blog-post",UNMAPPED
+15292,"[Blog post] Add post for the new `aspire doctor` command and CLI improvements",blog-post,UNMAPPED
+15295,"Aspire explorer not showing my running apphost",needs-area-label,UNMAPPED
+15304,"[Deployment E2E] Nightly test failure - 2026-03-17","area-testing,deployment-e2e",UNMAPPED
+15309,"Remove MakeSafeFormatter workaround after Spectre.Console fix",area-cli,UNMAPPED
+15316,"Streamline permissions when creating a volume",area-integrations,UNMAPPED
+15339,"Use emoji in ConsoleActivityLogger?",needs-area-label,UNMAPPED
+15348,"[Deployment E2E] Nightly test failure - 2026-03-18","area-testing,deployment-e2e",UNMAPPED
+15349,"Role AI Model Access",needs-area-label,UNMAPPED
+15363,"VS Code Extension: Panel empty and update button does not work",needs-area-label,UNMAPPED
+15374,"Remove Obsolete model entries from preview Aspire.Hosting.Foundry package","area-integrations,untriaged",UNMAPPED
+15376,"[Deployment E2E] Nightly test failure - 2026-03-19","area-testing,deployment-e2e",UNMAPPED
+15380,"[AspireE2E] Aspire Dashboard: ""Showing 0 parameters"" is not localized.",area-dashboard,UNMAPPED
+15382,"New Account Create",area-integrations,UNMAPPED
+15398,"Remove dashboard AI integration or use copilot CLI instead of vs/vsc integration",area-dashboard,UNMAPPED
+15402,"CLI config discovery doesn't find aspire.config.json adjacent to AppHost in subdirectory",area-cli,UNMAPPED
+15425,"[Deployment E2E] Nightly test failure - 2026-03-20","area-testing,deployment-e2e",UNMAPPED
+15427,"[AspireE2E] In VS Code, the option window that asks ""Would you like to configure AI agent environments for this project?"" appears for less than a second and then disappears, making it unselectable.",area-tooling,UNMAPPED
+15429,"[AspireE2E] When running the project from the output path using Aspire run, it keeps displaying ""Connecting to apphost...""",area-cli,UNMAPPED
+15431,"[AspireE2E]After adding the Maui Aspire integration, rebuilding the myapp-windows project with error ""Rebuilder resource for 'myapp-windows' not found.""","area-dashboard,area-app-model",UNMAPPED
+15435,"[AspireE2E] When running an Aspire project in VS Code, the GitHub Copilot chat in the Dashboard is showing an error.",vs,UNMAPPED
+15438,"[AspireE2E] An error “Cannot create a JSObjectReference from the value 'undefined'” occurs when quickly switching to details page and closing it",area-dashboard,UNMAPPED
+15443,"Long Command names can overflow Commands submenu",area-dashboard,UNMAPPED
+15449,"Add GetOpenAIResponseClient APIs",area-integrations,UNMAPPED
+15459,"Error when launchSettings.json is missing",area-cli,UNMAPPED
+15462,"azure-samples link broken in readme.md",area-samples,UNMAPPED
+15469,"[Deployment E2E] Nightly test failure - 2026-03-21","area-testing,deployment-e2e",UNMAPPED
+15478,"[Deployment E2E] Nightly test failure - 2026-03-22","area-testing,deployment-e2e",UNMAPPED
+15482,"Support launch profile in Aspire run command",area-cli,UNMAPPED
+15484,"Hang on building image webfrontend",area-cli,UNMAPPED
+15485,"Bettter Log filtering capabilities for MCP/CLI","area-cli,area-mcp",UNMAPPED
+15488,"First time run of 13.2 on an existing C# apphost the `aspire.config.json` is not created.",area-cli,UNMAPPED
+15490,"CLI should warn when apphost path is set in global settings, disallow setting it via aspire config, and remove that property from the schema",area-cli,UNMAPPED
+15493,"[Deployment E2E] Nightly test failure - 2026-03-23","area-testing,deployment-e2e",UNMAPPED
+15518,"Aspire no longer opening UI windows of resources","area-orchestrator,‼️regression-from-last-release",UNMAPPED
+15519,"[Deployment E2E] Nightly test failure - 2026-03-24","area-testing,deployment-e2e",UNMAPPED
+15533,"add apphost file associations",area-extension,UNMAPPED
+15556,"Foundry CapHost Failed to Deploy","area-integrations,azure,ai",UNMAPPED
+15569,"[Deployment E2E] Nightly test failure - 2026-03-25","area-testing,deployment-e2e",UNMAPPED
+15579,"VS Code shouldn't show code lens on commented out resources",area-app-model,UNMAPPED
+15588,"VS Code can't run resource command due to app host path case sensitivity mismatch",area-cli,UNMAPPED
+15592,"Configure Cosmos Preview emulator to emit otel",area-integrations,UNMAPPED
+15593,"Remove sigstore workaround",area-cli,UNMAPPED
+15597,"[Deployment E2E] Nightly test failure - 2026-03-26","area-testing,deployment-e2e",UNMAPPED
+15600,"`aspire update --non-interactive` crashes at PromptForSelectionAsync when hive directories exist",area-cli,UNMAPPED
+15601,"`aspire update --non-interactive` crashes at ConfirmAsync when version downgrade is detected",area-cli,UNMAPPED
+15604,"`aspire update` says 'up to date' when `dev` CLI checks `stable` project — potentially confusing UX",area-cli,UNMAPPED
+15628,"Aspire crashing soon after startup","area-orchestrator,‼️regression-from-last-release",UNMAPPED
+15629,"Interactive Input Choice - Multiselect",area-app-model,UNMAPPED
+15642,"[Deployment E2E] Nightly test failure - 2026-03-27","area-testing,deployment-e2e",UNMAPPED
+15646,"Interactive InputType and range limiting",needs-area-label,UNMAPPED
+15661,"Handle command input through the interaction service for CLI and MCP","area-app-model,area-cli,area-mcp",UNMAPPED
+15665,"[Deployment E2E] Nightly test failure - 2026-03-28","area-testing,deployment-e2e",UNMAPPED
+15666,"[CI] Hosting.Redis test fails with ""Collection was modified"" while creating redisinsight",area-app-model,UNMAPPED
+15673,"HttpServiceEndpointResolver timers leak on IHttpClientFactory handler rotation when using AddServiceDiscovery()",area-service-discovery,UNMAPPED
+15674,"`aspire dashboard` - Start an empty dashboard","area-dashboard,enhancement",UNMAPPED
+15679,"Dashboard metrics view for tagged metrics could be improved.","area-dashboard,enhancement",UNMAPPED
+15680,"CI: Hosting-1 Windows flaky - DCP fails with 'The directory name is invalid' for dotnet.exe","area-orchestrator,flaky-test",UNMAPPED
+15685,"`aspire run` hangs indefinitely when AppHost exits with code 0 (e.g. empty AppHost)","‼️regression-from-last-release,area-cli",UNMAPPED
+15689,"[Deployment E2E] Nightly test failure - 2026-03-29","area-testing,deployment-e2e",UNMAPPED
+15698,"[Deployment E2E] Nightly test failure - 2026-03-30","area-testing,deployment-e2e",UNMAPPED
+15701,"OnChange event for builder.AddConnectionString parameter","needs-area-label,enhancement",UNMAPPED
+15725,"[Deployment E2E] Nightly test failure - 2026-03-31","area-testing,deployment-e2e",UNMAPPED
+15735,"on SSH Remote from Windows to Mac, after updating to 13.2.1, I get AppleCommonCryptoCryptographicException",area-app-model,UNMAPPED
+15743,"[Deployment E2E] Nightly test failure - 2026-04-01","area-testing,deployment-e2e",UNMAPPED
+15752,"Backchannel path is too long",area-app-model,UNMAPPED
+15777,"[Failing test]: Aspire.Hosting.Tests.DistributedApplicationTests.StartResourceForcesStart","area-app-model,quarantined-test,failing-test",UNMAPPED
+15784,"[Deployment E2E] Nightly test failure - 2026-04-02","area-testing,deployment-e2e",UNMAPPED
+15801,"Skills with copilot cli is terrible","needs-area-label,area-copilot",UNMAPPED
+15833,"[Deployment E2E] Nightly test failure - 2026-04-03","area-testing,deployment-e2e",UNMAPPED
+15839,"Add WithDatabaseBackup to SQL Server integration","area-integrations,enhancement",UNMAPPED
+15840,"`aspire docs list` has formatting issues",area-cli,UNMAPPED
+15842,"`aspire wait` does not accept the resource name emitted by JSON output",area-cli,UNMAPPED
+15843,"`aspire start --format json` injects human readable messages",area-cli,UNMAPPED
+15846,"`aspire config info` exists but is omitted from `aspire config --help`",area-cli,UNMAPPED
+15859,"PublishWithStaticFiles and PublishAsStaticWebsite should allow Dockerfile customization",area-app-model,UNMAPPED
+15862,"No way to pass Docker build args through YARP static files publishing to the source resource build",area-app-model,UNMAPPED
+15869,"Intermittent network connectivity issues to containers and service-to-service + ""Rejoining Server"" message in Aspire Dashboard",needs-area-label,UNMAPPED
+15871,"[Failing test]: Aspire.Cli.EndToEnd.Tests.DockerDeploymentTests.CreateAndDeployToDockerComposeInteractive","disabled-tests,failing-test",UNMAPPED
+15875,"publishAsDockerFile: dockerfilePath resolution relative to context is confusing","area-app-model,aspirifriday",UNMAPPED
+15882,"[Failing test]: Aspire.Cli.EndToEnd.Tests.DockerDeploymentTests.CreateAndDeployToDockerCompose","needs-area-label,disabled-tests,failing-test",UNMAPPED
+15890,"[Deployment E2E] Nightly test failure - 2026-04-04","area-testing,deployment-e2e",UNMAPPED
+15891,"`aspire update --channel daily` fails because nuget.config is modified before packages are updated",area-cli,UNMAPPED
+15900,"Publishers crash or silently drop resources when references cross resource boundaries",area-app-model,UNMAPPED
+15903,"[Deployment E2E] Nightly test failure - 2026-04-05","area-testing,deployment-e2e",UNMAPPED
+15904,"`aspire update` ignores global.json for Aspire.AppHost.Sdk version",area-cli,UNMAPPED
+15905,"[Deployment E2E] Nightly test failure - 2026-04-06","area-testing,deployment-e2e",UNMAPPED
+15908,"playground/TestShop fails to run after restore.cmd - Microsoft.AspNetCore.App 8.0.0 runtime missing from local .dotnet",needs-area-label,UNMAPPED
+15909,"Aspire.Hosting.Yarp dependency versions",needs-area-label,UNMAPPED
+15913,"Aspire DCP injection of `LOGGING__CONSOLE__FORMATTERNAME` overrides Console `LogLevel` configuration from appsettings",area-app-model,UNMAPPED
+15915,"Feature request: Surface portal/endpoint links for Azure resources in the dashboard",area-integrations,UNMAPPED
+15920,"[Deployment E2E] Nightly test failure - 2026-04-07","area-testing,deployment-e2e",UNMAPPED
+15925,"YARP container fails to resolve named endpoint via service discovery after upgrade to Aspire.Hosting.Yarp 13.2.1","area-service-discovery,‼️regression-from-last-release",UNMAPPED
+15927,"[aw] PR Documentation Check failed","area-integrations,agentic-workflows",UNMAPPED
+15930,"CLI E2E tests that use bare bash (non-Docker) fail with ""aspire: command not found"" outside PR context","testing ☑️,disabled-tests,area-cli",UNMAPPED
+15953,"[Deployment E2E] Nightly test failure - 2026-04-08","area-testing,deployment-e2e",UNMAPPED
+15957,"Show timestamps in ""Manage logs and telemetry"" on dashboard","area-dashboard,enhancement",UNMAPPED
+15961,"Useful utility methods are inaccessible due to private and internal access modifiers.",area-app-model,UNMAPPED
+15965,"[dnceng-bot] Branch `aspire/main` can't be mirrored to Azdo fast forward branch",needs-area-label,UNMAPPED
+15968,"Issues with Aspire (using .net) + Azure AI Foundry",needs-area-label,UNMAPPED
+15971,"Foundry doesn't add the correct role assignments to be able to use deployments","area-integrations,azure",UNMAPPED
+15984,"Many Aspire CLI logs from VS Code extension",area-extension,UNMAPPED
+15993,"Extend the External Service APIs","area-app-model,enhancement",UNMAPPED
+15994,"[Deployment E2E] Nightly test failure - 2026-04-09","area-testing,deployment-e2e",UNMAPPED
+15999,"ExplicitStart Dashboard rather than excluding it when Dashboard is disabled","area-dashboard,enhancement",UNMAPPED
+16001,"Aspire does not proxy Quic protocol",area-app-model,UNMAPPED
+16010,"Passing an invalid ReferenceExpression as an environment variable propagates a silent failure",area-app-model,UNMAPPED
+16012,"Better handle dashboard crashes",area-dashboard,UNMAPPED
+16013,"`aspire` cli commands don't support `aspire-dashboard` (possibly all hidden resources)",area-dashboard,UNMAPPED
+16014,"`aspire describe` should have an option to include hidden resources",area-cli,UNMAPPED
+16028,"aspire ps does not show dashboard login token",area-cli,UNMAPPED
+16029,"Azure Function resources get 'Failed to execute command 'rebuild' on resource' error","area-integrations,azure-functions",UNMAPPED
+16030,"[Deployment E2E] Nightly test failure - 2026-04-10","area-testing,deployment-e2e",UNMAPPED
+16031,"Migrate Windows CLI validation to Hex1b-based E2E tests",needs-area-label,UNMAPPED
+16035,"Tests failing with `unexpected status from HEAD request to https://mcr.microsoft.com/v2/dotnet/sdk/ ... 403 Forbidden`",failing-test,UNMAPPED
+16037,"When started under isolated mode, no Traces and metrics are displayed in the Aspire dashboard","area-dashboard,area-app-model,area-cli",UNMAPPED
+16045,"VS Code: Code Lens shows up in weird places Take 2",area-dashboard,UNMAPPED
+16048,"Oracle fails with `ORA-12154: TNS:could not resolve` if not overriden",area-integrations,UNMAPPED
+16054,"[Failing test]: Aspire.Hosting.Tests.Backchannel.Exec.ContainerResourceExecTests.Exec\\_NginxContainer\\_ListFiles\\_ProducesLogs\\_Success",failing-test,UNMAPPED
+16065,"Why does `aspire doctor` want access to everything",needs-area-label,UNMAPPED
+16066,"Include CLI Version in `aspire doctor`",needs-area-label,UNMAPPED
+16067,"Browser Token not working on dashboard over HTTP",needs-area-label,UNMAPPED
+16068,"`AddCSharpApp` should enter a failed state if the project's runtime is unavailable",area-app-model,UNMAPPED
+16069,"Dashboard doesn't load if `ASPNETCORE_ENVIRONMENT` is not `Development`",area-dashboard,UNMAPPED
+16076,"StartStopTests.CreateStartAndStopAspireProject is flaky — times out polling docker network","flaky-test,area-cli",UNMAPPED
+16078,"Remove container tunnel check from aspire doctor — tunnel is on by default in 13.3",area-cli,UNMAPPED
+16081,"[Deployment E2E] Nightly test failure - 2026-04-12","area-testing,deployment-e2e",UNMAPPED
+16092,"Aspire MCP in Visual Studio",area-tooling,UNMAPPED
+16095,"Improve startup display and logging for the standalone dashboard container",area-dashboard,UNMAPPED
+16096,"ASPIRE_ENVIRONMENT should be read by DistributedApplicationBuilder, not just the CLI",area-app-model,UNMAPPED
+16109,"[Deployment E2E] Nightly test failure - 2026-04-13","area-testing,deployment-e2e",UNMAPPED
+16113,"PipelineSummaryItem should have a logo/symbol/emoji property",needs-area-label,UNMAPPED
+16115,"Foundry Hosted Agent should overwrite existing HTTP Endpoints","area-integrations,ai",UNMAPPED
+16116,"Open dashboard in browser automatically when launching from CLI",area-dashboard,UNMAPPED
+16118,"aspire doctor should check for Docker buildx",needs-area-label,UNMAPPED
+16126,"Aspire run and aspire start should fail or prompt if multiple apphosts found",area-cli,UNMAPPED
+16127,"Foundry Anthropic models aren't deployable","area-integrations,azure",UNMAPPED
+16129,"Foundry Hosted Agent responses are rendered weirdly","area-dashboard,ai",UNMAPPED
+16133,"Existing ACR In Separate Resource Group Generates Invalid Bicep",area-integrations,UNMAPPED
