@@ -7,6 +7,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddHostedService<TelemetryStresser>();
 builder.Services.AddHostedService<GaugeMetrics>();
 builder.Services.AddHostedService<CounterMetrics>();
+builder.Services.AddHostedService<StaggeredTelemetrySender>();
 
 builder.AddServiceDefaults();
 builder.Logging.SetMinimumLevel(LogLevel.Trace);

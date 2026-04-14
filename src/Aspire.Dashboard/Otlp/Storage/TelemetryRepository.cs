@@ -54,6 +54,7 @@ public sealed partial class TelemetryRepository : IDisposable
     private readonly ConcurrentDictionary<ResourceKey, DateTime> _latestLogTimestamps = new();
     private readonly ConcurrentDictionary<ResourceKey, DateTime> _latestTraceTimestamps = new();
     private readonly ConcurrentDictionary<ResourceKey, DateTime> _latestMetricTimestamps = new();
+    private readonly object _metricsWriteLock = new();
 
     private readonly ReaderWriterLockSlim _tracesLock = new();
     private readonly Dictionary<string, OtlpScope> _traceScopes = new();
@@ -380,6 +381,7 @@ public sealed partial class TelemetryRepository : IDisposable
     public void AddLogsCore(AddContext context, OtlpResourceView resourceView, RepeatedField<ScopeLogs> scopeLogs)
     {
         List<OtlpLogEntry>? addedLogs = null;
+        DateTime? maxLogTs = null;
 
         _logsLock.EnterWriteLock();
 
@@ -437,6 +439,10 @@ public sealed partial class TelemetryRepository : IDisposable
                         // Collect log for push-based streaming (lazy init to avoid allocation when no watchers)
                         addedLogs ??= new List<OtlpLogEntry>();
                         addedLogs.Add(logEntry);
+                        if (maxLogTs is null || logEntry.TimeStamp > maxLogTs.Value)
+                        {
+                            maxLogTs = logEntry.TimeStamp;
+                        }
 
                         context.SuccessCount++;
                     }
@@ -447,27 +453,20 @@ public sealed partial class TelemetryRepository : IDisposable
                     }
                 }
             }
+
+            if (maxLogTs is { } maxTimestamp)
+            {
+                _latestLogTimestamps.AddOrUpdate(resourceView.ResourceKey, maxTimestamp, (_, existing) => maxTimestamp > existing ? maxTimestamp : existing);
+            }
         }
         finally
         {
             _logsLock.ExitWriteLock();
         }
 
-        // Track latest log timestamp for this resource
+        // Push logs to watchers outside the lock.
         if (addedLogs is not null)
         {
-            var maxLogTs = addedLogs[0].TimeStamp;
-            for (var i = 1; i < addedLogs.Count; i++)
-            {
-                if (addedLogs[i].TimeStamp > maxLogTs)
-                {
-                    maxLogTs = addedLogs[i].TimeStamp;
-                }
-            }
-
-            _latestLogTimestamps.AddOrUpdate(resourceView.ResourceKey, maxLogTs, (_, existing) => maxLogTs > existing ? maxLogTs : existing);
-
-            // Push logs to watchers outside the lock
             PushLogsToWatchers(addedLogs, resourceView.ResourceKey);
         }
     }
@@ -943,26 +942,29 @@ public sealed partial class TelemetryRepository : IDisposable
 
     public void ClearMetrics(ResourceKey? resourceKey = null)
     {
-        List<OtlpResource> resources;
-        if (resourceKey.HasValue)
+        lock (_metricsWriteLock)
         {
-            resources = GetResources(resourceKey.Value);
-        }
-        else
-        {
-            resources = _resources.Values.ToList();
-        }
+            List<OtlpResource> resources;
+            if (resourceKey.HasValue)
+            {
+                resources = GetResources(resourceKey.Value);
+            }
+            else
+            {
+                resources = _resources.Values.ToList();
+            }
 
-        foreach (var resource in resources)
-        {
-            resource.ClearMetrics();
-            SetResourceHasMetrics(resource, false);
-            _latestMetricTimestamps.TryRemove(resource.ResourceKey, out _);
-        }
+            foreach (var resource in resources)
+            {
+                resource.ClearMetrics();
+                SetResourceHasMetrics(resource, false);
+                _latestMetricTimestamps.TryRemove(resource.ResourceKey, out _);
+            }
 
-        if (!resourceKey.HasValue)
-        {
-            _latestMetricTimestamps.Clear();
+            if (!resourceKey.HasValue)
+            {
+                _latestMetricTimestamps.Clear();
+            }
         }
 
         RaiseSubscriptionChanged(_metricsSubscriptions);
@@ -1146,12 +1148,15 @@ public sealed partial class TelemetryRepository : IDisposable
                 continue;
             }
 
-            var latestMetricTs = resourceView.Resource.AddMetrics(context, rm.ScopeMetrics);
-            SetResourceHasMetrics(resourceView.Resource, true);
-
-            if (latestMetricTs is { } metricTs)
+            lock (_metricsWriteLock)
             {
-                _latestMetricTimestamps.AddOrUpdate(resourceView.ResourceKey, metricTs, (_, existing) => metricTs > existing ? metricTs : existing);
+                var latestMetricTs = resourceView.Resource.AddMetrics(context, rm.ScopeMetrics);
+                SetResourceHasMetrics(resourceView.Resource, true);
+
+                if (latestMetricTs is { } metricTs)
+                {
+                    _latestMetricTimestamps.AddOrUpdate(resourceView.ResourceKey, metricTs, (_, existing) => metricTs > existing ? metricTs : existing);
+                }
             }
         }
 
@@ -1217,6 +1222,7 @@ public sealed partial class TelemetryRepository : IDisposable
     internal void AddTracesCore(AddContext context, OtlpResourceView resourceView, RepeatedField<ScopeSpans> scopeSpans)
     {
         List<OtlpSpan>? addedSpans = null;
+        DateTime? maxTraceTs = null;
 
         _tracesLock.EnterWriteLock();
 
@@ -1339,6 +1345,10 @@ public sealed partial class TelemetryRepository : IDisposable
                         // Collect span for push-based streaming (lazy init to avoid allocation when no watchers)
                         addedSpans ??= new List<OtlpSpan>();
                         addedSpans.Add(newSpan);
+                        if (maxTraceTs is null || newSpan.EndTime > maxTraceTs.Value)
+                        {
+                            maxTraceTs = newSpan.EndTime;
+                        }
 
                         context.SuccessCount++;
                     }
@@ -1359,28 +1369,20 @@ public sealed partial class TelemetryRepository : IDisposable
                     CalculateTraceUninstrumentedPeers(updatedTrace);
                 }
             }
+
+            if (maxTraceTs is { } maxTimestamp)
+            {
+                _latestTraceTimestamps.AddOrUpdate(resourceView.ResourceKey, maxTimestamp, (_, existing) => maxTimestamp > existing ? maxTimestamp : existing);
+            }
         }
         finally
         {
             _tracesLock.ExitWriteLock();
         }
 
-        // Track latest trace timestamp for this resource using the span's actual end time,
-        // not trace.LastUpdatedDate which is DateTime.UtcNow (receipt time, not signal time).
+        // Push spans to watchers outside the lock.
         if (addedSpans is not null)
         {
-            var maxTraceTs = DateTime.MinValue;
-            foreach (var span in addedSpans)
-            {
-                if (span.EndTime > maxTraceTs)
-                {
-                    maxTraceTs = span.EndTime;
-                }
-            }
-
-            _latestTraceTimestamps.AddOrUpdate(resourceView.ResourceKey, maxTraceTs, (_, existing) => maxTraceTs > existing ? maxTraceTs : existing);
-
-            // Push spans to watchers outside the lock
             PushSpansToWatchers(addedSpans, resourceView.ResourceKey);
         }
 
