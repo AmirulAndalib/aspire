@@ -3,6 +3,7 @@
 
 #pragma warning disable ASPIREPIPELINES001 // Pipeline types are experimental
 #pragma warning disable ASPIREAZURE001 // AzureEnvironmentResource is experimental
+#pragma warning disable ASPIREAZURE003 // Subnet/network types are experimental
 
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Azure;
@@ -246,6 +247,34 @@ public static class AzureKubernetesEnvironmentExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.Resource.IsPrivateCluster = true;
+        return builder;
+    }
+
+    /// <summary>
+    /// Configures the AKS cluster to use a VNet subnet for node pool networking.
+    /// Unlike <see cref="AzureVirtualNetworkExtensions.WithDelegatedSubnet{T}"/>, this does NOT
+    /// add a service delegation to the subnet — AKS uses plain (non-delegated) subnets.
+    /// </summary>
+    /// <param name="builder">The AKS environment resource builder.</param>
+    /// <param name="subnet">The subnet to use for AKS node pools.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
+    /// <example>
+    /// <code>
+    /// var vnet = builder.AddAzureVirtualNetwork("vnet", "10.0.0.0/16");
+    /// var subnet = vnet.AddSubnet("aks-subnet", "10.0.0.0/22");
+    /// var aks = builder.AddAzureKubernetesEnvironment("aks")
+    ///     .WithSubnet(subnet);
+    /// </code>
+    /// </example>
+    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithSubnet(
+        this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
+        IResourceBuilder<AzureSubnetResource> subnet)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(subnet);
+
+        builder.WithAnnotation(new AksSubnetAnnotation(subnet.Resource.Id));
         return builder;
     }
 

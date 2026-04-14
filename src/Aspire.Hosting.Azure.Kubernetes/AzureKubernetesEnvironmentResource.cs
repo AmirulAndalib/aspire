@@ -22,12 +22,8 @@ public class AzureKubernetesEnvironmentResource(
     Action<AzureResourceInfrastructure> configureInfrastructure)
     : AzureProvisioningResource(name, configureInfrastructure),
       IAzureComputeEnvironmentResource,
-      IAzureDelegatedSubnetResource,
       IAzureNspAssociationTarget
 {
-    /// <inheritdoc />
-    string IAzureDelegatedSubnetResource.DelegatedSubnetServiceName
-        => "Microsoft.ContainerService/managedClusters";
 
     /// <summary>
     /// Gets the underlying Kubernetes environment resource used for Helm-based deployment.
@@ -158,12 +154,26 @@ public class AzureKubernetesEnvironmentResource(
         }
 
         // Subnet parameter for VNet integration
-        var hasDelegatedSubnet = this.TryGetLastAnnotation<DelegatedSubnetAnnotation>(out var subnetAnnotation);
-        if (hasDelegatedSubnet)
+        var hasSubnet = this.TryGetLastAnnotation<AksSubnetAnnotation>(out var subnetAnnotation);
+        if (!hasSubnet)
         {
-            // Wire the subnet ID as a parameter so the publishing context resolves it in main.bicep
+            // Fallback: check for DelegatedSubnetAnnotation (legacy WithDelegatedSubnet usage)
+            hasSubnet = this.TryGetLastAnnotation<DelegatedSubnetAnnotation>(out var delegatedAnnotation);
+            if (hasSubnet)
+            {
+                // Wire as parameter — but note that DelegatedSubnetAnnotation adds a service
+                // delegation which AKS doesn't support. Users should use WithSubnet instead.
+                Parameters["subnetId"] = delegatedAnnotation!.SubnetId;
+            }
+        }
+        else
+        {
+            // Wire the subnet ID as a parameter so the publishing context resolves it
             Parameters["subnetId"] = subnetAnnotation!.SubnetId;
+        }
 
+        if (hasSubnet)
+        {
             sb.AppendLine("@description('The subnet ID for AKS node pool VNet integration.')");
             sb.AppendLine("param subnetId string");
             sb.AppendLine();
@@ -211,7 +221,7 @@ public class AzureKubernetesEnvironmentResource(
             sb.AppendLine("        enableAutoScaling: true");
             sb.Append("        mode: '").Append(mode).AppendLine("'");
             sb.AppendLine("        osType: 'Linux'");
-            if (hasDelegatedSubnet)
+            if (hasSubnet)
             {
                 sb.AppendLine("        vnetSubnetID: subnetId");
             }
@@ -258,7 +268,7 @@ public class AzureKubernetesEnvironmentResource(
             sb.Append("      dnsServiceIP: '").Append(NetworkProfile.DnsServiceIP).AppendLine("'");
             sb.AppendLine("    }");
         }
-        else if (hasDelegatedSubnet)
+        else if (hasSubnet)
         {
             // Default Azure CNI network profile when a subnet is delegated
             sb.AppendLine("    networkProfile: {");
