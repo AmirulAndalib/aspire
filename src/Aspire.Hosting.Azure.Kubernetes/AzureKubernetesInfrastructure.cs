@@ -101,6 +101,13 @@ internal sealed class AzureKubernetesInfrastructure(
                         serviceAccount.Metadata.Labels["azure.workload.identity/use"] = "true";
                         kubeResource.AdditionalResources.Add(serviceAccount);
 
+                        // Add a placeholder parameter for the identity clientId
+                        // so it appears in values.yaml under parameters.<name>.identityClientId.
+                        // The actual value is resolved at deploy time via CapturedHelmValueProviders.
+                        kubeResource.Parameters["identityClientId"] = new KubernetesResource.HelmValue(
+                            $"{{{{ .Values.parameters.{r.Name}.identityClientId }}}}",
+                            string.Empty);
+
                         // Set serviceAccountName on pod spec
                         if (kubeResource.Workload?.PodTemplate?.Spec is { } podSpec)
                         {
@@ -108,13 +115,21 @@ internal sealed class AzureKubernetesInfrastructure(
                         }
                     }));
 
-                    // Add the identity clientId as a deferred Helm value parameter
-                    // so it gets resolved from the Bicep output at deploy time.
-                    if (r is IResourceWithEnvironment resourceWithEnv)
+                    // Wire the identity clientId as a deferred Helm value so it gets
+                    // resolved from the Bicep output at deploy time. The SA annotation
+                    // references {{ .Values.parameters.<name>.identityClientId }}.
+                    if (identityClientId is IValueProvider clientIdProvider)
                     {
-                        // Store the identity reference for federated credential generation
-                        environment.WorkloadIdentities[r.Name] = appIdentity.IdentityResource;
+                        environment.KubernetesEnvironment.CapturedHelmValueProviders.Add(
+                            new KubernetesEnvironmentResource.CapturedHelmValueProvider(
+                                "parameters",
+                                r.Name,
+                                "identityClientId",
+                                clientIdProvider));
                     }
+
+                    // Store the identity reference for federated credential Bicep generation
+                    environment.WorkloadIdentities[r.Name] = appIdentity.IdentityResource;
                 }
             }
         }
