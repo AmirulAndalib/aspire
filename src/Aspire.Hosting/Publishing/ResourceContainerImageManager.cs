@@ -412,7 +412,7 @@ internal sealed class ResourceContainerImageManager(
             if (processResult.ExitCode != 0)
             {
                 throw new ProcessFailedException(
-                    $"dotnet publish for project '{projectMetadata.ProjectPath}' failed with exit code {processResult.ExitCode}.",
+                    $"Failed to build container image for resource '{resource.Name}' from project '{projectMetadata.ProjectPath}' with exit code {processResult.ExitCode}.",
                     processResult.ExitCode,
                     buildOutput.ToArray(),
                     buildOutput.TotalLineCount);
