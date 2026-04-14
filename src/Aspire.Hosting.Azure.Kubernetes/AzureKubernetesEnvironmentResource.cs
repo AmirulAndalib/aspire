@@ -99,6 +99,11 @@ public class AzureKubernetesEnvironmentResource(
     ];
 
     /// <summary>
+    /// Gets the per-node-pool subnet overrides. Key is the pool name.
+    /// </summary>
+    internal Dictionary<string, BicepOutputReference> NodePoolSubnets { get; } = [];
+
+    /// <summary>
     /// Gets or sets the network profile for the AKS cluster.
     /// </summary>
     internal AksNetworkProfile? NetworkProfile { get; set; }
@@ -153,29 +158,37 @@ public class AzureKubernetesEnvironmentResource(
             sb.AppendLine();
         }
 
-        // Subnet parameter for VNet integration
-        var hasSubnet = this.TryGetLastAnnotation<AksSubnetAnnotation>(out var subnetAnnotation);
-        if (!hasSubnet)
+        // Subnet parameters for VNet integration
+        // Environment-level subnet (default for all pools)
+        var hasDefaultSubnet = this.TryGetLastAnnotation<AksSubnetAnnotation>(out var subnetAnnotation);
+        if (!hasDefaultSubnet)
         {
             // Fallback: check for DelegatedSubnetAnnotation (legacy WithDelegatedSubnet usage)
-            hasSubnet = this.TryGetLastAnnotation<DelegatedSubnetAnnotation>(out var delegatedAnnotation);
-            if (hasSubnet)
+            hasDefaultSubnet = this.TryGetLastAnnotation<DelegatedSubnetAnnotation>(out var delegatedAnnotation);
+            if (hasDefaultSubnet)
             {
-                // Wire as parameter — but note that DelegatedSubnetAnnotation adds a service
-                // delegation which AKS doesn't support. Users should use WithSubnet instead.
                 Parameters["subnetId"] = delegatedAnnotation!.SubnetId;
             }
         }
         else
         {
-            // Wire the subnet ID as a parameter so the publishing context resolves it
             Parameters["subnetId"] = subnetAnnotation!.SubnetId;
         }
 
-        if (hasSubnet)
+        if (hasDefaultSubnet)
         {
-            sb.AppendLine("@description('The subnet ID for AKS node pool VNet integration.')");
+            sb.AppendLine("@description('The default subnet ID for AKS node pool VNet integration.')");
             sb.AppendLine("param subnetId string");
+            sb.AppendLine();
+        }
+
+        // Per-pool subnet overrides
+        foreach (var (poolName, poolSubnetRef) in NodePoolSubnets)
+        {
+            var paramName = $"subnetId_{poolName}";
+            Parameters[paramName] = poolSubnetRef;
+            sb.Append("@description('The subnet ID for the ").Append(poolName).AppendLine(" node pool.')");
+            sb.Append("param ").Append(paramName).AppendLine(" string");
             sb.AppendLine();
         }
 
@@ -221,7 +234,12 @@ public class AzureKubernetesEnvironmentResource(
             sb.AppendLine("        enableAutoScaling: true");
             sb.Append("        mode: '").Append(mode).AppendLine("'");
             sb.AppendLine("        osType: 'Linux'");
-            if (hasSubnet)
+            // Use per-pool subnet if available, otherwise fall back to environment default
+            if (NodePoolSubnets.ContainsKey(pool.Name))
+            {
+                sb.Append("        vnetSubnetID: subnetId_").AppendLine(pool.Name);
+            }
+            else if (hasDefaultSubnet)
             {
                 sb.AppendLine("        vnetSubnetID: subnetId");
             }
@@ -268,7 +286,7 @@ public class AzureKubernetesEnvironmentResource(
             sb.Append("      dnsServiceIP: '").Append(NetworkProfile.DnsServiceIP).AppendLine("'");
             sb.AppendLine("    }");
         }
-        else if (hasSubnet)
+        else if (hasDefaultSubnet || NodePoolSubnets.Count > 0)
         {
             // Default Azure CNI network profile when a subnet is delegated
             sb.AppendLine("    networkProfile: {");

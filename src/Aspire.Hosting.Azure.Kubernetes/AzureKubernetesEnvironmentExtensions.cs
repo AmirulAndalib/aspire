@@ -253,6 +253,45 @@ public static class AzureKubernetesEnvironmentExtensions
     }
 
     /// <summary>
+    /// Configures a specific AKS node pool to use its own VNet subnet.
+    /// When applied, this node pool's subnet overrides the environment-level subnet
+    /// set via <see cref="WithSubnet(IResourceBuilder{AzureKubernetesEnvironmentResource}, IResourceBuilder{AzureSubnetResource})"/>.
+    /// </summary>
+    /// <param name="builder">The node pool resource builder.</param>
+    /// <param name="subnet">The subnet to use for this node pool.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{AksNodePoolResource}"/> for chaining.</returns>
+    /// <example>
+    /// <code>
+    /// var vnet = builder.AddAzureVirtualNetwork("vnet", "10.0.0.0/16");
+    /// var defaultSubnet = vnet.AddSubnet("default", "10.0.0.0/22");
+    /// var gpuSubnet = vnet.AddSubnet("gpu-subnet", "10.0.4.0/24");
+    ///
+    /// var aks = builder.AddAzureKubernetesEnvironment("aks")
+    ///     .WithSubnet(defaultSubnet);
+    ///
+    /// var gpuPool = aks.AddNodePool("gpu", AzureVmSizes.GpuAccelerated.StandardNC6sV3, 0, 5)
+    ///     .WithSubnet(gpuSubnet);
+    /// </code>
+    /// </example>
+    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    public static IResourceBuilder<AksNodePoolResource> WithSubnet(
+        this IResourceBuilder<AksNodePoolResource> builder,
+        IResourceBuilder<AzureSubnetResource> subnet)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(subnet);
+
+        // Store the subnet on the node pool annotation for Bicep resolution
+        builder.WithAnnotation(new AksSubnetAnnotation(subnet.Resource.Id));
+
+        // Also register in the parent AKS environment's per-pool subnet dictionary
+        // so Bicep generation can emit the correct parameter per pool.
+        builder.Resource.AksParent.NodePoolSubnets[builder.Resource.Name] = subnet.Resource.Id;
+
+        return builder;
+    }
+
+    /// <summary>
     /// Configures the AKS environment to use a specific Azure Container Registry for image storage.
     /// When set, this replaces the auto-created default container registry.
     /// </summary>

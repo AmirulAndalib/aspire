@@ -271,6 +271,56 @@ public class AzureKubernetesEnvironmentExtensionsTests
     }
 
     [Fact]
+    public void WithSubnet_OnNodePool_StoresPerPoolSubnet()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish);
+
+        var vnet = builder.AddAzureVirtualNetwork("vnet", "10.0.0.0/16");
+        var defaultSubnet = vnet.AddSubnet("default-subnet", "10.0.0.0/22");
+        var gpuSubnet = vnet.AddSubnet("gpu-subnet", "10.0.4.0/24");
+
+        var aks = builder.AddAzureKubernetesEnvironment("aks")
+            .WithSubnet(defaultSubnet);
+
+        var gpuPool = aks.AddNodePool("gpu", "Standard_NC6s_v3", 0, 5)
+            .WithSubnet(gpuSubnet);
+
+        // Environment-level subnet should be set via annotation
+        Assert.True(aks.Resource.TryGetLastAnnotation<AksSubnetAnnotation>(out _));
+
+        // Per-pool subnet should be stored in NodePoolSubnets dictionary
+        Assert.Single(aks.Resource.NodePoolSubnets);
+        Assert.True(aks.Resource.NodePoolSubnets.ContainsKey("gpu"));
+
+        // Node pool should also have its own subnet annotation
+        Assert.True(gpuPool.Resource.TryGetLastAnnotation<AksSubnetAnnotation>(out _));
+    }
+
+    [Fact]
+    public void WithSubnet_OnNodePool_WithoutEnvironmentSubnet()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish);
+
+        var vnet = builder.AddAzureVirtualNetwork("vnet", "10.0.0.0/16");
+        var gpuSubnet = vnet.AddSubnet("gpu-subnet", "10.0.4.0/24");
+
+        var aks = builder.AddAzureKubernetesEnvironment("aks");
+
+        // Only set subnet on the pool, not the environment
+        var gpuPool = aks.AddNodePool("gpu", "Standard_NC6s_v3", 0, 5)
+            .WithSubnet(gpuSubnet);
+
+        // No environment-level subnet
+        Assert.False(aks.Resource.TryGetLastAnnotation<AksSubnetAnnotation>(out _));
+
+        // Per-pool subnet should still work
+        Assert.Single(aks.Resource.NodePoolSubnets);
+        Assert.True(aks.Resource.NodePoolSubnets.ContainsKey("gpu"));
+    }
+
+    [Fact]
     public void WithNodePool_AddsAnnotation()
     {
         using var builder = TestDistributedApplicationBuilder.Create();
