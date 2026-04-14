@@ -13,7 +13,7 @@ namespace Aspire.Hosting.Azure.Kubernetes;
 /// This class is auto-generated. To update, run the GenVmSizes tool:
 /// <code>dotnet run --project src/Aspire.Hosting.Azure.Kubernetes/tools GenVmSizes.cs</code>
 /// </remarks>
-public static partial class AzureVmSizes
+public static partial class AksNodeVmSizes
 {
     /// <summary>
     /// General purpose VM sizes optimized for balanced CPU-to-memory ratio.

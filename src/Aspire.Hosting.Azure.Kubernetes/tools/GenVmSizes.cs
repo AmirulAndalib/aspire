@@ -65,8 +65,8 @@ var vmSkus = skuResponse.Value
 Console.WriteLine($"Found {vmSkus.Count} VM sizes");
 
 var code = VmSizeClassGenerator.GenerateCode("Aspire.Hosting.Azure.Kubernetes", vmSkus);
-File.WriteAllText(Path.Combine("..", "AzureVmSizes.Generated.cs"), code);
-Console.WriteLine($"Generated AzureVmSizes.Generated.cs with {vmSkus.Count} VM sizes");
+File.WriteAllText(Path.Combine("..", "AksNodeVmSizes.Generated.cs"), code);
+Console.WriteLine($"Generated AksNodeVmSizes.Generated.cs with {vmSkus.Count} VM sizes");
 
 return 0;
 
@@ -173,7 +173,7 @@ internal static partial class VmSizeClassGenerator
         sb.AppendLine("/// This class is auto-generated. To update, run the GenVmSizes tool:");
         sb.AppendLine("/// <code>dotnet run --project src/Aspire.Hosting.Azure.Kubernetes/tools GenVmSizes.cs</code>");
         sb.AppendLine("/// </remarks>");
-        sb.AppendLine("public static partial class AzureVmSizes");
+        sb.AppendLine("public static partial class AksNodeVmSizes");
         sb.AppendLine("{");
 
         var groups = sizes.GroupBy(s => s.Family)
