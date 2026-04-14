@@ -108,7 +108,7 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
 
                             // User confirmed - delete the deployment state file
                             context.Logger.LogInformation("Deleting deployment state file at {Path} due to --clear-cache flag", stateFilePath);
-                            File.Delete(stateFilePath);
+                            await deploymentStateManager.ClearAllStateAsync(context.CancellationToken).ConfigureAwait(false);
                         }
                     }
                 }
@@ -264,6 +264,27 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
                 DumpDependencyGraphDiagnostics(stepsToAnalyze, context);
             }
         });
+
+        // Add a "destroy" aggregation step for teardown operations
+        _steps.Add(new PipelineStep
+        {
+            Name = WellKnownPipelineSteps.Destroy,
+            Description = "Aggregation step for all destroy operations. All destroy steps should be required by this step.",
+            Action = async context =>
+            {
+                // Full destroy clears all deployment state — parameters, Azure config, everything.
+                // The next deploy starts completely fresh.
+                var deploymentStateManager = context.Services.GetRequiredService<IDeploymentStateManager>();
+                await deploymentStateManager.ClearAllStateAsync(context.CancellationToken).ConfigureAwait(false);
+            },
+        });
+
+        _steps.Add(new PipelineStep
+        {
+            Name = WellKnownPipelineSteps.DestroyPrereq,
+            Description = "Prerequisite step that runs before any destroy operations.",
+            Action = _ => Task.CompletedTask,
+        });
     }
 
     public bool HasSteps => _steps.Count > 0;
@@ -359,6 +380,27 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
 
     public async Task ExecuteAsync(PipelineContext context)
     {
+        var allSteps = await ResolveStepsAsync(context).ConfigureAwait(false);
+
+        if (allSteps.Count == 0)
+        {
+            return;
+        }
+
+        var (stepsToExecute, stepsByName) = FilterStepsForExecution(allSteps, context);
+
+        // Build dependency graph and execute with readiness-based scheduler
+        await ExecuteStepsAsTaskDag(stepsToExecute, stepsByName, context).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Resolves all pipeline steps (from built-in steps and resource annotations),
+    /// normalizes RequiredBy relationships to DependsOn, and validates the steps
+    /// without executing them. The returned list is in collection order; use
+    /// <see cref="GetTopologicalOrder"/> to obtain execution order.
+    /// </summary>
+    internal async Task<List<PipelineStep>> ResolveStepsAsync(PipelineContext context)
+    {
         var annotationSteps = await CollectStepsFromAnnotationsAsync(context).ConfigureAwait(false);
         var allSteps = _steps.Concat(annotationSteps).ToList();
 
@@ -368,7 +410,7 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
 
         if (allSteps.Count == 0)
         {
-            return;
+            return allSteps;
         }
 
         ValidateSteps(allSteps);
@@ -380,10 +422,7 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         // Capture resolved pipeline data for diagnostics (before filtering)
         _lastResolvedSteps = allSteps;
 
-        var (stepsToExecute, stepsByName) = FilterStepsForExecution(allSteps, context);
-
-        // Build dependency graph and execute with readiness-based scheduler
-        await ExecuteStepsAsTaskDag(stepsToExecute, stepsByName, context).ConfigureAwait(false);
+        return allSteps;
     }
 
     /// <summary>
@@ -443,7 +482,7 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         return (stepsToExecute, filteredStepsByName);
     }
 
-    private static List<PipelineStep> ComputeTransitiveDependencies(
+    internal static List<PipelineStep> ComputeTransitiveDependencies(
         PipelineStep step,
         Dictionary<string, PipelineStep> stepsByName)
     {
@@ -600,6 +639,7 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         {
             // Create a TaskCompletionSource for each step
             var stepCompletions = new Dictionary<string, TaskCompletionSource>(steps.Count, StringComparer.Ordinal);
+            var stepHierarchyByName = GetStepHierarchyByStep(steps, stepsByName);
             foreach (var step in steps)
             {
                 stepCompletions[step.Name] = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -641,7 +681,8 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
                 try
                 {
                     var activityReporter = context.Services.GetRequiredService<IPipelineActivityReporter>();
-                    var reportingStep = await activityReporter.CreateStepAsync(step.Name, context.CancellationToken).ConfigureAwait(false);
+                    var stepHierarchy = stepHierarchyByName.GetValueOrDefault(step.Name);
+                    var reportingStep = await activityReporter.CreateStepAsync(step.Name, stepHierarchy.ParentStepName, stepHierarchy.Level, context.CancellationToken).ConfigureAwait(false);
 
                     await using (reportingStep.ConfigureAwait(false))
                     {
@@ -840,6 +881,13 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         try
         {
             await step.Action(stepContext).ConfigureAwait(false);
+        }
+        catch (DistributedApplicationException)
+        {
+            // DistributedApplicationException subtypes already have clean, user-friendly messages.
+            // Re-throw without wrapping to avoid verbose error output (e.g. raw HTTP headers
+            // from Azure SDK RequestFailedException leaking into step failure messages).
+            throw;
         }
         catch (Exception ex)
         {
@@ -1049,7 +1097,7 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
             sb.AppendLine();
         }
 
-        context.ReportingStep.Log(LogLevel.Information, sb.ToString(), enableMarkdown: false);
+        context.ReportingStep.Log(LogLevel.Information, sb.ToString());
     }
 
     /// <summary>
@@ -1078,6 +1126,30 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
                 result.UnionWith(transitiveDeps);
                 visited.Remove(depName);
             }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Gets the display hierarchy information for a set of steps.
+    /// </summary>
+    private static Dictionary<string, StepHierarchyInfo> GetStepHierarchyByStep(
+        List<PipelineStep> steps,
+        Dictionary<string, PipelineStep> stepsByName)
+    {
+        var executionLevels = GetExecutionLevelsByStep(steps, stepsByName);
+        var result = new Dictionary<string, StepHierarchyInfo>(StringComparer.Ordinal);
+
+        foreach (var step in steps)
+        {
+            var parentStepName = step.DependsOnSteps
+                .Where(stepsByName.ContainsKey)
+                .OrderByDescending(dep => executionLevels.GetValueOrDefault(dep))
+                .ThenBy(dep => dep, StringComparer.Ordinal)
+                .FirstOrDefault();
+
+            result[step.Name] = new StepHierarchyInfo(parentStepName, executionLevels.GetValueOrDefault(step.Name));
         }
 
         return result;
@@ -1140,10 +1212,12 @@ internal sealed class DistributedApplicationPipeline : IDistributedApplicationPi
         return maxLevel;
     }
 
+    private readonly record struct StepHierarchyInfo(string? ParentStepName, int Level);
+
     /// <summary>
     /// Gets the topological order of steps for execution.
     /// </summary>
-    private static List<PipelineStep> GetTopologicalOrder(List<PipelineStep> steps)
+    internal static List<PipelineStep> GetTopologicalOrder(List<PipelineStep> steps)
     {
         var stepsByName = steps.ToDictionary(s => s.Name, StringComparer.Ordinal);
         var visited = new HashSet<string>(StringComparer.Ordinal);

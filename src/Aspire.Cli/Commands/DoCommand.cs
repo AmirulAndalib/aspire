@@ -9,6 +9,7 @@ using Aspire.Cli.Projects;
 using Aspire.Cli.Resources;
 using Aspire.Cli.Telemetry;
 using Aspire.Cli.Utils;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 
@@ -16,27 +17,54 @@ namespace Aspire.Cli.Commands;
 
 internal sealed class DoCommand : PipelineCommandBase
 {
+    internal override HelpGroup HelpGroup => HelpGroup.Deployment;
+
     private readonly Argument<string> _stepArgument;
 
-    public DoCommand(IDotNetCliRunner runner, IInteractionService interactionService, IProjectLocator projectLocator, AspireCliTelemetry telemetry, IFeatures features, ICliUpdateNotifier updateNotifier, CliExecutionContext executionContext, ICliHostEnvironment hostEnvironment, IAppHostProjectFactory projectFactory, ILogger<DoCommand> logger, IAnsiConsole ansiConsole)
-        : base("do", DoCommandStrings.Description, runner, interactionService, projectLocator, telemetry, features, updateNotifier, executionContext, hostEnvironment, projectFactory, logger, ansiConsole)
+    public DoCommand(IDotNetCliRunner runner, IInteractionService interactionService, IProjectLocator projectLocator, AspireCliTelemetry telemetry, IFeatures features, ICliUpdateNotifier updateNotifier, CliExecutionContext executionContext, ICliHostEnvironment hostEnvironment, IAppHostProjectFactory projectFactory, IConfiguration configuration, ILogger<DoCommand> logger, IAnsiConsole ansiConsole)
+        : base("do", DoCommandStrings.Description, runner, interactionService, projectLocator, telemetry, features, updateNotifier, executionContext, hostEnvironment, projectFactory, configuration, logger, ansiConsole)
     {
         _stepArgument = new Argument<string>("step")
         {
-            Description = DoCommandStrings.StepArgumentDescription
+            Description = DoCommandStrings.StepArgumentDescription,
+            Arity = ArgumentArity.ZeroOrOne
         };
         Arguments.Add(_stepArgument);
+
+        Validators.Add(result =>
+        {
+            var step = result.GetValue(_stepArgument);
+            var listSteps = result.GetValue(s_listStepsOption);
+            if (string.IsNullOrEmpty(step) && !listSteps && !ExtensionHelper.IsExtensionHost(interactionService, out _, out _))
+            {
+                result.AddError("The 'step' argument is required when not using --list-steps.");
+            }
+        });
     }
 
     protected override string OperationCompletedPrefix => DoCommandStrings.OperationCompletedPrefix;
     protected override string OperationFailedPrefix => DoCommandStrings.OperationFailedPrefix;
     protected override string GetOutputPathDescription() => DoCommandStrings.OutputPathArgumentDescription;
 
-    protected override string[] GetRunArguments(string? fullyQualifiedOutputPath, string[] unmatchedTokens, ParseResult parseResult)
+    protected override string[] GetCommandArgs(ParseResult parseResult)
+    {
+        var step = parseResult.GetValue(_stepArgument);
+        return !string.IsNullOrEmpty(step) ? [step] : [];
+    }
+
+    protected override async Task<string[]> GetRunArgumentsAsync(string? fullyQualifiedOutputPath, string[] unmatchedTokens, ParseResult parseResult, CancellationToken cancellationToken)
     {
         var baseArgs = new List<string> { "--operation", "publish" };
 
         var step = parseResult.GetValue(_stepArgument);
+        if (string.IsNullOrEmpty(step) && ExtensionHelper.IsExtensionHost(InteractionService, out _, out _))
+        {
+            step = await InteractionService.PromptForStringAsync(
+                DoCommandStrings.StepArgumentDescription,
+                required: true,
+                cancellationToken: cancellationToken);
+        }
+
         if (!string.IsNullOrEmpty(step))
         {
             baseArgs.AddRange(["--step", step]);
@@ -73,8 +101,15 @@ internal sealed class DoCommand : PipelineCommandBase
 
     protected override string GetCanceledMessage() => DoCommandStrings.OperationCanceled;
 
+    protected override string? GetTargetStepName(ParseResult parseResult) => parseResult.GetValue(_stepArgument);
+
     protected override string GetProgressMessage(ParseResult parseResult)
     {
+        if (parseResult.GetValue(s_listStepsOption))
+        {
+            return "Listing pipeline steps";
+        }
+
         var step = parseResult.GetValue(_stepArgument);
         return $"Executing step {step}";
     }

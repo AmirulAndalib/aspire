@@ -13,7 +13,6 @@ using Aspire.Hosting.Backchannel;
 using Aspire.Hosting.Pipelines;
 using Aspire.Hosting.Tests.Publishing;
 using Aspire.Hosting.Utils;
-using Aspire.TestUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -21,6 +20,7 @@ using Microsoft.AspNetCore.InternalTesting;
 
 namespace Aspire.Hosting.Tests.Pipelines;
 
+[Trait("Partition", "4")]
 public class DistributedApplicationPipelineTests(ITestOutputHelper testOutputHelper)
 {
     [Fact]
@@ -428,7 +428,7 @@ public class DistributedApplicationPipelineTests(ITestOutputHelper testOutputHel
     [Fact]
     public async Task ExecuteAsync_WhenStepThrows_WrapsExceptionWithStepName()
     {
-        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: null).WithTestAndResourceLogging(testOutputHelper);
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: "failing-step").WithTestAndResourceLogging(testOutputHelper);
 
         builder.Services.AddSingleton(testOutputHelper);
         builder.Services.AddSingleton<IPipelineActivityReporter, TestPipelineActivityReporter>();
@@ -696,12 +696,12 @@ public class DistributedApplicationPipelineTests(ITestOutputHelper testOutputHel
     }
 
     // Test for multiple failing steps at the same level removed due to inherent race conditions.
-    // See https://github.com/dotnet/aspire/issues/12200
+    // See https://github.com/microsoft/aspire/issues/12200
 
     [Fact]
     public async Task ExecuteAsync_WithFailingStep_PreservesOriginalStackTrace()
     {
-        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: null).WithTestAndResourceLogging(testOutputHelper);
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: "failing-step").WithTestAndResourceLogging(testOutputHelper);
 
         builder.Services.AddSingleton(testOutputHelper);
         builder.Services.AddSingleton<IPipelineActivityReporter, TestPipelineActivityReporter>();
@@ -845,7 +845,7 @@ public class DistributedApplicationPipelineTests(ITestOutputHelper testOutputHel
     public async Task ExecuteAsync_WhenStepThrows_ReportsFailureToActivityReporter()
     {
         // Arrange
-        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: null).WithTestAndResourceLogging(testOutputHelper);
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: "failing-step").WithTestAndResourceLogging(testOutputHelper);
 
         builder.Services.AddSingleton(testOutputHelper);
         builder.Services.AddSingleton<IPipelineActivityReporter, TestPipelineActivityReporter>();
@@ -1223,7 +1223,7 @@ public class DistributedApplicationPipelineTests(ITestOutputHelper testOutputHel
     public async Task ExecuteAsync_WhenStepFails_PipelineLoggerIsCleanedUp()
     {
         // Arrange
-        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: null).WithTestAndResourceLogging(testOutputHelper);
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: "failing-step").WithTestAndResourceLogging(testOutputHelper);
 
         builder.Services.AddSingleton(testOutputHelper);
         builder.Services.AddSingleton<IPipelineActivityReporter, TestPipelineActivityReporter>();
@@ -1425,7 +1425,7 @@ public class DistributedApplicationPipelineTests(ITestOutputHelper testOutputHel
         await pipeline.ExecuteAsync(context).DefaultTimeout();
 
         Assert.True(callbackExecuted);
-        Assert.Equal(12, capturedSteps.Count); // Updated to account for all default steps including process-parameters, push, push-prereq
+        Assert.Equal(14, capturedSteps.Count); // Default steps: deploy, deploy-prereq, process-parameters, build, build-prereq, push, push-prereq, publish, publish-prereq, diagnostics, destroy, destroy-prereq + step1, step2
         Assert.Contains(capturedSteps, s => s.Name == "deploy");
         Assert.Contains(capturedSteps, s => s.Name == "process-parameters");
         Assert.Contains(capturedSteps, s => s.Name == "deploy-prereq");
@@ -1436,6 +1436,8 @@ public class DistributedApplicationPipelineTests(ITestOutputHelper testOutputHel
         Assert.Contains(capturedSteps, s => s.Name == "publish");
         Assert.Contains(capturedSteps, s => s.Name == "publish-prereq");
         Assert.Contains(capturedSteps, s => s.Name == "diagnostics");
+        Assert.Contains(capturedSteps, s => s.Name == "destroy");
+        Assert.Contains(capturedSteps, s => s.Name == "destroy-prereq");
         Assert.Contains(capturedSteps, s => s.Name == "step1");
         Assert.Contains(capturedSteps, s => s.Name == "step2");
     }
@@ -2027,7 +2029,6 @@ public class DistributedApplicationPipelineTests(ITestOutputHelper testOutputHel
     }
 
     [Fact]
-    [QuarantinedTest("https://github.com/dotnet/aspire/issues/13083")]
     public async Task ProcessParametersStep_ValidatesBehavior()
     {
         // Arrange
@@ -2098,6 +2099,29 @@ public class DistributedApplicationPipelineTests(ITestOutputHelper testOutputHel
         Assert.NotNull(paramResource);
         Assert.NotNull(paramResource.WaitForValueTcs);
         Assert.True(paramResource.WaitForValueTcs.Task.IsCompletedSuccessfully);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PassesStepHierarchyMetadataToActivityReporter()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: null).WithTestAndResourceLogging(testOutputHelper);
+        builder.Services.AddSingleton(testOutputHelper);
+
+        var activityReporter = new TestPipelineActivityReporter(testOutputHelper);
+        builder.Services.AddSingleton<IPipelineActivityReporter>(activityReporter);
+
+        var pipeline = new DistributedApplicationPipeline();
+        pipeline.AddStep("root", _ => Task.CompletedTask);
+        pipeline.AddStep("child", _ => Task.CompletedTask, dependsOn: "root");
+        pipeline.AddStep("grandchild", _ => Task.CompletedTask, dependsOn: "child");
+
+        var context = CreateDeployingContext(builder.Build());
+
+        await pipeline.ExecuteAsync(context).DefaultTimeout();
+
+        Assert.Contains(activityReporter.CreatedStepHierarchy, step => step.StepTitle == "root" && step.ParentStepId is null && step.HierarchyLevel == 0);
+        Assert.Contains(activityReporter.CreatedStepHierarchy, step => step.StepTitle == "child" && step.ParentStepId == "root" && step.HierarchyLevel == 1);
+        Assert.Contains(activityReporter.CreatedStepHierarchy, step => step.StepTitle == "grandchild" && step.ParentStepId == "child" && step.HierarchyLevel == 2);
     }
 
     [Fact]
@@ -2244,5 +2268,128 @@ public class DistributedApplicationPipelineTests(ITestOutputHelper testOutputHel
 
     private sealed class CustomResource(string name) : Resource(name)
     {
+    }
+
+    [Fact]
+    public async Task ResolveStepsAsync_ReturnsAllSteps()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: null).WithTestAndResourceLogging(testOutputHelper);
+        builder.Services.AddSingleton(testOutputHelper);
+        builder.Services.AddSingleton<IPipelineActivityReporter, TestPipelineActivityReporter>();
+
+        var pipeline = new DistributedApplicationPipeline();
+        pipeline.AddStep("custom-step", _ => Task.CompletedTask);
+
+        var context = CreateDeployingContext(builder.Build());
+        var steps = await pipeline.ResolveStepsAsync(context).DefaultTimeout();
+
+        // Should include built-in steps + our custom step
+        Assert.Contains(steps, s => s.Name == "custom-step");
+        Assert.Contains(steps, s => s.Name == "deploy");
+        Assert.Contains(steps, s => s.Name == "process-parameters");
+    }
+
+    [Fact]
+    public async Task ResolveStepsAsync_NormalizesRequiredByToDependsOn()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: null).WithTestAndResourceLogging(testOutputHelper);
+        builder.Services.AddSingleton(testOutputHelper);
+        builder.Services.AddSingleton<IPipelineActivityReporter, TestPipelineActivityReporter>();
+
+        var pipeline = new DistributedApplicationPipeline();
+        var step = new PipelineStep
+        {
+            Name = "my-step",
+            Action = _ => Task.CompletedTask,
+        };
+        step.RequiredBy("deploy");
+        pipeline.AddStep(step);
+
+        var context = CreateDeployingContext(builder.Build());
+        var steps = await pipeline.ResolveStepsAsync(context).DefaultTimeout();
+
+        // "deploy" should now depend on "my-step" due to RequiredBy normalization
+        var deployStep = steps.Single(s => s.Name == "deploy");
+        Assert.Contains("my-step", deployStep.DependsOnSteps);
+    }
+
+    [Fact]
+    public async Task ResolveStepsAsync_PreservesTags()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: null).WithTestAndResourceLogging(testOutputHelper);
+        builder.Services.AddSingleton(testOutputHelper);
+        builder.Services.AddSingleton<IPipelineActivityReporter, TestPipelineActivityReporter>();
+
+        var pipeline = new DistributedApplicationPipeline();
+        pipeline.AddStep(new PipelineStep
+        {
+            Name = "tagged-step",
+            Action = _ => Task.CompletedTask,
+            Tags = ["build-compute", "custom-tag"]
+        });
+
+        var context = CreateDeployingContext(builder.Build());
+        var steps = await pipeline.ResolveStepsAsync(context).DefaultTimeout();
+
+        var taggedStep = steps.Single(s => s.Name == "tagged-step");
+        Assert.Contains("build-compute", taggedStep.Tags);
+        Assert.Contains("custom-tag", taggedStep.Tags);
+    }
+
+    [Fact]
+    public async Task ResolveStepsAsync_DoesNotExecuteStepActions()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, step: null).WithTestAndResourceLogging(testOutputHelper);
+        builder.Services.AddSingleton(testOutputHelper);
+        builder.Services.AddSingleton<IPipelineActivityReporter, TestPipelineActivityReporter>();
+
+        var stepExecuted = false;
+        var pipeline = new DistributedApplicationPipeline();
+        pipeline.AddStep("should-not-execute", _ =>
+        {
+            stepExecuted = true;
+            return Task.CompletedTask;
+        });
+
+        var context = CreateDeployingContext(builder.Build());
+        await pipeline.ResolveStepsAsync(context).DefaultTimeout();
+
+        Assert.False(stepExecuted, "Step action should not be executed during resolution");
+    }
+
+    [Fact]
+    public void GetTopologicalOrder_ReturnsStepsInDependencyOrder()
+    {
+        var steps = new List<PipelineStep>
+        {
+            new() { Name = "deploy", Action = _ => Task.CompletedTask, DependsOnSteps = { "build" } },
+            new() { Name = "build", Action = _ => Task.CompletedTask, DependsOnSteps = { "init" } },
+            new() { Name = "init", Action = _ => Task.CompletedTask }
+        };
+
+        var ordered = DistributedApplicationPipeline.GetTopologicalOrder(steps);
+
+        var initIndex = ordered.FindIndex(s => s.Name == "init");
+        var buildIndex = ordered.FindIndex(s => s.Name == "build");
+        var deployIndex = ordered.FindIndex(s => s.Name == "deploy");
+
+        Assert.True(initIndex < buildIndex, "init should come before build");
+        Assert.True(buildIndex < deployIndex, "build should come before deploy");
+    }
+
+    [Fact]
+    public void GetTopologicalOrder_IsDeterministic()
+    {
+        var steps = new List<PipelineStep>
+        {
+            new() { Name = "c-step", Action = _ => Task.CompletedTask },
+            new() { Name = "a-step", Action = _ => Task.CompletedTask },
+            new() { Name = "b-step", Action = _ => Task.CompletedTask }
+        };
+
+        var ordered1 = DistributedApplicationPipeline.GetTopologicalOrder(steps);
+        var ordered2 = DistributedApplicationPipeline.GetTopologicalOrder(steps);
+
+        Assert.Equal(ordered1.Select(s => s.Name), ordered2.Select(s => s.Name));
     }
 }

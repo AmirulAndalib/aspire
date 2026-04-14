@@ -1,10 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#pragma warning disable IDE0005 // Incorrectly flagged as unused due to types spread across namespaces
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Aspire.Cli.Tests.Utils;
-using Hex1b.Automation;
-#pragma warning restore IDE0005
+using Hex1b;
 using Xunit;
 
 namespace Aspire.Cli.EndToEnd.Tests.Helpers;
@@ -69,464 +72,582 @@ internal static class CliE2ETestHelpers
     /// <returns>The full path to the .cast recording file.</returns>
     internal static string GetTestResultsRecordingPath(string testName)
     {
-        var githubWorkspace = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE");
-        string recordingsDir;
-
-        if (!string.IsNullOrEmpty(githubWorkspace))
-        {
-            // CI environment - write directly to test results for artifact upload
-            recordingsDir = Path.Combine(githubWorkspace, "testresults", "recordings");
-        }
-        else
-        {
-            // Local development - use temp directory
-            recordingsDir = Path.Combine(Path.GetTempPath(), "aspire-cli-e2e", "recordings");
-        }
-
-        Directory.CreateDirectory(recordingsDir);
-        return Path.Combine(recordingsDir, $"{testName}.cast");
-    }
-
-    internal static Hex1bTerminalInputSequenceBuilder PrepareEnvironment(
-        this Hex1bTerminalInputSequenceBuilder builder, TemporaryWorkspace workspace, SequenceCounter counter)
-    {
-        var waitingForInputPattern = new CellPatternSearcher()
-            .Find("b").RightUntil("$").Right(' ').Right(' ');
-
-        builder.WaitUntil(s => waitingForInputPattern.Search(s).Count > 0, TimeSpan.FromSeconds(10))
-            .Wait(500); // Small delay to ensure terminal is ready.
-
-        if (OperatingSystem.IsWindows())
-        {
-            // PowerShell prompt setup
-            const string promptSetup = "$global:CMDCOUNT=0; function prompt { $s=$?; $global:CMDCOUNT++; \"[$global:CMDCOUNT $(if($s){'OK'}else{\"ERR:$LASTEXITCODE\"})] PS> \" }";
-            builder.Type(promptSetup).Enter();
-        }
-        else
-        {
-            // Bash prompt setup
-            const string promptSetup = "CMDCOUNT=0; PROMPT_COMMAND='s=$?;((CMDCOUNT++));PS1=\"[$CMDCOUNT $([ $s -eq 0 ] && echo OK || echo ERR:$s)] \\$ \"'";
-            builder.Type(promptSetup).Enter();
-        }
-
-        return builder.WaitForSuccessPrompt(counter)
-            .Type($"cd {workspace.WorkspaceRoot.FullName}").Enter()
-            .WaitForSuccessPrompt(counter);
-    }
-
-    internal static Hex1bTerminalInputSequenceBuilder InstallAspireCliFromPullRequest(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        int prNumber,
-        SequenceCounter counter)
-    {
-        string command;
-        if (OperatingSystem.IsWindows())
-        {
-            // PowerShell installation command
-            command = $"iex \"& {{ $(irm https://raw.githubusercontent.com/dotnet/aspire/main/eng/scripts/get-aspire-cli-pr.ps1) }} {prNumber}\"";
-        }
-        else
-        {
-            // Bash installation command
-            command = $"curl -fsSL https://raw.githubusercontent.com/dotnet/aspire/main/eng/scripts/get-aspire-cli-pr.sh | bash -s -- {prNumber}";
-        }
-
-        return builder
-            .Type(command)
-            .Enter()
-            .WaitForSuccessPrompt(counter, TimeSpan.FromSeconds(300));
-    }
-
-    internal static Hex1bTerminalInputSequenceBuilder SourceAspireCliEnvironment(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        SequenceCounter counter
-        )
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            // On Windows, the PowerShell installer already updates the current session's PATH
-            // But we still need to set ASPIRE_PLAYGROUND for interactive mode and .NET CLI vars
-            return builder
-                .Type("$env:ASPIRE_PLAYGROUND='true'; $env:DOTNET_CLI_TELEMETRY_OPTOUT='true'; $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE='true'; $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'")
-                .Enter()
-                .WaitForSuccessPrompt(counter);
-        }
-
-        // The installer adds aspire to ~/.aspire/bin
-        // We need to add it to PATH and set environment variables:
-        // - ASPIRE_PLAYGROUND=true enables interactive mode
-        // - TERM=xterm enables clear command and other terminal features
-        // - .NET CLI vars suppress telemetry and first-time experience which can cause hangs
-        return builder
-            .Type("export PATH=~/.aspire/bin:$PATH ASPIRE_PLAYGROUND=true TERM=xterm DOTNET_CLI_TELEMETRY_OPTOUT=true DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true DOTNET_GENERATE_ASPNET_CERTIFICATE=false")
-            .Enter()
-            .WaitForSuccessPrompt(counter);
+        return Hex1bTestHelpers.GetTestResultsRecordingPath(testName, "aspire-cli-e2e");
     }
 
     /// <summary>
-    /// Verifies that the installed Aspire CLI version matches the expected commit SHA.
-    /// Runs 'aspire --version' and checks that the output contains the expected version suffix.
-    /// PR builds have version format: {version}-pr.{prNumber}.g{shortCommitSha}
+    /// Creates a headless Hex1b terminal configured for E2E testing with asciinema recording.
+    /// Uses default dimensions of 160x48 unless overridden.
     /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="commitSha">The full 40-character commit SHA to verify against.</param>
-    /// <param name="counter">The sequence counter for prompt detection.</param>
-    /// <returns>The builder for chaining.</returns>
-    /// <exception cref="ArgumentException">Thrown when commitSha is not exactly 40 characters.</exception>
-    internal static Hex1bTerminalInputSequenceBuilder VerifyAspireCliVersion(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        string commitSha,
-        SequenceCounter counter)
+    /// <param name="testName">The test name used for the recording file path. Defaults to the calling method name.</param>
+    /// <param name="width">The terminal width in columns. Defaults to 160.</param>
+    /// <param name="height">The terminal height in rows. Defaults to 48.</param>
+    /// <returns>A configured <see cref="Hex1bTerminal"/> instance. Caller is responsible for disposal.</returns>
+    internal static Hex1bTerminal CreateTestTerminal(int width = 160, int height = 48, [CallerMemberName] string testName = "")
     {
-        // Git SHA-1 hashes are exactly 40 hexadecimal characters
-        if (commitSha.Length != 40)
-        {
-            throw new ArgumentException($"Commit SHA must be exactly 40 characters, got {commitSha.Length}: '{commitSha}'", nameof(commitSha));
-        }
-
-        // PR builds use the format: {version}-pr.{prNumber}.g{shortCommitSha}
-        // The short commit SHA is 8 characters, prefixed with 'g' (git convention)
-        var shortCommitSha = commitSha[..8];
-        var expectedVersionSuffix = $"g{shortCommitSha}";
-
-        var versionPattern = new CellPatternSearcher()
-            .Find(expectedVersionSuffix);
-
-        return builder
-            .Type("aspire --version")
-            .Enter()
-            .WaitUntil(s => versionPattern.Search(s).Count > 0, TimeSpan.FromSeconds(10))
-            .WaitForSuccessPrompt(counter);
+        return Hex1bTestHelpers.CreateTestTerminal("aspire-cli-e2e", width, height, testName);
     }
 
-    internal static Hex1bTerminalInputSequenceBuilder WaitForSuccessPrompt(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        SequenceCounter counter,
-        TimeSpan? timeout = null)
+    /// <summary>
+    /// Specifies how the Aspire CLI should be installed inside a Docker container.
+    /// </summary>
+    internal enum DockerInstallMode
     {
-        var effectiveTimeout = timeout ?? TimeSpan.FromSeconds(500);
+        /// <summary>
+        /// The CLI was built from source by the Dockerfile and is already on PATH.
+        /// </summary>
+        SourceBuild,
 
-        return builder.WaitUntil(snapshot =>
+        /// <summary>
+        /// Install the latest GA release from aspire.dev.
+        /// </summary>
+        GaRelease,
+
+        /// <summary>
+        /// Install from PR artifacts using the get-aspire-cli-pr.sh script.
+        /// </summary>
+        PullRequest,
+    }
+
+    /// <summary>
+    /// Specifies which Dockerfile variant to use for the test container.
+    /// </summary>
+    internal enum DockerfileVariant
+    {
+        /// <summary>
+        /// .NET SDK + Docker + Python + Node.js. For tests that create/run .NET AppHosts.
+        /// </summary>
+        DotNet,
+
+        /// <summary>
+        /// Docker + Node.js (no .NET SDK). For Node-based polyglot AppHost tests.
+        /// </summary>
+        Polyglot,
+
+        /// <summary>
+        /// Docker + Node.js + Java (no .NET SDK). For Java polyglot AppHost tests.
+        /// </summary>
+        PolyglotJava,
+    }
+
+    private const string PolyglotBaseImageName = "aspire-e2e-polyglot-base";
+    private static readonly object s_polyglotBaseImageLock = new();
+    private static bool s_polyglotBaseImageBuilt;
+
+    /// <summary>
+    /// Detects the install mode for Docker-based tests based on the current environment.
+    /// </summary>
+    /// <param name="repoRoot">The repo root directory on the host.</param>
+    /// <returns>The detected <see cref="DockerInstallMode"/>.</returns>
+    internal static DockerInstallMode DetectDockerInstallMode(string repoRoot)
+    {
+        if (IsRunningInCI)
+        {
+            return DockerInstallMode.PullRequest;
+        }
+
+        // Check if a locally-built native AOT CLI binary exists (developer has run ./build.sh --bundle).
+        var cliPublishDir = FindLocalCliBinary(repoRoot);
+        if (cliPublishDir is not null)
+        {
+            return DockerInstallMode.SourceBuild;
+        }
+
+        return DockerInstallMode.GaRelease;
+    }
+
+    /// <summary>
+    /// Finds the locally-built native AOT CLI publish directory.
+    /// Searches for the aspire binary under artifacts/bin/Aspire.Cli/*/net*/linux-x64/publish/.
+    /// </summary>
+    /// <returns>The publish directory path, or null if not found.</returns>
+    internal static string? FindLocalCliBinary(string repoRoot)
+    {
+        var cliBaseDir = Path.Combine(repoRoot, "artifacts", "bin", "Aspire.Cli");
+        if (!Directory.Exists(cliBaseDir))
+        {
+            return null;
+        }
+
+        // Search for the native AOT binary under any config/TFM combination.
+        var matches = Directory.GetFiles(cliBaseDir, "aspire", SearchOption.AllDirectories)
+            .Where(f => f.Contains("linux-x64") && f.Contains("publish"))
+            .ToArray();
+
+        return matches.Length > 0 ? Path.GetDirectoryName(matches[0]) : null;
+    }
+
+    /// <summary>
+    /// Creates a Hex1b terminal that runs inside a Docker container built from the shared E2E Dockerfile.
+    /// The Dockerfile builds the CLI from source (local dev) or accepts pre-built artifacts (CI).
+    /// </summary>
+    /// <param name="repoRoot">The repo root directory, used as the Docker build context.</param>
+    /// <param name="installMode">The detected install mode, controlling Docker build args and volumes.</param>
+    /// <param name="output">Test output helper for logging configuration details.</param>
+    /// <param name="variant">Which Dockerfile variant to use (DotNet or Polyglot).</param>
+    /// <param name="mountDockerSocket">Whether to mount the Docker socket for DCP/container access.</param>
+    /// <param name="workspace">Optional workspace to mount into the container at /workspace.</param>
+    /// <param name="width">Terminal width in columns.</param>
+    /// <param name="height">Terminal height in rows.</param>
+    /// <param name="testName">The test name for the recording file path.</param>
+    /// <returns>A configured <see cref="Hex1bTerminal"/>. Caller is responsible for disposal.</returns>
+    internal static Hex1bTerminal CreateDockerTestTerminal(
+        string repoRoot,
+        DockerInstallMode installMode,
+        ITestOutputHelper output,
+        DockerfileVariant variant = DockerfileVariant.DotNet,
+        bool mountDockerSocket = false,
+        TemporaryWorkspace? workspace = null,
+        IEnumerable<string>? additionalVolumes = null,
+        int width = 160,
+        int height = 48,
+        [CallerMemberName] string testName = "")
+    {
+        var recordingPath = GetTestResultsRecordingPath(testName);
+        var dockerfileName = variant switch
+        {
+            DockerfileVariant.DotNet => "Dockerfile.e2e",
+            DockerfileVariant.Polyglot => "Dockerfile.e2e-polyglot-base",
+            DockerfileVariant.PolyglotJava => "Dockerfile.e2e-polyglot-java",
+            _ => throw new ArgumentOutOfRangeException(nameof(variant)),
+        };
+        var dockerfilePath = Path.Combine(repoRoot, "tests", "Shared", "Docker", dockerfileName);
+
+        if (variant is DockerfileVariant.PolyglotJava)
+        {
+            EnsurePolyglotBaseImage(repoRoot, output);
+        }
+
+        output.WriteLine($"Creating Docker test terminal:");
+        output.WriteLine($"  Test name:      {testName}");
+        output.WriteLine($"  Install mode:   {installMode}");
+        output.WriteLine($"  Variant:        {variant}");
+        output.WriteLine($"  Dockerfile:     {dockerfilePath}");
+        output.WriteLine($"  Workspace:      {workspace?.WorkspaceRoot.FullName ?? "(none)"}");
+        output.WriteLine($"  Docker socket:  {mountDockerSocket}");
+        output.WriteLine($"  Dimensions:     {width}x{height}");
+        output.WriteLine($"  Recording:      {recordingPath}");
+
+        var builder = Hex1bTerminal.CreateBuilder()
+            .WithHeadless()
+            .WithDimensions(width, height)
+            .WithAsciinemaRecording(recordingPath)
+            .WithDockerContainer(c =>
             {
-                var successPromptSearcher = new CellPatternSearcher()
-                    .FindPattern(counter.Value.ToString())
-                    .RightText(" OK] $ ");
+                c.DockerfilePath = dockerfilePath;
+                c.BuildContext = repoRoot;
 
-                var result = successPromptSearcher.Search(snapshot);
-                return result.Count > 0;
-            }, effectiveTimeout)
-            .IncrementSequence(counter);
+                if (mountDockerSocket)
+                {
+                    c.MountDockerSocket = true;
+                }
+
+                if (workspace is not null)
+                {
+                    // Mount using the same directory name so that
+                    // workspace.WorkspaceRoot.Name matches inside the container
+                    // (e.g., aspire CLI uses the dir name as the default project name).
+                    c.Volumes.Add($"{workspace.WorkspaceRoot.FullName}:/workspace/{workspace.WorkspaceRoot.Name}");
+                }
+
+                if (additionalVolumes is not null)
+                {
+                    foreach (var volume in additionalVolumes)
+                    {
+                        c.Volumes.Add(volume);
+                    }
+                }
+
+                // Always skip the expensive source build inside Docker.
+                // For SourceBuild mode, the CLI is installed from a mounted local bundle.
+                // For PullRequest/GaRelease, it's installed via scripts after container start.
+                c.BuildArgs["SKIP_SOURCE_BUILD"] = "true";
+
+                if (installMode == DockerInstallMode.SourceBuild)
+                {
+                    // Mount the locally-built native AOT CLI binary into the container.
+                    var cliPublishDir = FindLocalCliBinary(repoRoot)
+                        ?? throw new InvalidOperationException("SourceBuild mode detected but CLI binary not found");
+                    c.Volumes.Add($"{cliPublishDir}:/opt/aspire-cli:ro");
+                    output.WriteLine($"  CLI binary:     {cliPublishDir}");
+                }
+
+                if (installMode == DockerInstallMode.PullRequest)
+                {
+                    var ghToken = Environment.GetEnvironmentVariable("GH_TOKEN");
+                    if (!string.IsNullOrEmpty(ghToken))
+                    {
+                        c.Environment["GH_TOKEN"] = ghToken;
+                    }
+
+                    var prNumber = Environment.GetEnvironmentVariable("GITHUB_PR_NUMBER") ?? "";
+                    var prSha = Environment.GetEnvironmentVariable("GITHUB_PR_HEAD_SHA") ?? "";
+                    c.Environment["GITHUB_PR_NUMBER"] = prNumber;
+                    c.Environment["GITHUB_PR_HEAD_SHA"] = prSha;
+                    output.WriteLine($"  PR number:      {prNumber}");
+                    output.WriteLine($"  PR head SHA:    {prSha}");
+                }
+            });
+
+        return builder.Build();
     }
 
-    internal static Hex1bTerminalInputSequenceBuilder IncrementSequence(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        SequenceCounter counter)
+    /// <summary>
+    /// Creates a Hex1b terminal that runs inside a Docker container, configured using the
+    /// given <see cref="CliInstallStrategy"/> for CLI installation.
+    /// </summary>
+    internal static Hex1bTerminal CreateDockerTestTerminal(
+        string repoRoot,
+        CliInstallStrategy strategy,
+        ITestOutputHelper output,
+        DockerfileVariant variant = DockerfileVariant.DotNet,
+        bool mountDockerSocket = false,
+        TemporaryWorkspace? workspace = null,
+        IEnumerable<string>? additionalVolumes = null,
+        int width = 160,
+        int height = 48,
+        [CallerMemberName] string testName = "")
     {
-        return builder.WaitUntil(s =>
+        var recordingPath = GetTestResultsRecordingPath(testName);
+        var dockerfileName = variant switch
         {
-            // Hack to pump the counter fluently.
-            counter.Increment();
-            return true;
-        }, TimeSpan.FromSeconds(1));
-    }
+            DockerfileVariant.DotNet => "Dockerfile.e2e",
+            DockerfileVariant.Polyglot => "Dockerfile.e2e-polyglot-base",
+            DockerfileVariant.PolyglotJava => "Dockerfile.e2e-polyglot-java",
+            _ => throw new ArgumentOutOfRangeException(nameof(variant)),
+        };
+        var dockerfilePath = Path.Combine(repoRoot, "tests", "Shared", "Docker", dockerfileName);
 
-    /// <summary>
-    /// Executes an arbitrary callback action during the sequence execution.
-    /// This is useful for performing file modifications or other side effects between terminal commands.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="callback">The callback action to execute.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder ExecuteCallback(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        Action callback)
-    {
-        return builder.WaitUntil(s =>
+        if (variant is DockerfileVariant.PolyglotJava)
         {
-            callback();
-            return true;
-        }, TimeSpan.FromSeconds(1));
+            EnsurePolyglotBaseImage(repoRoot, output);
+        }
+
+        output.WriteLine($"Creating Docker test terminal:");
+        output.WriteLine($"  Test name:      {testName}");
+        output.WriteLine($"  Strategy:       {strategy}");
+        output.WriteLine($"  Variant:        {variant}");
+        output.WriteLine($"  Dockerfile:     {dockerfilePath}");
+        output.WriteLine($"  Workspace:      {workspace?.WorkspaceRoot.FullName ?? "(none)"}");
+        output.WriteLine($"  Docker socket:  {mountDockerSocket}");
+        output.WriteLine($"  Dimensions:     {width}x{height}");
+        output.WriteLine($"  Recording:      {recordingPath}");
+
+        var builder = Hex1bTerminal.CreateBuilder()
+            .WithHeadless()
+            .WithDimensions(width, height)
+            .WithAsciinemaRecording(recordingPath)
+            .WithDockerContainer(c =>
+            {
+                c.DockerfilePath = dockerfilePath;
+                c.BuildContext = repoRoot;
+
+                if (mountDockerSocket)
+                {
+                    c.MountDockerSocket = true;
+                }
+
+                if (workspace is not null)
+                {
+                    c.Volumes.Add($"{workspace.WorkspaceRoot.FullName}:/workspace/{workspace.WorkspaceRoot.Name}");
+                }
+
+                if (additionalVolumes is not null)
+                {
+                    foreach (var volume in additionalVolumes)
+                    {
+                        c.Volumes.Add(volume);
+                    }
+                }
+
+                // Delegate all mode-specific Docker config to the strategy
+                strategy.ConfigureContainer(c);
+            });
+
+        return builder.Build();
     }
 
-    /// <summary>
-    /// Enables polyglot support feature flag using the aspire config set command.
-    /// This allows the CLI to create TypeScript and Python AppHosts.
-    /// Uses the global (-g) flag to ensure the setting persists across CLI invocations,
-    /// even when aspire init creates a new local settings.json file.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="counter">The sequence counter for prompt detection.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder EnablePolyglotSupport(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        SequenceCounter counter)
+    private static void EnsurePolyglotBaseImage(string repoRoot, ITestOutputHelper output)
     {
-        return builder
-            .Type("aspire config set features.polyglotSupportEnabled true -g")
-            .Enter()
-            .WaitForSuccessPrompt(counter);
-    }
-
-    /// <summary>
-    /// Clears SSL_CERT_DIR environment variable to simulate partial trust scenario on Linux.
-    /// When SSL_CERT_DIR is not set, dev certificates are only partially trusted because
-    /// OpenSSL doesn't know to look in ~/.aspnet/dev-certs/trust for the certificate.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="counter">The sequence counter for prompt detection.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder ClearSslCertDir(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        SequenceCounter counter)
-    {
-        return builder
-            .Type("unset SSL_CERT_DIR")
-            .Enter()
-            .WaitForSuccessPrompt(counter);
-    }
-
-    /// <summary>
-    /// Configures SSL_CERT_DIR environment variable to include the dev-certs trust path.
-    /// This enables full trust for dev certificates on Linux by telling OpenSSL where to
-    /// find the trusted certificate directory.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="counter">The sequence counter for prompt detection.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder ConfigureSslCertDir(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        SequenceCounter counter)
-    {
-        // Set SSL_CERT_DIR to include both the system certs and the dev-certs trust path
-        // Using $HOME instead of ~ for proper expansion in the shell
-        return builder
-            .Type("export SSL_CERT_DIR=\"/etc/ssl/certs:$HOME/.aspnet/dev-certs/trust\"")
-            .Enter()
-            .WaitForSuccessPrompt(counter);
-    }
-
-    /// <summary>
-    /// Clears the terminal screen between test steps to avoid pattern interference.
-    /// Requires TERM to be set (done in SetEnvironmentFromInstallerOutput).
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="counter">The sequence counter for prompt detection.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder ClearScreen(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        SequenceCounter counter)
-    {
-        return builder
-            .Type("clear")
-            .Enter()
-            .WaitForSuccessPrompt(counter);
-    }
-
-    /// <summary>
-    /// Clears the first-time use sentinel file to simulate a fresh CLI installation.
-    /// The sentinel is stored at ~/.aspire/cli/cli.firstUseSentinel and controls
-    /// whether the welcome banner and telemetry notice are displayed.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="counter">The sequence counter for prompt detection.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder ClearFirstRunSentinel(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        SequenceCounter counter)
-    {
-        // Remove the sentinel file to trigger first-time use behavior
-        return builder
-            .Type("rm -f ~/.aspire/cli/cli.firstUseSentinel")
-            .Enter()
-            .WaitForSuccessPrompt(counter);
-    }
-
-    /// <summary>
-    /// Verifies that the first-time use sentinel file was successfully deleted.
-    /// This is a debugging aid to help diagnose banner test failures.
-    /// The command will fail if the sentinel file still exists after deletion.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="counter">The sequence counter for prompt detection.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder VerifySentinelDeleted(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        SequenceCounter counter)
-    {
-        // Verify the sentinel file doesn't exist - this will return exit code 1 (ERR) if file exists
-        // Using test -f which returns 0 if file exists, 1 if not. We negate with ! to fail if exists.
-        return builder
-            .Type("test ! -f ~/.aspire/cli/cli.firstUseSentinel")
-            .Enter()
-            .WaitForSuccessPrompt(counter);
-    }
-
-    /// <summary>
-    /// Installs a specific GA version of the Aspire CLI using the install script.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="version">The version to install (e.g., "13.1.0").</param>
-    /// <param name="counter">The sequence counter for prompt detection.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder InstallAspireCliVersion(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        string version,
-        SequenceCounter counter)
-    {
-        var command = $"curl -fsSL https://raw.githubusercontent.com/dotnet/aspire/main/eng/scripts/get-aspire-cli.sh | bash -s -- --version \"{version}\"";
-
-        return builder
-            .Type(command)
-            .Enter()
-            .WaitForSuccessPrompt(counter, TimeSpan.FromSeconds(300));
-    }
-
-    /// <summary>
-    /// Creates a deprecated MCP config file for testing migration detection.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="configPath">The path to create the config file.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder CreateDeprecatedMcpConfig(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        string configPath)
-    {
-        var deprecatedConfig = """{"mcpServers":{"aspire":{"command":"aspire","args":["mcp","start"]}}}""";
-
-        return builder.ExecuteCallback(() => File.WriteAllText(configPath, deprecatedConfig));
-    }
-
-    /// <summary>
-    /// Creates a .vscode folder for testing VS Code agent detection.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="vscodePath">The path to the .vscode directory.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder CreateVsCodeFolder(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        string vscodePath)
-    {
-        return builder.ExecuteCallback(() => Directory.CreateDirectory(vscodePath));
-    }
-
-    /// <summary>
-    /// Verifies a file contains expected content.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="filePath">The path to the file to verify.</param>
-    /// <param name="expectedContent">The content that should be present in the file.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder VerifyFileContains(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        string filePath,
-        string expectedContent)
-    {
-        return builder.ExecuteCallback(() =>
+        lock (s_polyglotBaseImageLock)
         {
-            var content = File.ReadAllText(filePath);
-            if (!content.Contains(expectedContent))
+            if (s_polyglotBaseImageBuilt)
+            {
+                return;
+            }
+
+            var dockerfilePath = Path.Combine(repoRoot, "tests", "Shared", "Docker", "Dockerfile.e2e-polyglot-base");
+
+            output.WriteLine($"Building shared polyglot Docker base image from {dockerfilePath}");
+
+            var startInfo = new ProcessStartInfo("docker")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+
+            startInfo.ArgumentList.Add("build");
+            startInfo.ArgumentList.Add("--quiet");
+            startInfo.ArgumentList.Add("--build-arg");
+            startInfo.ArgumentList.Add("SKIP_SOURCE_BUILD=true");
+            startInfo.ArgumentList.Add("-f");
+            startInfo.ArgumentList.Add(dockerfilePath);
+            startInfo.ArgumentList.Add("-t");
+            startInfo.ArgumentList.Add(PolyglotBaseImageName);
+            startInfo.ArgumentList.Add(repoRoot);
+
+            using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start docker build process.");
+            var standardOutput = process.StandardOutput.ReadToEnd();
+            var standardError = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
             {
                 throw new InvalidOperationException(
-                    $"File {filePath} does not contain expected content: {expectedContent}");
+                    $"Failed to build shared polyglot Docker base image.{Environment.NewLine}" +
+                    $"{standardOutput}{Environment.NewLine}{standardError}");
             }
-        });
-    }
 
-    /// <summary>
-    /// Verifies a file does NOT contain specified content.
-    /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="filePath">The path to the file to verify.</param>
-    /// <param name="unexpectedContent">The content that should NOT be present in the file.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder VerifyFileDoesNotContain(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        string filePath,
-        string unexpectedContent)
-    {
-        return builder.ExecuteCallback(() =>
-        {
-            var content = File.ReadAllText(filePath);
-            if (content.Contains(unexpectedContent))
+            if (!string.IsNullOrWhiteSpace(standardOutput))
             {
-                throw new InvalidOperationException(
-                    $"File {filePath} unexpectedly contains: {unexpectedContent}");
+                output.WriteLine(standardOutput.Trim());
             }
-        });
+
+            s_polyglotBaseImageBuilt = true;
+        }
     }
 
     /// <summary>
-    /// Installs the Aspire CLI Bundle from a specific pull request's artifacts.
-    /// The bundle is a self-contained distribution that includes:
-    /// - Native AOT Aspire CLI
-    /// - .NET runtime
-    /// - Dashboard, DCP, AppHost Server (for polyglot apps)
-    /// This is required for polyglot (TypeScript, Python) AppHost scenarios which
-    /// cannot use SDK-based fallback mode.
+    /// Walks up from the test assembly directory to find the repo root (contains Aspire.slnx).
     /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="prNumber">The pull request number to download from.</param>
-    /// <param name="counter">The sequence counter for prompt detection.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder InstallAspireBundleFromPullRequest(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        int prNumber,
-        SequenceCounter counter)
+    internal static string GetRepoRoot()
     {
-        // The bundle script may not be on main yet, so we need to fetch it from the PR's branch.
-        // Use the PR head SHA (not branch ref) to avoid CDN caching on raw.githubusercontent.com
-        // which can serve stale script content for several minutes after a push.
-        string command;
-        if (OperatingSystem.IsWindows())
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (dir is not null)
         {
-            // PowerShell: Get PR head SHA, then fetch and run bundle script from that SHA
-            command = $"$ref = (gh api repos/dotnet/aspire/pulls/{prNumber} --jq '.head.sha'); " +
-                      $"iex \"& {{ $(irm https://raw.githubusercontent.com/dotnet/aspire/$ref/eng/scripts/get-aspire-cli-bundle-pr.ps1) }} {prNumber}\"";
-        }
-        else
-        {
-            // Bash: Get PR head SHA, then fetch and run bundle script from that SHA
-            command = $"ref=$(gh api repos/dotnet/aspire/pulls/{prNumber} --jq '.head.sha') && " +
-                      $"curl -fsSL https://raw.githubusercontent.com/dotnet/aspire/$ref/eng/scripts/get-aspire-cli-bundle-pr.sh | bash -s -- {prNumber}";
+            if (File.Exists(Path.Combine(dir.FullName, "Aspire.slnx")))
+            {
+                return dir.FullName;
+            }
+
+            dir = dir.Parent;
         }
 
-        return builder
-            .Type(command)
-            .Enter()
-            .WaitForSuccessPrompt(counter, TimeSpan.FromSeconds(300));
+        throw new InvalidOperationException(
+            "Could not find repo root (directory containing Aspire.slnx) " +
+            $"by walking up from {AppContext.BaseDirectory}");
     }
 
     /// <summary>
-    /// Sources the Aspire Bundle environment after installation.
-    /// Adds both the bundle's bin/ directory and root directory to PATH so the CLI
-    /// is discoverable regardless of which version of the install script ran
-    /// (the script is fetched from raw.githubusercontent.com which has CDN caching).
-    /// The CLI auto-discovers bundle components (runtime, dashboard, DCP, AppHost server)
-    /// in the parent directory via relative path resolution.
+    /// Converts a host-side path (under the workspace root) to the corresponding
+    /// container-side path (under /workspace/{workspaceName}). Use this when a path
+    /// constructed from <see cref="TemporaryWorkspace.WorkspaceRoot"/> needs to be
+    /// used in a command typed into the Docker container terminal.
     /// </summary>
-    /// <param name="builder">The sequence builder.</param>
-    /// <param name="counter">The sequence counter for prompt detection.</param>
-    /// <returns>The builder for chaining.</returns>
-    internal static Hex1bTerminalInputSequenceBuilder SourceAspireBundleEnvironment(
-        this Hex1bTerminalInputSequenceBuilder builder,
-        SequenceCounter counter)
+    /// <param name="hostPath">The full host-side path.</param>
+    /// <param name="workspace">The workspace whose root is mounted at /workspace/{name}.</param>
+    /// <returns>The equivalent path inside the container.</returns>
+    internal static string ToContainerPath(string hostPath, TemporaryWorkspace workspace)
     {
-        if (OperatingSystem.IsWindows())
+        var relativePath = Path.GetRelativePath(workspace.WorkspaceRoot.FullName, hostPath);
+        return $"/workspace/{workspace.WorkspaceRoot.Name}/" + relativePath.Replace('\\', '/');
+    }
+
+    /// <summary>
+    /// Reads the VersionPrefix (e.g., "13.3.0") from eng/Versions.props by parsing
+    /// the MajorVersion, MinorVersion, and PatchVersion MSBuild properties.
+    /// </summary>
+    internal static string GetVersionPrefix()
+    {
+        var repoRoot = GetRepoRoot();
+        var versionsPropsPath = Path.Combine(repoRoot, "eng", "Versions.props");
+
+        var doc = XDocument.Load(versionsPropsPath);
+        var ns = doc.Root?.Name.Namespace ?? XNamespace.None;
+
+        string? GetProperty(string name) =>
+            doc.Descendants(ns + name).FirstOrDefault()?.Value;
+
+        var major = GetProperty("MajorVersion")
+            ?? throw new InvalidOperationException("MajorVersion not found in eng/Versions.props");
+        var minor = GetProperty("MinorVersion")
+            ?? throw new InvalidOperationException("MinorVersion not found in eng/Versions.props");
+        var patch = GetProperty("PatchVersion")
+            ?? throw new InvalidOperationException("PatchVersion not found in eng/Versions.props");
+
+        return $"{major}.{minor}.{patch}";
+    }
+
+    /// <summary>
+    /// Checks whether the build is stabilized (StabilizePackageVersion=true in eng/Versions.props).
+    /// Stabilized builds produce version strings without commit SHA suffixes (e.g., "13.2.0" instead
+    /// of "13.2.0-preview.1.25175.1+g{sha}"). This is only true for official release builds,
+    /// never for normal PR CI builds.
+    /// </summary>
+    internal static bool IsStabilizedBuild()
+    {
+        var repoRoot = GetRepoRoot();
+        var versionsPropsPath = Path.Combine(repoRoot, "eng", "Versions.props");
+
+        var doc = XDocument.Load(versionsPropsPath);
+        var ns = doc.Root?.Name.Namespace ?? XNamespace.None;
+
+        // The default value in Versions.props uses a Condition to default to "false",
+        // so we read the element's text directly.
+        var stabilize = doc.Descendants(ns + "StabilizePackageVersion")
+            .FirstOrDefault()?.Value;
+
+        return string.Equals(stabilize, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Prepares a local NuGet package channel for source-build E2E tests.
+    /// Copies packed Aspire.*.nupkg files to a workspace-local directory and extracts the SDK version.
+    /// Returns <c>null</c> for non-SourceBuild modes.
+    /// </summary>
+    /// <param name="repoRoot">The repo root directory containing artifacts/.</param>
+    /// <param name="workspace">The temporary workspace where the local channel directory will be created.</param>
+    /// <param name="installMode">The detected install mode.</param>
+    /// <param name="requiredPackagePrefixes">
+    /// Optional additional package name prefixes to validate beyond <c>Aspire.Hosting.</c>.
+    /// For example, <c>["Aspire.Hosting.CodeGeneration.TypeScript.", "Aspire.Hosting.JavaScript."]</c>.
+    /// </param>
+    /// <returns>A <see cref="LocalChannelInfo"/> with the packages path and SDK version, or <c>null</c> for non-SourceBuild.</returns>
+    internal static LocalChannelInfo? PrepareLocalChannel(
+        string repoRoot,
+        TemporaryWorkspace workspace,
+        DockerInstallMode installMode,
+        string[]? requiredPackagePrefixes = null)
+    {
+        if (installMode != DockerInstallMode.SourceBuild)
         {
-            // PowerShell environment setup for bundle
-            return builder
-                .Type("$env:PATH=\"$HOME\\.aspire\\bin;$HOME\\.aspire;$env:PATH\"; $env:ASPIRE_PLAYGROUND='true'; $env:DOTNET_CLI_TELEMETRY_OPTOUT='true'; $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE='true'; $env:DOTNET_GENERATE_ASPNET_CERTIFICATE='false'")
-                .Enter()
-                .WaitForSuccessPrompt(counter);
+            return null;
         }
 
-        // Bash environment setup for bundle
-        // Add both ~/.aspire/bin (new layout) and ~/.aspire (old layout) to PATH
-        // The install script is downloaded from raw.githubusercontent.com which has CDN caching,
-        // so the old version may still be served for a while after push.
-        return builder
-            .Type("export PATH=~/.aspire/bin:~/.aspire:$PATH ASPIRE_PLAYGROUND=true TERM=xterm DOTNET_CLI_TELEMETRY_OPTOUT=true DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true DOTNET_GENERATE_ASPNET_CERTIFICATE=false")
-            .Enter()
-            .WaitForSuccessPrompt(counter);
+        var shippingPackagesDirectory = Path.Combine(repoRoot, "artifacts", "packages", "Debug", "Shipping");
+        if (!Directory.Exists(shippingPackagesDirectory))
+        {
+            throw new InvalidOperationException("Local source-built E2E tests require packed Aspire packages. Run './build.sh --bundle --pack' first.");
+        }
+
+        var packageFiles = Directory.EnumerateFiles(shippingPackagesDirectory, "Aspire*.nupkg", SearchOption.TopDirectoryOnly)
+            .Where(file => !file.EndsWith(".symbols.nupkg", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (!packageFiles.Any(file => Path.GetFileName(file).StartsWith("Aspire.Hosting.", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException("Local source-built E2E tests require packed Aspire.Hosting packages. Run './build.sh --bundle --pack' first.");
+        }
+
+        if (requiredPackagePrefixes is not null)
+        {
+            foreach (var prefix in requiredPackagePrefixes)
+            {
+                if (!packageFiles.Any(file => Path.GetFileName(file).StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new InvalidOperationException($"Local source-built E2E tests require packed {prefix.TrimEnd('.')} packages. Run './build.sh --bundle --pack' first.");
+                }
+            }
+        }
+
+        var localChannelPackagesPath = Path.Combine(workspace.WorkspaceRoot.FullName, ".aspire-local", "packages");
+        Directory.CreateDirectory(localChannelPackagesPath);
+
+        foreach (var packageFile in packageFiles)
+        {
+            File.Copy(packageFile, Path.Combine(localChannelPackagesPath, Path.GetFileName(packageFile)), overwrite: true);
+        }
+
+        var sdkVersion = packageFiles
+            .Select(Path.GetFileName)
+            .FirstOrDefault(fileName => fileName is not null && Regex.IsMatch(fileName, @"^Aspire\.Hosting\.\d+\.\d+\.\d+.*\.nupkg$", RegexOptions.IgnoreCase))
+            ?.Replace("Aspire.Hosting.", string.Empty, StringComparison.OrdinalIgnoreCase)
+            ?.Replace(".nupkg", string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        if (string.IsNullOrEmpty(sdkVersion))
+        {
+            throw new InvalidOperationException("Local source-built E2E tests could not determine the Aspire SDK version from packed packages.");
+        }
+
+        return new LocalChannelInfo(localChannelPackagesPath, sdkVersion);
+    }
+
+    internal static void WriteLocalChannelSettings(string projectRoot, string sdkVersion)
+    {
+        var configPath = Path.Combine(projectRoot, "aspire.config.json");
+        var config = File.Exists(configPath)
+            ? JsonNode.Parse(File.ReadAllText(configPath))?.AsObject() ?? new JsonObject()
+            : new JsonObject();
+
+        config["channel"] = "local";
+        config["sdk"] = new JsonObject
+        {
+            ["version"] = sdkVersion
+        };
+
+        File.WriteAllText(configPath, config.ToJsonString());
+    }
+
+    /// <summary>
+    /// Information about a local NuGet package channel for source-build E2E tests.
+    /// </summary>
+    /// <param name="PackagesPath">The directory path containing the local .nupkg files.</param>
+    /// <param name="SdkVersion">The Aspire SDK version extracted from the package filenames.</param>
+    internal sealed record LocalChannelInfo(string PackagesPath, string SdkVersion);
+
+    /// <summary>
+    /// Copies a directory to testresults/workspaces/{testName}/{label} for CI artifact upload.
+    /// Renames dot-prefixed directories to underscore-prefixed (upload-artifact skips hidden files).
+    /// </summary>
+    internal static void CaptureDirectory(string sourcePath, string testName, string? label)
+    {
+        var destDir = Path.Combine(
+            AppContext.BaseDirectory,
+            "TestResults",
+            "workspaces",
+            testName);
+
+        if (label is not null)
+        {
+            destDir = Path.Combine(destDir, label);
+        }
+
+        using var logWriter = new StreamWriter(Path.Combine(
+            Directory.CreateDirectory(destDir).FullName,
+            "_capture.log"));
+
+        CopyDirectory(sourcePath, destDir, line => logWriter.WriteLine(line));
+    }
+
+    private static void CopyDirectory(string sourceDir, string destDir, Action<string>? log)
+    {
+        Directory.CreateDirectory(destDir);
+
+        log?.Invoke($"DIR: {sourceDir} ({Directory.GetFiles(sourceDir).Length} files, {Directory.GetDirectories(sourceDir).Length} dirs)");
+
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            var destFile = Path.Combine(destDir, Path.GetFileName(file));
+            File.Copy(file, destFile, overwrite: true);
+        }
+
+        foreach (var dir in Directory.GetDirectories(sourceDir))
+        {
+            var dirName = Path.GetFileName(dir);
+
+            // Skip node_modules — too large for artifacts
+            if (dirName.Equals("node_modules", StringComparison.OrdinalIgnoreCase))
+            {
+                log?.Invoke($"  SKIP: {dirName}");
+                continue;
+            }
+
+            // Rename dot-prefixed dirs to underscore-prefixed
+            // (upload-artifact uses include-hidden-files: false by default)
+            var destDirName = dirName.StartsWith('.') ? "_" + dirName[1..] : dirName;
+            CopyDirectory(dir, Path.Combine(destDir, destDirName), log);
+        }
     }
 }

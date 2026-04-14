@@ -271,7 +271,16 @@ public class ResourceNotificationService : IDisposable
         var resourceLogger = _resourceLoggerService.GetLogger(resource);
         resourceLogger.LogInformation("Waiting for resource '{ResourceName}' to complete.", dependency.Name);
 
-        await PublishUpdateAsync(resource, s => s with { State = KnownResourceStates.Waiting }).ConfigureAwait(false);
+        // Only transition replicas that are actually starting up to "Waiting".
+        // Replicas already in a Running or terminal state should not be clobbered,
+        // as this broadcast targets ALL replicas of the resource (model-level update),
+        // not just the specific replica being started.
+        await PublishUpdateAsync(resource, s =>
+            s.State?.Text is null
+            || s.State?.Text == KnownResourceStates.Starting
+            || s.State?.Text == KnownResourceStates.Waiting
+                ? s with { State = KnownResourceStates.Waiting }
+                : s).ConfigureAwait(false);
 
         for (var i = 0; i < names.Length; i++)
         {
@@ -297,7 +306,7 @@ public class ResourceNotificationService : IDisposable
                     displayName
                     );
 
-                throw new DistributedApplicationException($"Dependency resource '{displayName}' failed to start.");
+                throw new DistributedApplicationException($"Resource '{resource.Name}' stopped waiting for dependency resource '{displayName}' because it failed to start.");
             }
             else if ((snapshot.State!.Text == KnownResourceStates.Finished || snapshot.State!.Text == KnownResourceStates.Exited) && snapshot.ExitCode is not null && snapshot.ExitCode != exitCode)
             {
@@ -310,7 +319,7 @@ public class ResourceNotificationService : IDisposable
                     );
 
                 throw new DistributedApplicationException(
-                    $"Resource '{displayName}' has entered the '{snapshot.State.Text}' state with exit code '{snapshot.ExitCode}', expected '{exitCode}'."
+                    $"Resource '{resource.Name}' stopped waiting for dependency resource '{displayName}' because it entered the '{snapshot.State.Text}' state with exit code '{snapshot.ExitCode}', expected '{exitCode}'."
                     );
             }
 
@@ -322,12 +331,22 @@ public class ResourceNotificationService : IDisposable
         }
     }
 
-    private async Task WaitUntilStateAsync(IResource resource, IResource dependency, WaitBehavior waitBehavior, 
+    private async Task WaitUntilStateAsync(IResource resource, IResource dependency, WaitBehavior waitBehavior,
         Func<ILogger, string, string, ResourceEvent, Task> postRunningAction, CancellationToken cancellationToken)
     {
         var resourceLogger = _resourceLoggerService.GetLogger(resource);
         resourceLogger.LogInformation("Waiting for resource '{ResourceName}' to enter the '{State}' state.", dependency.Name, KnownResourceStates.Running);
-        await PublishUpdateAsync(resource, s => s with { State = KnownResourceStates.Waiting }).ConfigureAwait(false);
+
+        // Only transition replicas that are actually starting up to "Waiting".
+        // Replicas already in a Running or terminal state should not be clobbered,
+        // as this broadcast targets ALL replicas of the resource (model-level update),
+        // not just the specific replica being started.
+        await PublishUpdateAsync(resource, s =>
+            s.State?.Text is null
+            || s.State?.Text == KnownResourceStates.Starting
+            || s.State?.Text == KnownResourceStates.Waiting
+                ? s with { State = KnownResourceStates.Waiting }
+                : s).ConfigureAwait(false);
 
         var names = dependency.GetResolvedResourceNames();
         var tasks = new Task[names.Length];
@@ -358,7 +377,7 @@ public class ResourceNotificationService : IDisposable
                         displayName
                         );
 
-                    throw new DistributedApplicationException($"Dependency resource '{displayName}' failed to start.");
+                    throw new DistributedApplicationException($"Resource '{resource.Name}' stopped waiting for dependency resource '{displayName}' because it failed to start.");
                 }
                 else if (snapshot.State!.Text == KnownResourceStates.Finished ||
                          snapshot.State.Text == KnownResourceStates.Exited ||
@@ -371,7 +390,7 @@ public class ResourceNotificationService : IDisposable
                         );
 
                     throw new DistributedApplicationException(
-                        $"Resource '{displayName}' has entered the '{snapshot.State.Text}' state prematurely."
+                        $"Resource '{resource.Name}' stopped waiting for dependency resource '{displayName}' because it entered the '{snapshot.State.Text}' state prematurely."
                         );
                 }
             }
@@ -538,7 +557,7 @@ public class ResourceNotificationService : IDisposable
                 break;
             }
         }
-        
+
         if (nameMatch is { } m && m.Value.LastSnapshot != null)
         {
             resourceEvent = new ResourceEvent(m.Value.Resource, m.Key, m.Value.LastSnapshot);
@@ -808,8 +827,8 @@ public class ResourceNotificationService : IDisposable
             return previousState;
         }
 
-        return previousState with 
-        { 
+        return previousState with
+        {
             IconName = newIconName,
             IconVariant = newIconVariant
         };

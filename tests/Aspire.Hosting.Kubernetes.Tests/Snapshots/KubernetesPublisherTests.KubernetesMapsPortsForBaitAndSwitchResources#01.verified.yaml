@@ -1,0 +1,13 @@
+﻿parameters:
+  api:
+    api_image: "api:latest"
+secrets: {}
+config:
+  env_dashboard:
+    DASHBOARD__FRONTEND__AUTHMODE: "Unsecured"
+    DASHBOARD__OTLP__AUTHMODE: "Unsecured"
+  api:
+    PORT: "8000"
+  gateway:
+    API_HTTP: "http://api-service:8000"
+    services__api__http__0: "http://api-service:8000"

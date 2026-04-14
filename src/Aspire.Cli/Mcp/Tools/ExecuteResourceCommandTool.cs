@@ -74,9 +74,19 @@ internal sealed class ExecuteResourceCommandTool(
 
             if (response.Success)
             {
+                var content = new List<TextContentBlock>
+                {
+                    new() { Text = $"Command '{commandName}' executed successfully on resource '{resourceName}'." }
+                };
+
+                if (response.Value is not null)
+                {
+                    content.Add(new TextContentBlock { Text = response.Value.Value });
+                }
+
                 return new CallToolResult
                 {
-                    Content = [new TextContentBlock { Text = $"Command '{commandName}' executed successfully on resource '{resourceName}'." }]
+                    Content = [.. content]
                 };
             }
             else if (response.Canceled)
@@ -85,8 +95,25 @@ internal sealed class ExecuteResourceCommandTool(
             }
             else
             {
-                var message = response.ErrorMessage is { Length: > 0 } ? response.ErrorMessage : "Unknown error. See logs for details.";
-                throw new McpProtocolException($"Command '{commandName}' failed for resource '{resourceName}': {message}", McpErrorCode.InternalError);
+#pragma warning disable CS0618 // Type or member is obsolete
+                var message = (response.Message ?? response.ErrorMessage) is { Length: > 0 } errorMsg ? errorMsg : "Unknown error. See logs for details.";
+#pragma warning restore CS0618 // Type or member is obsolete
+
+                var content = new List<TextContentBlock>
+                {
+                    new() { Text = $"Command '{commandName}' failed for resource '{resourceName}': {message}" }
+                };
+
+                if (response.Value is not null)
+                {
+                    content.Add(new TextContentBlock { Text = response.Value.Value });
+                }
+
+                return new CallToolResult
+                {
+                    IsError = true,
+                    Content = [.. content]
+                };
             }
         }
         catch (McpProtocolException)

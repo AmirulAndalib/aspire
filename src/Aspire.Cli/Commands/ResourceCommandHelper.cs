@@ -20,7 +20,7 @@ internal static class ResourceCommandHelper
     /// <param name="interactionService">The interaction service for user feedback.</param>
     /// <param name="logger">The logger for debug output.</param>
     /// <param name="resourceName">The name of the resource.</param>
-    /// <param name="commandName">The command to execute (e.g., "resource-start").</param>
+    /// <param name="commandName">The command to execute (e.g., "start").</param>
     /// <param name="progressVerb">The verb to display during progress (e.g., "Starting", "Stopping").</param>
     /// <param name="baseVerb">The base verb for error messages (e.g., "start", "stop").</param>
     /// <param name="pastTenseVerb">The past tense verb for success messages (e.g., "started", "stopped").</param>
@@ -59,6 +59,9 @@ internal static class ResourceCommandHelper
     {
         logger.LogDebug("Executing command '{CommandName}' on resource '{ResourceName}'", commandName, resourceName);
 
+        // Route status messages to stderr so command results in stdout remain pipeable (e.g., | jq)
+        interactionService.Console = ConsoleOutput.Error;
+
         var response = await interactionService.ShowStatusAsync(
             $"Executing command '{commandName}' on resource '{resourceName}'...",
             async () => await connection.ExecuteResourceCommandAsync(resourceName, commandName, cancellationToken));
@@ -66,19 +69,26 @@ internal static class ResourceCommandHelper
         if (response.Success)
         {
             interactionService.DisplaySuccess($"Command '{commandName}' executed successfully on resource '{resourceName}'.");
-            return ExitCodeConstants.Success;
         }
         else if (response.Canceled)
         {
-            interactionService.DisplayMessage("warning", $"Command '{commandName}' on '{resourceName}' was canceled.");
+            interactionService.DisplayMessage(KnownEmojis.Warning, $"Command '{commandName}' on '{resourceName}' was canceled.");
             return ExitCodeConstants.FailedToExecuteResourceCommand;
         }
         else
         {
-            var errorMessage = GetFriendlyErrorMessage(response.ErrorMessage);
+#pragma warning disable CS0618 // Type or member is obsolete
+            var errorMessage = GetFriendlyErrorMessage(response.Message ?? response.ErrorMessage);
+#pragma warning restore CS0618 // Type or member is obsolete
             interactionService.DisplayError($"Failed to execute command '{commandName}' on resource '{resourceName}': {errorMessage}");
-            return ExitCodeConstants.FailedToExecuteResourceCommand;
         }
+
+        if (response.Value is not null)
+        {
+            DisplayCommandResult(interactionService, response.Value);
+        }
+
+        return response.Success ? ExitCodeConstants.Success : ExitCodeConstants.FailedToExecuteResourceCommand;
     }
 
     private static int HandleResponse(
@@ -92,18 +102,37 @@ internal static class ResourceCommandHelper
         if (response.Success)
         {
             interactionService.DisplaySuccess($"Resource '{resourceName}' {pastTenseVerb} successfully.");
-            return ExitCodeConstants.Success;
         }
         else if (response.Canceled)
         {
-            interactionService.DisplayMessage("warning", $"{progressVerb} command for '{resourceName}' was canceled.");
+            interactionService.DisplayMessage(KnownEmojis.Warning, $"{progressVerb} command for '{resourceName}' was canceled.");
             return ExitCodeConstants.FailedToExecuteResourceCommand;
         }
         else
         {
-            var errorMessage = GetFriendlyErrorMessage(response.ErrorMessage);
+#pragma warning disable CS0618 // Type or member is obsolete
+            var errorMessage = GetFriendlyErrorMessage(response.Message ?? response.ErrorMessage);
+#pragma warning restore CS0618 // Type or member is obsolete
             interactionService.DisplayError($"Failed to {baseVerb} resource '{resourceName}': {errorMessage}");
-            return ExitCodeConstants.FailedToExecuteResourceCommand;
+        }
+
+        if (response.Value is not null)
+        {
+            DisplayCommandResult(interactionService, response.Value);
+        }
+
+        return response.Success ? ExitCodeConstants.Success : ExitCodeConstants.FailedToExecuteResourceCommand;
+    }
+
+    private static void DisplayCommandResult(IInteractionService interactionService, ExecuteResourceCommandResult result)
+    {
+        if (result.Format is CommandResultFormat.Markdown)
+        {
+            interactionService.DisplayMarkdown(result.Value, ConsoleOutput.Standard);
+        }
+        else
+        {
+            interactionService.DisplayRawText(result.Value, ConsoleOutput.Standard);
         }
     }
 

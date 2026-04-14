@@ -32,9 +32,11 @@ internal sealed class DotNetAppHostProject : IAppHostProject
     private readonly IDotNetSdkInstaller _sdkInstaller;
     private readonly RunningInstanceManager _runningInstanceManager;
     private readonly Diagnostics.FileLoggerProvider _fileLoggerProvider;
+    private readonly Program.CliLoggingOptions _loggingOptions;
 
     private static readonly string[] s_detectionPatterns = ["*.csproj", "*.fsproj", "*.vbproj", "apphost.cs"];
-    private static readonly string[] s_projectExtensions = [".csproj", ".fsproj", ".vbproj"];
+    internal static IReadOnlyCollection<string> ProjectExtensions { get; } =
+        Array.AsReadOnly([".csproj", ".fsproj", ".vbproj"]);
 
     public DotNetAppHostProject(
         IDotNetCliRunner runner,
@@ -46,6 +48,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         IDotNetSdkInstaller sdkInstaller,
         ILogger<DotNetAppHostProject> logger,
         Diagnostics.FileLoggerProvider fileLoggerProvider,
+        Program.CliLoggingOptions loggingOptions,
         TimeProvider? timeProvider = null)
     {
         _runner = runner;
@@ -57,6 +60,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         _sdkInstaller = sdkInstaller;
         _logger = logger;
         _fileLoggerProvider = fileLoggerProvider;
+        _loggingOptions = loggingOptions;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _runningInstanceManager = new RunningInstanceManager(_logger, _interactionService, _timeProvider);
     }
@@ -64,6 +68,9 @@ internal sealed class DotNetAppHostProject : IAppHostProject
     // ═══════════════════════════════════════════════════════════════
     // IDENTITY
     // ═══════════════════════════════════════════════════════════════
+
+    /// <inheritdoc />
+    public bool IsUnsupported { get; set; }
 
     /// <inheritdoc />
     public string LanguageId => KnownLanguageId.CSharp;
@@ -85,7 +92,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         var extension = appHostFile.Extension.ToLowerInvariant();
 
         // Handle project files (.csproj, .fsproj, .vbproj)
-        if (s_projectExtensions.Contains(extension))
+        if (ProjectExtensions.Contains(extension))
         {
             // We can handle any project file - ValidateAsync will do deeper validation
             return true;
@@ -152,6 +159,11 @@ internal sealed class DotNetAppHostProject : IAppHostProject
     /// <inheritdoc />
     public async Task<AppHostValidationResult> ValidateAppHostAsync(FileInfo appHostFile, CancellationToken cancellationToken)
     {
+        if (IsUnsupported)
+        {
+            return new AppHostValidationResult(IsValid: false, IsUnsupported: true);
+        }
+
         var isSingleFile = appHostFile.Extension.Equals(".cs", StringComparison.OrdinalIgnoreCase);
 
         if (isSingleFile)
@@ -163,7 +175,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         }
 
         // For project files, check if it's a valid Aspire AppHost using GetAppHostInformationAsync
-        var information = await _runner.GetAppHostInformationAsync(appHostFile, new DotNetCliRunnerInvocationOptions(), cancellationToken);
+        var information = await _runner.GetAppHostInformationAsync(appHostFile, new ProcessInvocationOptions(), cancellationToken);
 
         if (information.ExitCode == 0 && information.IsAspireHost)
         {
@@ -191,7 +203,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
     public async Task<int> RunAsync(AppHostProjectContext context, CancellationToken cancellationToken)
     {
         // .NET projects require the SDK to be installed
-        if (!await SdkInstallHelper.EnsureSdkInstalledAsync(_sdkInstaller, _interactionService, _features, _telemetry, cancellationToken: cancellationToken))
+        if (!await SdkInstallHelper.EnsureSdkInstalledAsync(_sdkInstaller, _interactionService, _telemetry, cancellationToken: cancellationToken))
         {
             // Signal build failure so RunCommand doesn't wait forever
             context.BuildCompletionSource?.TrySetResult(false);
@@ -218,6 +230,12 @@ internal sealed class DotNetAppHostProject : IAppHostProject
             isolatedUserSecretsId = await ConfigureIsolatedModeAsync(effectiveAppHostFile, env, cancellationToken);
             _logger.LogInformation("Aspire run isolated. Isolated UserSecretsId: {IsolatedUserSecretsId}", isolatedUserSecretsId);
         }
+
+        // Enable debug logging in the app host so that debug-level output is
+        // captured in the CLI log file for diagnostics. Defaults to Debug but
+        // can be overridden via --log-level.
+        var appHostLogLevel = _loggingOptions.ConsoleLogLevel ?? LogLevel.Debug;
+        env["Logging__LogLevel__Default"] = appHostLogLevel.ToString();
 
         if (context.WaitForDebugger)
         {
@@ -252,7 +270,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
                 var shouldBuildInCli = !isExtensionHost || extensionHasBuildCapability;
                 if (shouldBuildInCli)
                 {
-                    var buildOptions = new DotNetCliRunnerInvocationOptions
+                    var buildOptions = new ProcessInvocationOptions
                     {
                         StandardOutputCallback = buildOutputCollector.AppendOutput,
                         StandardErrorCallback = buildOutputCollector.AppendError,
@@ -300,7 +318,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         // Signal that build/preparation is complete
         context.BuildCompletionSource?.TrySetResult(true);
 
-        var runOptions = new DotNetCliRunnerInvocationOptions
+        var runOptions = new ProcessInvocationOptions
         {
             StandardOutputCallback = runOutputCollector.AppendOutput,
             StandardErrorCallback = runOutputCollector.AppendError,
@@ -314,7 +332,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
 
         if (isSingleFileAppHost)
         {
-            ConfigureSingleFileEnvironment(effectiveAppHostFile, env);
+            ConfigureSingleFileRunEnvironment(effectiveAppHostFile, env, args: context.UnmatchedTokens);
         }
 
         // Start the apphost - the runner will signal the backchannel when ready
@@ -344,25 +362,96 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         }
     }
 
-    private static void ConfigureSingleFileEnvironment(FileInfo appHostFile, Dictionary<string, string> env)
+    internal static void ConfigureSingleFileRunEnvironment(
+        FileInfo appHostFile,
+        Dictionary<string, string> env,
+        IReadOnlyDictionary<string, string?>? inheritedEnvironmentVariables = null,
+        string[]? args = null)
     {
         var runJsonFilePath = appHostFile.FullName[..^2] + "run.json";
         if (!File.Exists(runJsonFilePath))
         {
-            env["ASPNETCORE_ENVIRONMENT"] = "Development";
-            env["DOTNET_ENVIRONMENT"] = "Development";
-            env["ASPNETCORE_URLS"] = "https://localhost:17193;http://localhost:15069";
-            env["ASPIRE_DASHBOARD_MCP_ENDPOINT_URL"] = "https://localhost:21294";
-            env["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"] = "https://localhost:21293";
-            env["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"] = "https://localhost:22086";
+            AppHostEnvironmentDefaults.ApplyEffectiveEnvironment(
+                env,
+                AppHostEnvironmentDefaults.DevelopmentEnvironmentName,
+                inheritedEnvironmentVariables,
+                args);
+            ApplyDefaultSingleFileEndpoints(env);
         }
+    }
+
+    internal static void ConfigureSingleFilePublishEnvironment(
+        FileInfo appHostFile,
+        Dictionary<string, string> env,
+        IReadOnlyDictionary<string, string?>? inheritedEnvironmentVariables = null,
+        string[]? args = null)
+    {
+        if (!TryApplySingleFileLaunchProfileEnvironmentVariables(appHostFile, env))
+        {
+            ApplyDefaultSingleFileEndpoints(env);
+        }
+
+        AppHostEnvironmentDefaults.ApplyEffectiveEnvironment(
+            env,
+            AppHostEnvironmentDefaults.ProductionEnvironmentName,
+            inheritedEnvironmentVariables,
+            args);
+    }
+
+    private static bool TryApplySingleFileLaunchProfileEnvironmentVariables(
+        FileInfo appHostFile,
+        Dictionary<string, string> env)
+    {
+        var profiles = AspireConfigFile.ReadApphostRunProfiles(appHostFile.FullName[..^2] + "run.json");
+        AspireConfigProfile? profile;
+
+        if (profiles?.TryGetValue("https", out var httpsProfile) == true)
+        {
+            profile = httpsProfile;
+        }
+        else
+        {
+            profile = profiles?.Values.FirstOrDefault();
+        }
+
+        if (profile is null)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrEmpty(profile.ApplicationUrl))
+        {
+            env["ASPNETCORE_URLS"] = profile.ApplicationUrl;
+        }
+
+        if (profile.EnvironmentVariables is not null)
+        {
+            foreach (var (key, value) in profile.EnvironmentVariables)
+            {
+                if (AppHostEnvironmentDefaults.IsEnvironmentVariableName(key))
+                {
+                    continue;
+                }
+
+                env[key] = value;
+            }
+        }
+
+        return true;
+    }
+
+    private static void ApplyDefaultSingleFileEndpoints(IDictionary<string, string> env)
+    {
+        env["ASPNETCORE_URLS"] = "https://localhost:17193;http://localhost:15069";
+        env["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"] = "https://localhost:21293";
+        env["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"] = "https://localhost:22086";
     }
 
     /// <inheritdoc />
     public async Task<int> PublishAsync(PublishContext context, CancellationToken cancellationToken)
     {
         // .NET projects require the SDK to be installed
-        if (!await SdkInstallHelper.EnsureSdkInstalledAsync(_sdkInstaller, _interactionService, _features, _telemetry, cancellationToken: cancellationToken))
+        if (!await SdkInstallHelper.EnsureSdkInstalledAsync(_sdkInstaller, _interactionService, _telemetry, cancellationToken: cancellationToken))
         {
             // Throw an exception that will be caught by the command and result in SdkNotInstalled exit code
             // This is cleaner than trying to signal through the backchannel pattern
@@ -370,7 +459,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         }
 
         var effectiveAppHostFile = context.AppHostFile;
-        var isSingleFileAppHost = effectiveAppHostFile.Extension != ".csproj";
+        var isSingleFileAppHost = effectiveAppHostFile.Extension != ".csproj" && IsValidSingleFileAppHost(effectiveAppHostFile);
         var env = new Dictionary<string, string>(context.EnvironmentVariables);
 
         // Check compatibility for project-based apphosts
@@ -400,7 +489,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
             if (!context.NoBuild)
             {
                 var buildOutputCollector = new OutputCollector(_fileLoggerProvider, "Build");
-                var buildOptions = new DotNetCliRunnerInvocationOptions
+                var buildOptions = new ProcessInvocationOptions
                 {
                     StandardOutputCallback = buildOutputCollector.AppendOutput,
                     StandardErrorCallback = buildOutputCollector.AppendError,
@@ -431,17 +520,20 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         var runOutputCollector = new OutputCollector(_fileLoggerProvider, "AppHost");
         context.OutputCollector = runOutputCollector;
 
-        var runOptions = new DotNetCliRunnerInvocationOptions
+        var runOptions = new ProcessInvocationOptions
         {
             StandardOutputCallback = runOutputCollector.AppendOutput,
             StandardErrorCallback = runOutputCollector.AppendError,
             NoLaunchProfile = true,
-            NoExtensionLaunch = true
+            StartDebugSession = context.StartDebugSession,
+            // When not starting a debug session, prevent DotNetCliRunner from delegating the
+            // apphost launch to the extension — pipeline commands should run the apphost directly.
+            NoExtensionLaunch = !context.StartDebugSession,
         };
 
         if (isSingleFileAppHost)
         {
-            ConfigureSingleFileEnvironment(effectiveAppHostFile, env);
+            ConfigureSingleFilePublishEnvironment(effectiveAppHostFile, env, args: context.Arguments);
         }
 
         return await _runner.RunAsync(
@@ -462,7 +554,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         var outputCollector = new OutputCollector(_fileLoggerProvider, "Package");
         context.OutputCollector = outputCollector;
 
-        var options = new DotNetCliRunnerInvocationOptions
+        var options = new ProcessInvocationOptions
         {
             StandardOutputCallback = outputCollector.AppendOutput,
             StandardErrorCallback = outputCollector.AppendError,
@@ -472,6 +564,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
             context.PackageId,
             context.PackageVersion,
             context.Source,
+            noRestore: false,
             options,
             cancellationToken);
 
@@ -486,7 +579,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
     }
 
     /// <inheritdoc />
-    public async Task<RunningInstanceResult> CheckAndHandleRunningInstanceAsync(FileInfo appHostFile, DirectoryInfo homeDirectory, CancellationToken cancellationToken)
+    public async Task<RunningInstanceResult> FindAndStopRunningInstanceAsync(FileInfo appHostFile, DirectoryInfo homeDirectory, CancellationToken cancellationToken)
     {
         var matchingSockets = AppHostHelper.FindMatchingSockets(appHostFile.FullName, homeDirectory.FullName);
 
@@ -497,16 +590,44 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         }
 
         // Stop all running instances
-        var stopTasks = matchingSockets.Select(socketPath => 
+        var stopTasks = matchingSockets.Select(socketPath =>
             _runningInstanceManager.StopRunningInstanceAsync(socketPath, cancellationToken));
         var results = await Task.WhenAll(stopTasks);
         return results.All(r => r) ? RunningInstanceResult.InstanceStopped : RunningInstanceResult.StopFailed;
     }
 
     /// <summary>
-    /// Gets the UserSecretsId from a project file.
+    /// Gets the UserSecretsId from a project file, optionally initializing if not configured.
     /// </summary>
-    private async Task<string?> GetUserSecretsIdAsync(FileInfo projectFile, CancellationToken cancellationToken)
+    public async Task<string?> GetUserSecretsIdAsync(FileInfo projectFile, bool autoInit, CancellationToken cancellationToken)
+    {
+        var userSecretsId = await QueryUserSecretsIdAsync(projectFile, cancellationToken);
+
+        if (!string.IsNullOrEmpty(userSecretsId) || !autoInit)
+        {
+            return userSecretsId;
+        }
+
+        // Auto-initialize user secrets (only for csproj projects - file-based apphosts
+        // always have a UserSecretsId provided by the SDK)
+        if (!ProjectExtensions.Contains(projectFile.Extension.ToLowerInvariant()))
+        {
+            return userSecretsId;
+        }
+
+        _logger.LogInformation("No UserSecretsId found. Initializing user secrets for {Project}...", projectFile.Name);
+        _interactionService.DisplayMessage(KnownEmojis.Key, $"Initializing user secrets for {projectFile.Name}...");
+
+        await _runner.InitUserSecretsAsync(
+            projectFile,
+            new ProcessInvocationOptions(),
+            cancellationToken);
+
+        // Re-query
+        return await QueryUserSecretsIdAsync(projectFile, cancellationToken);
+    }
+
+    private async Task<string?> QueryUserSecretsIdAsync(FileInfo projectFile, CancellationToken cancellationToken)
     {
         try
         {
@@ -514,7 +635,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
                 projectFile,
                 items: [],
                 properties: ["UserSecretsId"],
-                new DotNetCliRunnerInvocationOptions(),
+                new ProcessInvocationOptions(),
                 cancellationToken);
 
             if (exitCode != 0 || jsonDocument is null)
@@ -526,7 +647,8 @@ internal sealed class DotNetAppHostProject : IAppHostProject
             if (rootElement.TryGetProperty("Properties", out var properties) &&
                 properties.TryGetProperty("UserSecretsId", out var userSecretsIdElement))
             {
-                return userSecretsIdElement.GetString();
+                var value = userSecretsIdElement.GetString();
+                return string.IsNullOrWhiteSpace(value) ? null : value;
             }
 
             return null;
@@ -554,10 +676,10 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         env["DcpPublisher__RandomizePorts"] = "true";
 
         // Get the UserSecretsId from the project and create isolated copy
-        var userSecretsId = await GetUserSecretsIdAsync(appHostFile, cancellationToken);
+        var userSecretsId = await QueryUserSecretsIdAsync(appHostFile, cancellationToken);
         if (!string.IsNullOrEmpty(userSecretsId))
         {
-            _interactionService.DisplayMessage("key", RunCommandStrings.CopyingUserSecrets);
+            _interactionService.DisplayMessage(KnownEmojis.Key, RunCommandStrings.CopyingUserSecrets);
             var isolatedUserSecretsId = IsolatedUserSecretsHelper.CreateIsolatedUserSecrets(userSecretsId);
             if (!string.IsNullOrEmpty(isolatedUserSecretsId))
             {

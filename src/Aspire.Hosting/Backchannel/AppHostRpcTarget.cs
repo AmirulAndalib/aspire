@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Runtime.CompilerServices;
-using System.Threading.Channels;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Exec;
 using Aspire.Hosting.Pipelines;
@@ -20,14 +19,7 @@ internal class AppHostRpcTarget(
     IHostApplicationLifetime lifetime,
     DistributedApplicationOptions options)
 {
-    private readonly TaskCompletionSource<Channel<BackchannelLogEntry>> _logChannelTcs = new();
     private readonly CancellationTokenSource _shutdownCts = new();
-
-    public void RegisterLogChannel(Channel<BackchannelLogEntry> channel)
-    {
-        ArgumentNullException.ThrowIfNull(channel);
-        _logChannelTcs.TrySetResult(channel);
-    }
 
     public async IAsyncEnumerable<BackchannelLogEntry> GetAppHostLogEntriesAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -35,30 +27,32 @@ internal class AppHostRpcTarget(
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdownCts.Token);
         var linkedToken = linkedCts.Token;
 
-        Channel<BackchannelLogEntry>? channel = null;
-        
-        try
+        var loggerProvider = serviceProvider.GetService<BackchannelLoggerProvider>();
+        if (loggerProvider is null)
         {
-            channel = await _logChannelTcs.Task.WaitAsync(linkedToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (_shutdownCts.Token.IsCancellationRequested)
-        {
-            // Gracefully handle cancellation due to shutdown
-            logger.LogDebug("Log entries stream cancelled due to AppHost shutdown before channel was ready");
             yield break;
         }
 
-        var logEntries = channel.Reader.ReadAllAsync(linkedToken);
+        // Subscribe atomically: snapshot + channel for new entries, no gap
+        var (snapshot, subscriberId, channel) = loggerProvider.Subscribe();
 
-        await foreach (var logEntry in logEntries.WithCancellation(linkedToken).ConfigureAwait(false))
+        try
         {
-            // If the log entry is null, terminate the stream
-            if (logEntry == null)
+            // Replay buffered entries first so late-connecting clients see history
+            foreach (var entry in snapshot)
             {
-                yield break;
+                yield return entry;
             }
 
-            yield return logEntry;
+            // Stream live entries
+            await foreach (var entry in channel.Reader.ReadAllAsync(linkedToken).ConfigureAwait(false))
+            {
+                yield return entry;
+            }
+        }
+        finally
+        {
+            loggerProvider.Unsubscribe(subscriberId);
         }
     }
 
@@ -197,7 +191,8 @@ internal class AppHostRpcTarget(
 
         _ = cancellationToken;
         return Task.FromResult(new string[] {
-            "baseline.v2"
+            "baseline.v2",
+            "pipeline-steps.v1"
             });
     }
 #pragma warning restore CA1822
@@ -210,5 +205,52 @@ internal class AppHostRpcTarget(
     public async Task UpdatePromptResponseAsync(string promptId, PublishingPromptInputAnswer[] answers, CancellationToken cancellationToken = default)
     {
         await activityReporter.CompleteInteractionAsync(promptId, answers, updateResponse: true, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<GetPipelineStepsResponse> GetPipelineStepsAsync(GetPipelineStepsRequest? request = null, CancellationToken cancellationToken = default)
+    {
+        logger.LogDebug("Resolving pipeline steps for list-steps request.");
+
+#pragma warning disable ASPIREPIPELINES001
+        var pipeline = serviceProvider.GetRequiredService<IDistributedApplicationPipeline>() as DistributedApplicationPipeline
+            ?? throw new InvalidOperationException("Pipeline is not a DistributedApplicationPipeline.");
+
+        var model = serviceProvider.GetRequiredService<DistributedApplicationModel>();
+        var executionContext = serviceProvider.GetRequiredService<DistributedApplicationExecutionContext>();
+
+        var pipelineContext = new PipelineContext(model, executionContext, serviceProvider, logger, cancellationToken);
+
+        var resolvedSteps = await pipeline.ResolveStepsAsync(pipelineContext).ConfigureAwait(false);
+
+        // If a target step is specified, filter to its transitive dependencies
+        if (!string.IsNullOrEmpty(request?.Step))
+        {
+            var stepsByName = resolvedSteps.ToDictionary(s => s.Name, StringComparer.Ordinal);
+            if (stepsByName.TryGetValue(request.Step, out var targetStep))
+            {
+                resolvedSteps = DistributedApplicationPipeline.ComputeTransitiveDependencies(targetStep, stepsByName);
+            }
+            else
+            {
+                var availableSteps = string.Join(", ", resolvedSteps.Select(s => $"'{s.Name}'"));
+                throw new InvalidOperationException(
+                    $"Step '{request.Step}' not found in pipeline. Available steps: {availableSteps}");
+            }
+        }
+
+        var orderedSteps = DistributedApplicationPipeline.GetTopologicalOrder(resolvedSteps);
+#pragma warning restore ASPIREPIPELINES001
+
+        return new GetPipelineStepsResponse
+        {
+            Steps = orderedSteps.Select(step => new PipelineStepInfo
+            {
+                Name = step.Name,
+                Description = step.Description,
+                DependsOn = [.. step.DependsOnSteps],
+                Tags = [.. step.Tags],
+                ResourceName = step.Resource?.Name
+            }).ToArray()
+        };
     }
 }

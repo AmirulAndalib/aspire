@@ -13,6 +13,7 @@ using Aspire.Cli.Projects;
 using Aspire.Cli.Resources;
 using Aspire.Cli.Telemetry;
 using Aspire.Cli.Utils;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 
@@ -20,6 +21,8 @@ namespace Aspire.Cli.Commands;
 
 internal sealed class UpdateCommand : BaseCommand
 {
+    internal override HelpGroup HelpGroup => HelpGroup.AppCommands;
+
     private readonly IProjectLocator _projectLocator;
     private readonly IPackagingService _packagingService;
     private readonly IAppHostProjectFactory _projectFactory;
@@ -28,14 +31,12 @@ internal sealed class UpdateCommand : BaseCommand
     private readonly ICliUpdateNotifier _updateNotifier;
     private readonly IFeatures _features;
     private readonly IConfigurationService _configurationService;
+    private readonly IConfiguration _configuration;
 
-    private static readonly Option<FileInfo?> s_projectOption = new("--project")
-    {
-        Description = UpdateCommandStrings.ProjectArgumentDescription
-    };
+    private static readonly OptionWithLegacy<FileInfo?> s_appHostOption = new("--apphost", "--project", UpdateCommandStrings.ProjectArgumentDescription);
     private static readonly Option<bool> s_selfOption = new("--self")
     {
-        Description = "Update the Aspire CLI itself to the latest version"
+        Description = UpdateCommandStrings.SelfOptionDescription
     };
     private readonly Option<string?> _channelOption;
     private readonly Option<string?> _qualityOption;
@@ -51,7 +52,8 @@ internal sealed class UpdateCommand : BaseCommand
         ICliUpdateNotifier updateNotifier,
         CliExecutionContext executionContext,
         IConfigurationService configurationService,
-        AspireCliTelemetry telemetry)
+        AspireCliTelemetry telemetry,
+        IConfiguration configuration)
         : base("update", UpdateCommandStrings.Description, features, updateNotifier, executionContext, interactionService, telemetry)
     {
         _projectLocator = projectLocator;
@@ -62,12 +64,13 @@ internal sealed class UpdateCommand : BaseCommand
         _updateNotifier = updateNotifier;
         _features = features;
         _configurationService = configurationService;
+        _configuration = configuration;
 
-        Options.Add(s_projectOption);
+        Options.Add(s_appHostOption);
         Options.Add(s_selfOption);
 
         // Customize description based on whether staging channel is enabled
-        var isStagingEnabled = _features.IsFeatureEnabled(KnownFeatures.StagingChannelEnabled, false);
+        var isStagingEnabled = KnownFeatures.IsStagingChannelEnabled(_features, _configuration);
 
         _channelOption = new Option<string?>("--channel")
         {
@@ -114,7 +117,7 @@ internal sealed class UpdateCommand : BaseCommand
             // When running as a dotnet tool, print the update command instead of executing
             if (IsRunningAsDotNetTool())
             {
-                InteractionService.DisplayMessage("information", UpdateCommandStrings.DotNetToolSelfUpdateMessage);
+                InteractionService.DisplayMessage(KnownEmojis.Information, UpdateCommandStrings.DotNetToolSelfUpdateMessage);
                 InteractionService.DisplayPlainText("  dotnet tool update -g Aspire.Cli");
                 return 0;
             }
@@ -139,7 +142,7 @@ internal sealed class UpdateCommand : BaseCommand
         // Otherwise, handle project update
         try
         {
-            var passedAppHostProjectFile = parseResult.GetValue(s_projectOption);
+            var passedAppHostProjectFile = parseResult.GetValue(s_appHostOption);
             var projectFile = await _projectLocator.UseOrFindAppHostProjectFileAsync(passedAppHostProjectFile, createSettingsFile: true, cancellationToken);
             if (projectFile is null)
             {
@@ -153,7 +156,9 @@ internal sealed class UpdateCommand : BaseCommand
             var channelName = parseResult.GetValue(_channelOption) ?? parseResult.GetValue(_qualityOption);
             PackageChannel channel;
 
-            var allChannels = await _packagingService.GetChannelsAsync(cancellationToken);
+            var allChannels = await InteractionService.ShowStatusAsync(
+                UpdateCommandStrings.CheckingForUpdates,
+                async () => await _packagingService.GetChannelsAsync(cancellationToken));
 
             if (!string.IsNullOrEmpty(channelName))
             {
@@ -269,7 +274,10 @@ internal sealed class UpdateCommand : BaseCommand
         // for future 'aspire new' and 'aspire init' commands.
         if (string.IsNullOrEmpty(channel))
         {
-            var channels = new[] { PackageChannelNames.Stable, PackageChannelNames.Staging, PackageChannelNames.Daily };
+            var isStagingEnabled = KnownFeatures.IsStagingChannelEnabled(_features, _configuration);
+            var channels = isStagingEnabled
+                ? new[] { PackageChannelNames.Stable, PackageChannelNames.Staging, PackageChannelNames.Daily }
+                : new[] { PackageChannelNames.Stable, PackageChannelNames.Daily };
             channel = await InteractionService.PromptForSelectionAsync(
                 "Select the channel to update to:",
                 channels,
@@ -287,8 +295,8 @@ internal sealed class UpdateCommand : BaseCommand
                 return ExitCodeConstants.InvalidCommand;
             }
 
-            InteractionService.DisplayMessage("package", $"Current CLI location: {currentExePath}");
-            InteractionService.DisplayMessage("up_arrow", $"Updating to channel: {channel}");
+            InteractionService.DisplayMessage(KnownEmojis.Package, $"Current CLI location: {currentExePath}");
+            InteractionService.DisplayMessage(KnownEmojis.UpButton, $"Updating to channel: {channel}");
 
             // Download the latest CLI
             var archivePath = await _cliDownloader!.DownloadLatestCliAsync(channel, cancellationToken);
@@ -348,8 +356,16 @@ internal sealed class UpdateCommand : BaseCommand
         try
         {
             // Extract archive
-            InteractionService.DisplayMessage("package", "Extracting new CLI...");
-            await ArchiveHelper.ExtractAsync(archivePath, tempExtractDir, cancellationToken);
+            await InteractionService.ShowStatusAsync(
+                UpdateCommandStrings.ExtractingNewCli,
+                async () =>
+                {
+                    await ArchiveHelper.ExtractAsync(archivePath, tempExtractDir, cancellationToken);
+                    return 0;
+                },
+                KnownEmojis.Package);
+
+            InteractionService.DisplayMessage(KnownEmojis.Package, UpdateCommandStrings.ExtractedNewCli);
 
             // Find the aspire executable in the extracted files
             var newExePath = Path.Combine(tempExtractDir, exeName);
@@ -359,24 +375,25 @@ internal sealed class UpdateCommand : BaseCommand
             }
 
             // Backup current executable if it exists
-            var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var backupPath = $"{targetExePath}.old.{unixTimestamp}";
+            var exeDir = Path.GetDirectoryName(targetExePath)!;
+            FileDeleteHelper.TryCleanupOldItems(exeDir, exeName);
+
+            string? backupPath = null;
             if (File.Exists(targetExePath))
             {
-                InteractionService.DisplayMessage("floppy_disk", "Backing up current CLI...");
-                _logger.LogDebug("Creating backup: {BackupPath}", backupPath);
-
-                // Clean up old backup files
-                CleanupOldBackupFiles(targetExePath);
+                InteractionService.DisplayMessage(KnownEmojis.FloppyDisk, "Backing up current CLI...");
 
                 // Rename current executable to .old.[timestamp]
+                var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                backupPath = $"{targetExePath}.old.{unixTimestamp}";
+                _logger.LogDebug("Creating backup: {BackupPath}", backupPath);
                 File.Move(targetExePath, backupPath);
             }
 
             try
             {
                 // Copy new executable to install location
-                InteractionService.DisplayMessage("wrench", $"Installing new CLI to {installDir}...");
+                InteractionService.DisplayMessage(KnownEmojis.Wrench, $"Installing new CLI to {installDir}...");
                 File.Copy(newExePath, targetExePath, overwrite: true);
 
                 // On Unix systems, ensure the executable bit is set
@@ -394,7 +411,7 @@ internal sealed class UpdateCommand : BaseCommand
                 }
 
                 // If we get here, the update was successful, clean up old backups
-                CleanupOldBackupFiles(targetExePath);
+                FileDeleteHelper.TryCleanupOldItems(exeDir, exeName);
 
                 // The new binary will extract its embedded bundle on first run via EnsureExtractedAsync.
                 // No proactive extraction needed — the payload is inside the new binary's embedded resources,
@@ -403,14 +420,14 @@ internal sealed class UpdateCommand : BaseCommand
                 // Display helpful message about PATH
                 if (!IsInPath(installDir))
                 {
-                    InteractionService.DisplayMessage("information", $"Note: {installDir} is not in your PATH. Add it to use the updated CLI globally.");
+                    InteractionService.DisplayMessage(KnownEmojis.Information, $"Note: {installDir} is not in your PATH. Add it to use the updated CLI globally.");
                 }
             }
             catch
             {
                 // If anything goes wrong, restore the backup
                 _logger.LogWarning("Update failed, restoring backup");
-                if (File.Exists(backupPath))
+                if (backupPath is not null && File.Exists(backupPath))
                 {
                     if (File.Exists(targetExePath))
                     {
@@ -503,39 +520,6 @@ internal sealed class UpdateCommand : BaseCommand
         catch
         {
             return null;
-        }
-    }
-
-    internal void CleanupOldBackupFiles(string targetExePath)
-    {
-        try
-        {
-            var directory = Path.GetDirectoryName(targetExePath);
-            if (string.IsNullOrEmpty(directory))
-            {
-                return;
-            }
-
-            var exeName = Path.GetFileName(targetExePath);
-            var searchPattern = $"{exeName}.old.*";
-
-            var oldBackupFiles = Directory.GetFiles(directory, searchPattern);
-            foreach (var backupFile in oldBackupFiles)
-            {
-                try
-                {
-                    File.Delete(backupFile);
-                    _logger.LogDebug("Deleted old backup file: {BackupFile}", backupFile);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogDebug(ex, "Failed to delete old backup file: {BackupFile}", backupFile);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to cleanup old backup files for: {TargetExePath}", targetExePath);
         }
     }
 

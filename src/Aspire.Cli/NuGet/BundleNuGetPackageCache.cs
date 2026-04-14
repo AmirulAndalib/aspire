@@ -18,21 +18,18 @@ namespace Aspire.Cli.NuGet;
 internal sealed class BundleNuGetPackageCache : INuGetPackageCache
 {
     private readonly IBundleService _bundleService;
+    private readonly LayoutProcessRunner _layoutProcessRunner;
     private readonly ILogger<BundleNuGetPackageCache> _logger;
     private readonly IFeatures _features;
 
-    // List of deprecated packages that should be filtered by default
-    private static readonly HashSet<string> s_deprecatedPackages = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Aspire.Hosting.Dapr"
-    };
-
     public BundleNuGetPackageCache(
         IBundleService bundleService,
+        LayoutProcessRunner layoutProcessRunner,
         ILogger<BundleNuGetPackageCache> logger,
         IFeatures features)
     {
         _bundleService = bundleService;
+        _layoutProcessRunner = layoutProcessRunner;
         _logger = logger;
         _features = features;
     }
@@ -118,15 +115,16 @@ internal sealed class BundleNuGetPackageCache : INuGetPackageCache
             throw new InvalidOperationException("Bundle layout not found. Cannot perform NuGet search in bundle mode.");
         }
 
-        var helperPath = layout.GetNuGetHelperPath();
-        if (helperPath is null || !File.Exists(helperPath))
+        var managedPath = layout.GetManagedPath();
+        if (managedPath is null || !File.Exists(managedPath))
         {
-            throw new InvalidOperationException("NuGet helper tool not found at expected location.");
+            throw new InvalidOperationException("aspire-managed not found in layout.");
         }
 
-        // Build arguments for NuGetHelper search command
+        // Build arguments for NuGet search command (via aspire-managed nuget subcommand)
         var args = new List<string>
         {
+            "nuget",
             "search",
             "--query", query,
             "--take", "1000",
@@ -155,14 +153,13 @@ internal sealed class BundleNuGetPackageCache : INuGetPackageCache
             args.Add("--verbose");
         }
 
-        _logger.LogDebug("Running NuGet search via NuGetHelper: {Query}", query);
-        _logger.LogDebug("NuGetHelper path: {HelperPath}", helperPath);
-        _logger.LogDebug("NuGetHelper args: {Args}", string.Join(" ", args));
+        _logger.LogDebug("Running NuGet search via aspire-managed: {Query}", query);
+        _logger.LogDebug("aspire-managed path: {ManagedPath}", managedPath);
+        _logger.LogDebug("NuGet search args: {Args}", string.Join(" ", args));
         _logger.LogDebug("Working directory: {WorkingDir}", workingDirectory.FullName);
 
-        var (exitCode, output, error) = await LayoutProcessRunner.RunAsync(
-            layout,
-            helperPath,
+        var (exitCode, output, error) = await _layoutProcessRunner.RunAsync(
+            managedPath,
             args,
             workingDirectory: workingDirectory.FullName,
             ct: cancellationToken).ConfigureAwait(false);
@@ -214,6 +211,7 @@ internal sealed class BundleNuGetPackageCache : INuGetPackageCache
 
     private IEnumerable<NuGetPackage> FilterPackages(IEnumerable<NuGetPackage> packages, Func<string, bool>? filter)
     {
+        var showDeprecatedPackages = _features.IsFeatureEnabled(KnownFeatures.ShowDeprecatedPackages, defaultValue: false);
         var effectiveFilter = (NuGetPackage p) =>
         {
             if (filter is not null)
@@ -224,9 +222,9 @@ internal sealed class BundleNuGetPackageCache : INuGetPackageCache
             var isOfficialPackage = IsOfficialOrCommunityToolkitPackage(p.Id);
 
             // Apply deprecated package filter unless the user wants to show deprecated packages
-            if (isOfficialPackage && !_features.IsFeatureEnabled(KnownFeatures.ShowDeprecatedPackages, defaultValue: false))
+            if (isOfficialPackage && !showDeprecatedPackages)
             {
-                return !s_deprecatedPackages.Contains(p.Id);
+                return !DeprecatedPackages.IsDeprecated(p.Id);
             }
 
             return isOfficialPackage;

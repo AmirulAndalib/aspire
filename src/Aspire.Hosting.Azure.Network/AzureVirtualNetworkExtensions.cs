@@ -28,6 +28,7 @@ public static class AzureVirtualNetworkExtensions
     /// var subnet = vnet.AddSubnet("pe-subnet", "10.0.1.0/24");
     /// </code>
     /// </example>
+    [AspireExport(Description = "Adds an Azure Virtual Network resource to the application model.")]
     public static IResourceBuilder<AzureVirtualNetworkResource> AddAzureVirtualNetwork(
         this IDistributedApplicationBuilder builder,
         [ResourceName] string name,
@@ -58,6 +59,7 @@ public static class AzureVirtualNetworkExtensions
     /// var subnet = vnet.AddSubnet("pe-subnet", "10.0.1.0/24");
     /// </code>
     /// </example>
+    [AspireExport("addAzureVirtualNetworkFromParameter", MethodName = "addAzureVirtualNetwork", Description = "Adds an Azure Virtual Network resource to the application model with a parameterized address prefix.")]
     public static IResourceBuilder<AzureVirtualNetworkResource> AddAzureVirtualNetwork(
         this IDistributedApplicationBuilder builder,
         [ResourceName] string name,
@@ -165,6 +167,7 @@ public static class AzureVirtualNetworkExtensions
     /// var subnet = vnet.AddSubnet("my-subnet", "10.0.1.0/24");
     /// </code>
     /// </example>
+    [AspireExport(Description = "Adds an Azure subnet resource to an Azure Virtual Network resource.")]
     public static IResourceBuilder<AzureSubnetResource> AddSubnet(
         this IResourceBuilder<AzureVirtualNetworkResource> builder,
         [ResourceName] string name,
@@ -198,6 +201,7 @@ public static class AzureVirtualNetworkExtensions
     /// var subnet = vnet.AddSubnet("my-subnet", subnetPrefix);
     /// </code>
     /// </example>
+    [AspireExport("addSubnetFromParameter", MethodName = "addSubnet", Description = "Adds an Azure subnet resource with a parameterized address prefix to an Azure Virtual Network resource.")]
     public static IResourceBuilder<AzureSubnetResource> AddSubnet(
         this IResourceBuilder<AzureVirtualNetworkResource> builder,
         [ResourceName] string name,
@@ -252,6 +256,7 @@ public static class AzureVirtualNetworkExtensions
     ///     .WithDelegatedSubnet(subnet);
     /// </code>
     /// </example>
+    [AspireExport("withSubnetDelegatedSubnet", MethodName = "withDelegatedSubnet", Description = "Associates a delegated Azure subnet resource with an Azure resource that supports subnet delegation.")]
     public static IResourceBuilder<T> WithDelegatedSubnet<T>(
         this IResourceBuilder<T> builder,
         IResourceBuilder<AzureSubnetResource> subnet)
@@ -293,6 +298,7 @@ public static class AzureVirtualNetworkExtensions
     ///     .WithNatGateway(natGateway);
     /// </code>
     /// </example>
+    [AspireExport(Description = "Associates an Azure NAT Gateway resource with an Azure subnet resource.")]
     public static IResourceBuilder<AzureSubnetResource> WithNatGateway(
         this IResourceBuilder<AzureSubnetResource> builder,
         IResourceBuilder<AzureNatGatewayResource> natGateway)
@@ -324,6 +330,7 @@ public static class AzureVirtualNetworkExtensions
     /// (<see cref="AllowInbound"/>, <see cref="DenyInbound"/>, <see cref="AllowOutbound"/>, <see cref="DenyOutbound"/>).
     /// Use either shorthand methods or an explicit NSG, not both.
     /// </exception>
+    [AspireExport(Description = "Associates an Azure Network Security Group resource with an Azure subnet resource.")]
     public static IResourceBuilder<AzureSubnetResource> WithNetworkSecurityGroup(
         this IResourceBuilder<AzureSubnetResource> builder,
         IResourceBuilder<AzureNetworkSecurityGroupResource> nsg)
@@ -361,10 +368,11 @@ public static class AzureVirtualNetworkExtensions
     /// This example allows HTTPS traffic from the Azure Load Balancer:
     /// <code>
     /// var subnet = vnet.AddSubnet("web", "10.0.1.0/24")
-    ///     .AllowInbound(port: "443", from: "AzureLoadBalancer", protocol: SecurityRuleProtocol.Tcp)
-    ///     .DenyInbound(from: "Internet");
+    ///     .AllowInbound(port: "443", from: AzureServiceTags.AzureLoadBalancer, protocol: SecurityRuleProtocol.Tcp)
+    ///     .DenyInbound(from: AzureServiceTags.Internet);
     /// </code>
     /// </example>
+    [AspireExport(Description = "Adds an inbound allow rule to the Azure subnet resource's Network Security Group.")]
     public static IResourceBuilder<AzureSubnetResource> AllowInbound(
         this IResourceBuilder<AzureSubnetResource> builder,
         string? port = null,
@@ -391,6 +399,7 @@ public static class AzureVirtualNetworkExtensions
     /// <remarks>
     /// If no Network Security Group has been associated with the subnet, one is automatically created.
     /// </remarks>
+    [AspireExport(Description = "Adds an inbound deny rule to the Azure subnet resource's Network Security Group.")]
     public static IResourceBuilder<AzureSubnetResource> DenyInbound(
         this IResourceBuilder<AzureSubnetResource> builder,
         string? port = null,
@@ -417,6 +426,7 @@ public static class AzureVirtualNetworkExtensions
     /// <remarks>
     /// If no Network Security Group has been associated with the subnet, one is automatically created.
     /// </remarks>
+    [AspireExport(Description = "Adds an outbound allow rule to the Azure subnet resource's Network Security Group.")]
     public static IResourceBuilder<AzureSubnetResource> AllowOutbound(
         this IResourceBuilder<AzureSubnetResource> builder,
         string? port = null,
@@ -443,6 +453,7 @@ public static class AzureVirtualNetworkExtensions
     /// <remarks>
     /// If no Network Security Group has been associated with the subnet, one is automatically created.
     /// </remarks>
+    [AspireExport(Description = "Adds an outbound deny rule to the Azure subnet resource's Network Security Group.")]
     public static IResourceBuilder<AzureSubnetResource> DenyOutbound(
         this IResourceBuilder<AzureSubnetResource> builder,
         string? port = null,
@@ -489,7 +500,7 @@ public static class AzureVirtualNetworkExtensions
         // Auto-generate name
         var accessStr = access == SecurityRuleAccess.Allow ? "allow" : "deny";
         var directionStr = direction == SecurityRuleDirection.Inbound ? "inbound" : "outbound";
-        var resolvedName = name ?? GenerateRuleName(accessStr, directionStr, port, from);
+        var resolvedName = name ?? GenerateUniqueRuleName(nsgResource, accessStr, directionStr, port, from, to);
 
         var rule = new AzureSecurityRule
         {
@@ -516,7 +527,27 @@ public static class AzureVirtualNetworkExtensions
         return builder;
     }
 
-    private static string GenerateRuleName(string access, string direction, string? port, string? from)
+    private static string GenerateUniqueRuleName(AzureNetworkSecurityGroupResource nsgResource, string access, string direction, string? port, string? from, string? to)
+    {
+        var baseName = GenerateRuleName(access, direction, port, from, to);
+
+        // Check for conflicts and append an index if needed
+        var candidateName = baseName;
+        var index = 2;
+        while (nsgResource.SecurityRules.Any(r => r.Name == candidateName))
+        {
+            if (index == 100)
+            {
+                throw new InvalidOperationException($"Could not generate a unique name for security rule '{baseName}'");
+            }
+            candidateName = $"{baseName}-{index}";
+            index++;
+        }
+
+        return candidateName;
+    }
+
+    private static string GenerateRuleName(string access, string direction, string? port, string? from, string? to)
     {
         var parts = new List<string> { access, direction };
 
@@ -528,6 +559,11 @@ public static class AzureVirtualNetworkExtensions
         if (from is not null)
         {
             parts.Add(from);
+        }
+
+        if (to is not null)
+        {
+            parts.Add(to);
         }
 
         return string.Join("-", parts);

@@ -61,6 +61,16 @@ internal static partial class MarkdownToSpectreConverter
         return result;
     }
 
+    /// <summary>
+    /// Converts markdown links to plain text.
+    /// </summary>
+    /// <param name="markdown">The markdown text to convert.</param>
+    /// <returns>The text with markdown links converted to the plain text format <c>text (url)</c>.</returns>
+    public static string ConvertLinksToPlainText(string markdown)
+    {
+        return LinkRegex().Replace(markdown, "$1 ($2)");
+    }
+
     private static string ConvertHeaders(string text)
     {
         // Convert ###### Header 6 (most specific first)
@@ -156,7 +166,7 @@ internal static partial class MarkdownToSpectreConverter
         // Convert > quoted text - handle all forms: "> text", "> ", and ">"
         // Process line by line to avoid regex matching across line boundaries
         var lines = text.Split('\n');
-        var regex = new Regex(@"^>\s*(.*)$");
+        var regex = QuotedTextRegex();
 
         for (int i = 0; i < lines.Length; i++)
         {
@@ -265,6 +275,10 @@ internal static partial class MarkdownToSpectreConverter
     [GeneratedRegex(@"!\[([^\]]*)\]\(([^)]+)\)")]
     private static partial Regex ImageRegex();
 
-    [GeneratedRegex(@"\[([^\]]+)\]\(([^)]+)\)")]
+    [GeneratedRegex(@"\[((?:[^\[\]]|\[[^\[\]]*\])+)\]\(([^)]+)\)")]
     private static partial Regex LinkRegex();
+
+    [GeneratedRegex(@"^>\s*(.*)$", RegexOptions.Multiline)]
+    private static partial Regex QuotedTextRegex();
+
 }

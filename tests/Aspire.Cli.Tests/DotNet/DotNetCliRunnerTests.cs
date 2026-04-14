@@ -35,7 +35,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions()
+        var options = new ProcessInvocationOptions()
         {
             NoLaunchProfile = true
         };
@@ -75,7 +75,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -90,6 +90,34 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
             0);
 
         var exitCode = await runner.BuildAsync(projectFile, noRestore: false, options, CancellationToken.None).DefaultTimeout();
+
+        Assert.Equal(0, exitCode);
+    }
+
+    [Fact]
+    public async Task RestoreAsyncRunsDotnetRestoreCommand()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var projectFile = new FileInfo(Path.Combine(workspace.WorkspaceRoot.FullName, "AppHost.csproj"));
+        await File.WriteAllTextAsync(projectFile.FullName, "Not a real project file.");
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
+        var provider = services.BuildServiceProvider();
+
+        var options = new ProcessInvocationOptions();
+
+        var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
+        var runner = DotNetCliRunnerTestHelper.Create(
+            provider,
+            executionContext,
+            (args, _, _, _) =>
+            {
+                Assert.Equal("restore", args[0]);
+                Assert.Equal(projectFile.FullName, args[1]);
+            },
+            0);
+
+        var exitCode = await runner.RestoreAsync(projectFile, options, CancellationToken.None).DefaultTimeout();
 
         Assert.Equal(0, exitCode);
     }
@@ -114,7 +142,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         });
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -143,7 +171,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -172,7 +200,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -201,7 +229,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -239,7 +267,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -280,7 +308,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -323,7 +351,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -361,7 +389,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         });
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var runner = DotNetCliRunnerTestHelper.Create(
             provider,
@@ -401,7 +429,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         });
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var runner = DotNetCliRunnerTestHelper.Create(
             provider,
@@ -443,7 +471,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         });
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var runner = DotNetCliRunnerTestHelper.Create(
             provider,
@@ -518,7 +546,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
             args: [],
             env: null,
             backchannelCompletionSource: new TaskCompletionSource<IAppHostCliBackchannel>(),
-            options: new DotNetCliRunnerInvocationOptions(),
+            options: new ProcessInvocationOptions(),
             cancellationToken: CancellationToken.None).DefaultTimeout();
 
         await launchAppHostCalledTcs.Task.DefaultTimeout();
@@ -535,7 +563,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -551,14 +579,14 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
                 Assert.Contains("Aspire.Hosting.Redis@9.2.0", args);
                 Assert.Contains("--no-restore", args);
 
-                // Verify the order: add package PackageName --file FilePath --version Version --no-restore
-                var addIndex = Array.IndexOf(args, "add");
+                // Verify the order: package add PackageName --file FilePath --version Version --no-restore
                 var packageIndex = Array.IndexOf(args, "package");
+                var addIndex = Array.IndexOf(args, "add");
                 var fileIndex = Array.IndexOf(args, "--file");
                 var filePathIndex = Array.IndexOf(args, appHostFile.FullName);
                 var packageNameIndex = Array.IndexOf(args, "Aspire.Hosting.Redis@9.2.0");
 
-                Assert.True(addIndex < packageIndex);
+                Assert.True(packageIndex < addIndex);
                 Assert.True(packageIndex < fileIndex);
                 Assert.True(fileIndex < filePathIndex);
                 Assert.True(filePathIndex < packageNameIndex);
@@ -569,7 +597,8 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
             appHostFile,
             "Aspire.Hosting.Redis",
             "9.2.0",
-            null, // no source, should use --no-restore
+            nugetSource: null,
+            noRestore: true, // should use --no-restore
             options,
             CancellationToken.None
             );
@@ -587,7 +616,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -605,19 +634,25 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
                 Assert.Contains("--source", args);
                 Assert.Contains("https://api.nuget.org/v3/index.json", args);
 
-                // Verify the order: add ProjectFile package PackageName --version Version --source Source
-                var addIndex = Array.IndexOf(args, "add");
-                var projectIndex = Array.IndexOf(args, projectFile.FullName);
+                // Verify the order: package add PackageName --version Version --source Source --project ProjectFile 
                 var packageIndex = Array.IndexOf(args, "package");
+                var addIndex = Array.IndexOf(args, "add");
+                var projectFlagIndex = Array.IndexOf(args, "--project");
+                var projectValueIndex = Array.IndexOf(args, projectFile.FullName);
                 var packageNameIndex = Array.IndexOf(args, "Aspire.Hosting.Redis");
                 var versionFlagIndex = Array.IndexOf(args, "--version");
                 var versionValueIndex = Array.IndexOf(args, "9.2.0");
+                var sourceFlagIndex = Array.IndexOf(args, "--source");
+                var sourceValueIndex = Array.IndexOf(args, "https://api.nuget.org/v3/index.json");
 
-                Assert.True(addIndex < projectIndex);
-                Assert.True(projectIndex < packageIndex);
-                Assert.True(packageIndex < packageNameIndex);
+                Assert.True(packageIndex < addIndex);
+                Assert.True(addIndex < packageNameIndex);
                 Assert.True(packageNameIndex < versionFlagIndex);
                 Assert.True(versionFlagIndex < versionValueIndex);
+                Assert.True(packageNameIndex < projectFlagIndex);
+                Assert.True(projectFlagIndex < projectValueIndex);
+                Assert.True(packageNameIndex < sourceFlagIndex);
+                Assert.True(sourceFlagIndex < sourceValueIndex);
 
                 // Should NOT contain --file or the @version format
                 Assert.DoesNotContain("--file", args);
@@ -630,6 +665,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
             "Aspire.Hosting.Redis",
             "9.2.0",
             "https://api.nuget.org/v3/index.json", // provide source, should use --source
+            noRestore: false,
             options,
             CancellationToken.None
             );
@@ -647,7 +683,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -656,28 +692,31 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
             (args, _, _, _) =>
             {
                 // Verify arguments are correct for .csproj file with --no-restore (no source provided)
-                Assert.Contains("add", args);
                 Assert.Contains("package", args);
-                Assert.Contains(projectFile.FullName, args);
+                Assert.Contains("add", args);
                 Assert.Contains("Aspire.Hosting.Redis", args);
                 Assert.Contains("--version", args);
                 Assert.Contains("9.2.0", args);
+                Assert.Contains("--project", args);
+                Assert.Contains(projectFile.FullName, args);
                 Assert.Contains("--no-restore", args);
 
-                // Verify the order: add ProjectFile package PackageName --version Version --no-restore
-                var addIndex = Array.IndexOf(args, "add");
-                var projectIndex = Array.IndexOf(args, projectFile.FullName);
+                // Verify the order: package add PackageName --version Version --project ProjectFile --no-restore
                 var packageIndex = Array.IndexOf(args, "package");
+                var addIndex = Array.IndexOf(args, "add");
                 var packageNameIndex = Array.IndexOf(args, "Aspire.Hosting.Redis");
                 var versionFlagIndex = Array.IndexOf(args, "--version");
                 var versionValueIndex = Array.IndexOf(args, "9.2.0");
+                var projectFlagIndex = Array.IndexOf(args, "--project");
+                var projectValueIndex = Array.IndexOf(args, projectFile.FullName);
                 var noRestoreIndex = Array.IndexOf(args, "--no-restore");
 
-                Assert.True(addIndex < projectIndex);
-                Assert.True(projectIndex < packageIndex);
-                Assert.True(packageIndex < packageNameIndex);
+                Assert.True(packageIndex < addIndex);
+                Assert.True(addIndex < packageNameIndex);
                 Assert.True(packageNameIndex < versionFlagIndex);
                 Assert.True(versionFlagIndex < versionValueIndex);
+                Assert.True(packageNameIndex < projectFlagIndex);
+                Assert.True(projectFlagIndex < projectValueIndex);
                 Assert.True(versionValueIndex < noRestoreIndex);
 
                 // Should NOT contain --file, --source, or the @version format
@@ -691,7 +730,79 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
             projectFile,
             "Aspire.Hosting.Redis",
             "9.2.0",
-            null, // no source, should use --no-restore
+            nugetSource: null,
+            noRestore: true,
+            options,
+            CancellationToken.None
+            );
+
+        Assert.Equal(0, exitCode);
+    }
+
+    [Fact]
+    public async Task AddPackageAsyncWithSourceAndNoRestoreHasArgumentSourceAndNoRestore()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var projectFile = new FileInfo(Path.Combine(workspace.WorkspaceRoot.FullName, "AppHost.csproj"));
+        await File.WriteAllTextAsync(projectFile.FullName, "<Project></Project>");
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
+        var provider = services.BuildServiceProvider();
+
+        var options = new ProcessInvocationOptions();
+
+        var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
+        var runner = DotNetCliRunnerTestHelper.Create(
+            provider,
+            executionContext,
+            (args, _, _, _) =>
+            {
+                // Verify arguments are correct for .csproj file with --source and --no-restore
+                Assert.Contains("package", args);
+                Assert.Contains("add", args);
+                Assert.Contains("Aspire.Hosting.Redis", args);
+                Assert.Contains("--version", args);
+                Assert.Contains("9.2.0", args);
+                Assert.Contains("--project", args);
+                Assert.Contains(projectFile.FullName, args);
+                Assert.Contains("--source", args);
+                Assert.Contains("https://api.nuget.org/v3/index.json", args);
+                Assert.Contains("--no-restore", args);
+
+                // Verify the order: package add PackageName --version Version --project ProjectFile --no-restore --source Source
+                var packageIndex = Array.IndexOf(args, "package");
+                var addIndex = Array.IndexOf(args, "add");
+                var packageNameIndex = Array.IndexOf(args, "Aspire.Hosting.Redis");
+                var versionFlagIndex = Array.IndexOf(args, "--version");
+                var versionValueIndex = Array.IndexOf(args, "9.2.0");
+                var projectFlagIndex = Array.IndexOf(args, "--project");
+                var projectValueIndex = Array.IndexOf(args, projectFile.FullName);
+                var sourceFlagIndex = Array.IndexOf(args, "--source");
+                var sourceValueIndex = Array.IndexOf(args, "https://api.nuget.org/v3/index.json");
+                var noRestoreIndex = Array.IndexOf(args, "--no-restore");
+
+                Assert.True(packageIndex < addIndex);
+                Assert.True(addIndex < packageNameIndex);
+                Assert.True(packageNameIndex < versionFlagIndex);
+                Assert.True(versionFlagIndex < versionValueIndex);
+                Assert.True(packageNameIndex < projectFlagIndex);
+                Assert.True(projectFlagIndex < projectValueIndex);
+                Assert.True(packageNameIndex < noRestoreIndex);
+                Assert.True(packageNameIndex < sourceFlagIndex);
+                Assert.True(sourceFlagIndex < sourceValueIndex);
+
+                // Should NOT contain --file or the @version format
+                Assert.DoesNotContain("--file", args);
+                Assert.DoesNotContain("Aspire.Hosting.Redis@9.2.0", args);
+            },
+            0);
+
+        var exitCode = await runner.AddPackageAsync(
+            projectFile,
+            "Aspire.Hosting.Redis",
+            "9.2.0",
+            "https://api.nuget.org/v3/index.json", // provide source, should use --source
+            noRestore: true,
             options,
             CancellationToken.None
             );
@@ -720,7 +831,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions
+        var options = new ProcessInvocationOptions
         {
             StandardOutputCallback = (line) => outputHelper.WriteLine($"stdout: {line}")
         };
@@ -761,7 +872,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -791,7 +902,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions()
+        var options = new ProcessInvocationOptions()
         {
             NoLaunchProfile = true
         };
@@ -837,7 +948,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions()
+        var options = new ProcessInvocationOptions()
         {
             NoLaunchProfile = false
         };
@@ -883,7 +994,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var provider = services.BuildServiceProvider();
 
         // Use watch=true and NoLaunchProfile=false to ensure some empty strings are generated
-        var options = new DotNetCliRunnerInvocationOptions()
+        var options = new ProcessInvocationOptions()
         {
             NoLaunchProfile = false,
             Debug = false
@@ -927,7 +1038,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions()
+        var options = new ProcessInvocationOptions()
         {
             NoLaunchProfile = false // This will generate an empty string for noProfileSwitch
         };
@@ -978,7 +1089,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions()
+        var options = new ProcessInvocationOptions()
         {
             NoLaunchProfile = true,
             Debug = true
@@ -1027,7 +1138,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions()
+        var options = new ProcessInvocationOptions()
         {
             NoLaunchProfile = true,
             Debug = false // No debug, so no --verbose
@@ -1075,7 +1186,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -1111,7 +1222,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -1164,7 +1275,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
             logger: logger
         );
 
-        var options = new DotNetCliRunnerInvocationOptions { SuppressLogging = true };
+        var options = new ProcessInvocationOptions { SuppressLogging = true };
 
         var result = await runner.SearchPackagesAsync(
             workspace.WorkspaceRoot,
@@ -1205,7 +1316,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
             logger: logger
         );
 
-        var options = new DotNetCliRunnerInvocationOptions { SuppressLogging = true };
+        var options = new ProcessInvocationOptions { SuppressLogging = true };
 
         var result = await runner.SearchPackagesAsync(
             workspace.WorkspaceRoot,
@@ -1246,7 +1357,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
             logger: logger
         );
 
-        var options = new DotNetCliRunnerInvocationOptions { SuppressLogging = true };
+        var options = new ProcessInvocationOptions { SuppressLogging = true };
 
         var result = await runner.SearchPackagesAsync(
             workspace.WorkspaceRoot,
@@ -1290,7 +1401,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -1328,7 +1439,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -1366,7 +1477,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(
@@ -1406,7 +1517,7 @@ public class DotNetCliRunnerTests(ITestOutputHelper outputHelper)
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
         var provider = services.BuildServiceProvider();
 
-        var options = new DotNetCliRunnerInvocationOptions();
+        var options = new ProcessInvocationOptions();
 
         var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
         var runner = DotNetCliRunnerTestHelper.Create(

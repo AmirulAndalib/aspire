@@ -3,6 +3,7 @@
 
 using System.CommandLine;
 using System.Globalization;
+using System.Text.Json;
 using Aspire.Cli.Configuration;
 using Aspire.Cli.DotNet;
 using Aspire.Cli.Interaction;
@@ -19,12 +20,13 @@ namespace Aspire.Cli.Commands;
 
 internal sealed class AddCommand : BaseCommand
 {
+    internal override HelpGroup HelpGroup => HelpGroup.AppCommands;
+
     private readonly IPackagingService _packagingService;
     private readonly IProjectLocator _projectLocator;
     private readonly IAddCommandPrompter _prompter;
     private readonly IDotNetSdkInstaller _sdkInstaller;
     private readonly ICliHostEnvironment _hostEnvironment;
-    private readonly IFeatures _features;
     private readonly IAppHostProjectFactory _projectFactory;
 
     private static readonly Argument<string> s_integrationArgument = new("integration")
@@ -32,11 +34,8 @@ internal sealed class AddCommand : BaseCommand
         Description = AddCommandStrings.IntegrationArgumentDescription,
         Arity = ArgumentArity.ZeroOrOne
     };
-    private static readonly Option<FileInfo?> s_projectOption = new("--project")
-    {
-        Description = AddCommandStrings.ProjectArgumentDescription
-    };
-    private static readonly Option<string> s_versionOption = new("--version", "-v")
+    private static readonly OptionWithLegacy<FileInfo?> s_appHostOption = new("--apphost", "--project", AddCommandStrings.ProjectArgumentDescription);
+    private static readonly Option<string> s_versionOption = new("--version")
     {
         Description = AddCommandStrings.VersionArgumentDescription
     };
@@ -53,11 +52,10 @@ internal sealed class AddCommand : BaseCommand
         _prompter = prompter;
         _sdkInstaller = sdkInstaller;
         _hostEnvironment = hostEnvironment;
-        _features = features;
         _projectFactory = projectFactory;
 
         Arguments.Add(s_integrationArgument);
-        Options.Add(s_projectOption);
+        Options.Add(s_appHostOption);
         Options.Add(s_versionOption);
         Options.Add(s_sourceOption);
     }
@@ -72,7 +70,7 @@ internal sealed class AddCommand : BaseCommand
         {
             var integrationName = parseResult.GetValue(s_integrationArgument);
 
-            var passedAppHostProjectFile = parseResult.GetValue(s_projectOption);
+            var passedAppHostProjectFile = parseResult.GetValue(s_appHostOption);
             var searchResult = await _projectLocator.UseOrFindAppHostProjectFileAsync(passedAppHostProjectFile, MultipleAppHostProjectsFoundBehavior.Prompt, createSettingsFile: true, cancellationToken);
             var effectiveAppHostProjectFile = searchResult.SelectedProjectFile;
 
@@ -87,7 +85,7 @@ internal sealed class AddCommand : BaseCommand
             // Check if the .NET SDK is available (only needed for .NET projects)
             if (project.LanguageId == KnownLanguageId.CSharp)
             {
-                if (!await SdkInstallHelper.EnsureSdkInstalledAsync(_sdkInstaller, InteractionService, _features, Telemetry, _hostEnvironment, cancellationToken))
+                if (!await SdkInstallHelper.EnsureSdkInstalledAsync(_sdkInstaller, InteractionService, Telemetry, cancellationToken))
                 {
                     return ExitCodeConstants.SdkNotInstalled;
                 }
@@ -95,9 +93,9 @@ internal sealed class AddCommand : BaseCommand
 
             var source = parseResult.GetValue(s_sourceOption);
 
-            // For non-.NET projects, read the channel from settings.json if available.
-            // Unlike .NET projects which have a nuget.config, polyglot apphosts store
-            // the channel in .aspire/settings.json during the build process.
+            // For non-.NET projects, read the channel from the local Aspire configuration if available.
+            // Unlike .NET projects which have a nuget.config, polyglot apphosts persist the channel
+            // in aspire.config.json (or the legacy settings.json during migration).
             string? configuredChannel = null;
             if (project.LanguageId != KnownLanguageId.CSharp)
             {
@@ -105,8 +103,18 @@ internal sealed class AddCommand : BaseCommand
                 var isProjectReferenceMode = AspireRepositoryDetector.DetectRepositoryRoot(appHostDirectory) is not null;
                 if (!isProjectReferenceMode)
                 {
-                    var settings = AspireJsonConfiguration.Load(appHostDirectory);
-                    configuredChannel = settings?.Channel;
+                    // TODO: Remove legacy AspireJsonConfiguration fallback once confident most users
+                    // have migrated. Tracked by https://github.com/microsoft/aspire/issues/15239
+                    try
+                    {
+                        configuredChannel = AspireConfigFile.Load(appHostDirectory)?.Channel
+                            ?? AspireJsonConfiguration.Load(appHostDirectory)?.Channel;
+                    }
+                    catch (JsonException ex)
+                    {
+                        InteractionService.DisplayError(ex.Message);
+                        return ExitCodeConstants.FailedToLoadConfiguration;
+                    }
                 }
             }
 
@@ -208,6 +216,24 @@ internal sealed class AddCommand : BaseCommand
                 Source = source
             };
 
+            // Stop any running AppHost instance before adding the package.
+            // A running AppHost (especially in detach mode) locks project files,
+            // which prevents 'dotnet add package' from modifying the project.
+            var runningInstanceResult = await project.FindAndStopRunningInstanceAsync(
+                effectiveAppHostProjectFile,
+                ExecutionContext.HomeDirectory,
+                cancellationToken);
+
+            if (runningInstanceResult == RunningInstanceResult.InstanceStopped)
+            {
+                InteractionService.DisplayMessage(KnownEmojis.Information, AddCommandStrings.StoppedRunningInstance);
+            }
+            else if (runningInstanceResult == RunningInstanceResult.StopFailed)
+            {
+                InteractionService.DisplayError(AddCommandStrings.UnableToStopRunningInstances);
+                return ExitCodeConstants.FailedToAddPackage;
+            }
+
             var success = await InteractionService.ShowStatusAsync(
                 AddCommandStrings.AddingAspireIntegration,
                 async () => await project.AddPackageAsync(context, cancellationToken)
@@ -278,8 +304,12 @@ internal sealed class AddCommand : BaseCommand
             return preferredVersionPackage;
         }
 
-        // In non-interactive mode, auto-select the latest version.
-        var orderedPackageVersions = packageVersions.OrderByDescending(p => SemVersion.Parse(p.Package.Version), SemVersion.PrecedenceComparer);
+        // In non-interactive mode, prefer the implicit/default channel first to keep
+        // package selection aligned with the project's configured feeds. Then select
+        // the latest version within the chosen channel.
+        var orderedPackageVersions = packageVersions
+            .OrderByDescending(p => p.Channel.Type is PackageChannelType.Implicit)
+            .ThenByDescending(p => SemVersion.Parse(p.Package.Version), SemVersion.PrecedenceComparer);
         if (!_hostEnvironment.SupportsInteractiveInput)
         {
             return orderedPackageVersions.First();

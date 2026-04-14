@@ -22,37 +22,17 @@ namespace Aspire.Cli.Projects;
 internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
 {
     private const string ProjectHashFileName = ".projecthash";
-    private const string FolderPrefix = ".aspire";
     private const string AppsFolder = "hosts";
     public const string ProjectFileName = "AppHostServer.csproj";
     private const string ProjectDllName = "AppHostServer.dll";
-    private const string TargetFramework = "net10.0";
+    internal const string TargetFramework = "net10.0";
     public const string BuildFolder = "build";
     private const string AssemblyName = "AppHostServer";
 
     /// <summary>
     /// Gets the default Aspire SDK version based on the CLI version.
     /// </summary>
-    public static string DefaultSdkVersion => GetEffectiveVersion();
-
-    private static string GetEffectiveVersion()
-    {
-        var version = VersionHelper.GetDefaultTemplateVersion();
-
-        // Strip the commit SHA suffix (e.g., "9.2.0+abc123" -> "9.2.0")
-        var plusIndex = version.IndexOf('+');
-        if (plusIndex > 0)
-        {
-            version = version[..plusIndex];
-        }
-
-        // Dev versions (e.g., "13.2.0-dev") don't exist on NuGet, fall back to latest stable
-        if (version.EndsWith("-dev", StringComparison.OrdinalIgnoreCase))
-        {
-            return "13.1.0";
-        }
-        return version;
-    }
+    public static string DefaultSdkVersion => VersionHelper.GetDefaultSdkVersion();
 
     private readonly string _projectModelPath;
     private readonly string _appPath;
@@ -93,7 +73,7 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
         else
         {
             var pathDir = Convert.ToHexString(pathHash)[..12].ToLowerInvariant();
-            _projectModelPath = Path.Combine(Path.GetTempPath(), FolderPrefix, AppsFolder, pathDir);
+            _projectModelPath = Path.Combine(CliPathHelper.GetAspireHomeDirectory(), AppsFolder, pathDir);
         }
 
         // Create a stable UserSecretsId based on the app path hash
@@ -103,7 +83,7 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
     }
 
     /// <inheritdoc />
-    public string AppPath => _appPath;
+    public string AppDirectoryPath => _appPath;
 
     public string ProjectModelPath => _projectModelPath;
     public string UserSecretsId => _userSecretsId;
@@ -135,7 +115,7 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
     /// <summary>
     /// Creates the project .csproj content using project references to the local Aspire repository.
     /// </summary>
-    private XDocument CreateProjectFile(IEnumerable<(string Name, string Version)> packages)
+    private XDocument CreateProjectFile(IEnumerable<IntegrationReference> integrations)
     {
         // Determine OS/architecture for DCP package name
         var (buildOs, buildArch) = GetBuildPlatform();
@@ -183,12 +163,22 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
         var addedProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var otherPackages = new List<(string Name, string Version)>();
 
-        foreach (var (name, version) in packages)
+        foreach (var integration in integrations)
         {
-            if (name.StartsWith("Aspire.Hosting", StringComparison.OrdinalIgnoreCase))
+            if (integration.IsProjectReference)
             {
-                var projectPath = Path.Combine(_repoRoot, "src", name, $"{name}.csproj");
-                if (File.Exists(projectPath) && addedProjects.Add(name))
+                // Explicit project reference from settings.json
+                if (addedProjects.Add(integration.Name))
+                {
+                    projectRefGroup.Add(new XElement("ProjectReference",
+                        new XAttribute("Include", integration.ProjectPath!),
+                        new XElement("IsAspireProjectResource", "false")));
+                }
+            }
+            else if (integration.Name.StartsWith("Aspire.Hosting", StringComparison.OrdinalIgnoreCase))
+            {
+                var projectPath = Path.Combine(_repoRoot, "src", integration.Name, $"{integration.Name}.csproj");
+                if (File.Exists(projectPath) && addedProjects.Add(integration.Name))
                 {
                     projectRefGroup.Add(new XElement("ProjectReference",
                         new XAttribute("Include", projectPath),
@@ -197,7 +187,11 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
             }
             else
             {
-                otherPackages.Add((name, version));
+                if (integration.Version is null)
+                {
+                    throw new InvalidOperationException($"Integration '{integration.Name}' is neither a project reference nor a package reference (both Version and ProjectPath are null).");
+                }
+                otherPackages.Add((integration.Name, integration.Version));
             }
         }
 
@@ -262,9 +256,8 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
     /// Scaffolds the project files.
     /// </summary>
     public async Task<(string ProjectPath, string? ChannelName)> CreateProjectFilesAsync(
-        IEnumerable<(string Name, string Version)> packages,
-        CancellationToken cancellationToken = default,
-        IEnumerable<string>? additionalProjectReferences = null)
+        IEnumerable<IntegrationReference> integrations,
+        CancellationToken cancellationToken = default)
     {
         // Clean obj folder to ensure fresh NuGet restore
         var objPath = Path.Combine(_projectModelPath, "obj");
@@ -288,23 +281,18 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
 
         // Create appsettings.json with ATS assemblies
         var atsAssemblies = new List<string> { "Aspire.Hosting" };
-        foreach (var pkg in packages)
+        foreach (var integration in integrations)
         {
-            if (!atsAssemblies.Contains(pkg.Name, StringComparer.OrdinalIgnoreCase))
+            // Skip SDK-only packages that don't produce runtime assemblies
+            if (integration.Name.Equals("Aspire.Hosting.AppHost", StringComparison.OrdinalIgnoreCase) ||
+                integration.Name.StartsWith("Aspire.AppHost.Sdk", StringComparison.OrdinalIgnoreCase))
             {
-                atsAssemblies.Add(pkg.Name);
+                continue;
             }
-        }
 
-        if (additionalProjectReferences is not null)
-        {
-            foreach (var projectPath in additionalProjectReferences)
+            if (!atsAssemblies.Contains(integration.Name, StringComparer.OrdinalIgnoreCase))
             {
-                var assemblyName = Path.GetFileNameWithoutExtension(projectPath);
-                if (!atsAssemblies.Contains(assemblyName, StringComparer.OrdinalIgnoreCase))
-                {
-                    atsAssemblies.Add(assemblyName);
-                }
+                atsAssemblies.Add(integration.Name);
             }
         }
 
@@ -327,58 +315,54 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
 
         // Handle NuGet config and channel resolution
         string? channelName = null;
-        var nugetConfigPath = Path.Combine(_projectModelPath, "nuget.config");
 
         var userNugetConfig = FindNuGetConfig(_appPath);
         if (userNugetConfig is not null)
         {
+            var nugetConfigPath = Path.Combine(_projectModelPath, "nuget.config");
             File.Copy(userNugetConfig, nugetConfigPath, overwrite: true);
         }
 
         var channels = await _packagingService.GetChannelsAsync(cancellationToken);
-        var localConfig = AspireJsonConfiguration.Load(_appPath);
-        var configuredChannelName = localConfig?.Channel;
+        var configuredChannelName = AspireConfigFile.Load(_appPath)?.Channel
+            ?? AspireJsonConfiguration.Load(_appPath)?.Channel;
 
         if (string.IsNullOrEmpty(configuredChannelName))
         {
             configuredChannelName = await _configurationService.GetConfigurationAsync("channel", cancellationToken);
         }
 
-        PackageChannel? channel;
-        if (!string.IsNullOrEmpty(configuredChannelName))
-        {
-            channel = channels.FirstOrDefault(c => string.Equals(c.Name, configuredChannelName, StringComparison.OrdinalIgnoreCase));
-        }
-        else
-        {
-            channel = channels.FirstOrDefault(c => c.Type == PackageChannelType.Explicit);
-        }
+        // Resolve channel sources and add them via RestoreAdditionalProjectSources
+        // This is additive — it preserves the user's nuget.config and adds channel-specific sources
+        var channelSources = new List<string>();
+        var matchedChannels = !string.IsNullOrEmpty(configuredChannelName)
+            ? channels.Where(c => string.Equals(c.Name, configuredChannelName, StringComparison.OrdinalIgnoreCase))
+            : channels.Where(c => c.Type == PackageChannelType.Explicit);
 
-        if (channel is not null)
+        foreach (var ch in matchedChannels)
         {
-            await NuGetConfigMerger.CreateOrUpdateAsync(
-                new DirectoryInfo(_projectModelPath),
-                channel,
-                cancellationToken: cancellationToken);
-            channelName = channel.Name;
+            channelName ??= ch.Name;
+            if (ch.Mappings is not null)
+            {
+                foreach (var mapping in ch.Mappings)
+                {
+                    if (!channelSources.Contains(mapping.Source, StringComparer.OrdinalIgnoreCase))
+                    {
+                        channelSources.Add(mapping.Source);
+                    }
+                }
+            }
         }
 
         // Create the project file
-        var doc = CreateProjectFile(packages);
+        var doc = CreateProjectFile(integrations);
 
-        // Add additional project references
-        if (additionalProjectReferences is not null)
+        // Add channel sources to the project
+        if (channelSources.Count > 0)
         {
-            var additionalProjectRefs = additionalProjectReferences
-                .Select(path => new XElement("ProjectReference",
-                    new XAttribute("Include", path),
-                    new XElement("IsAspireProjectResource", "false")))
-                .ToList();
-
-            if (additionalProjectRefs.Count > 0)
-            {
-                doc.Root!.Add(new XElement("ItemGroup", additionalProjectRefs));
-            }
+            var sourceList = string.Join(";", channelSources);
+            doc.Root!.Descendants("PropertyGroup").First()
+                .Add(new XElement("RestoreAdditionalProjectSources", sourceList));
         }
 
         // Add appsettings.json to output
@@ -390,6 +374,7 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
         // Create Directory.Packages.props to enable central package management
         // This ensures transitive dependencies use versions from the repo's Directory.Packages.props
         var repoDirectoryPackagesProps = Path.Combine(_repoRoot, "Directory.Packages.props");
+
         var directoryPackagesProps = $"""
             <Project>
               <PropertyGroup>
@@ -401,10 +386,16 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
             """;
         File.WriteAllText(Path.Combine(_projectModelPath, "Directory.Packages.props"), directoryPackagesProps);
 
+        // Write empty Directory.Build.props/targets to prevent MSBuild from walking up and
+        // importing the repo's build infrastructure (Arcade SDK, etc.) which can rewrite
+        // project reference paths and cause resolution failures from the temp directory.
+        File.WriteAllText(Path.Combine(_projectModelPath, "Directory.Build.props"), "<Project />");
+        File.WriteAllText(Path.Combine(_projectModelPath, "Directory.Build.targets"), "<Project />");
+
         var projectFileName = Path.Combine(_projectModelPath, ProjectFileName);
 
         // Log the full project XML for debugging
-        _logger.LogDebug("Generated AppHostServer project file:\n{ProjectXml}", doc.ToString());
+        _logger.LogTrace("Generated AppHostServer project file:\n{ProjectXml}", doc.ToString());
 
         doc.Save(projectFileName);
 
@@ -419,7 +410,7 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
         var outputCollector = new OutputCollector();
         var projectFile = new FileInfo(Path.Combine(_projectModelPath, ProjectFileName));
 
-        var options = new DotNetCliRunnerInvocationOptions
+        var options = new ProcessInvocationOptions
         {
             StandardOutputCallback = outputCollector.AppendOutput,
             StandardErrorCallback = outputCollector.AppendError
@@ -433,10 +424,10 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
     /// <inheritdoc />
     public async Task<AppHostServerPrepareResult> PrepareAsync(
         string sdkVersion,
-        IEnumerable<(string Name, string Version)> packages,
+        IEnumerable<IntegrationReference> integrations,
         CancellationToken cancellationToken = default)
     {
-        var (_, channelName) = await CreateProjectFilesAsync(packages, cancellationToken);
+        var (_, channelName) = await CreateProjectFilesAsync(integrations, cancellationToken);
         var (buildSuccess, buildOutput) = await BuildAsync(cancellationToken);
 
         if (!buildSuccess)
@@ -519,7 +510,7 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
         {
             if (e.Data is not null)
             {
-                _logger.LogDebug("AppHostServer({ProcessId}) stdout: {Line}", process.Id, e.Data);
+                _logger.LogTrace("AppHostServer({ProcessId}) stdout: {Line}", process.Id, e.Data);
                 outputCollector.AppendOutput(e.Data);
             }
         };
@@ -527,7 +518,7 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
         {
             if (e.Data is not null)
             {
-                _logger.LogDebug("AppHostServer({ProcessId}) stderr: {Line}", process.Id, e.Data);
+                _logger.LogTrace("AppHostServer({ProcessId}) stderr: {Line}", process.Id, e.Data);
                 outputCollector.AppendError(e.Data);
             }
         };

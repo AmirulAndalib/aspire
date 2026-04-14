@@ -118,31 +118,16 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Description" xml:space="preserve">
-    <value>Wait for a resource to reach a target status.</value>
+    <value>Wait for a resource to reach a target status</value>
   </data>
   <data name="ResourceArgumentDescription" xml:space="preserve">
-    <value>The name of the resource to wait for.</value>
+    <value>The name of the resource to wait for</value>
   </data>
   <data name="StatusOptionDescription" xml:space="preserve">
     <value>The target status to wait for (healthy, up, down). Defaults to healthy.</value>
   </data>
   <data name="TimeoutOptionDescription" xml:space="preserve">
     <value>Maximum time to wait in seconds. Defaults to 120.</value>
-  </data>
-  <data name="ProjectOptionDescription" xml:space="preserve">
-    <value>The path to the Aspire AppHost project file.</value>
-  </data>
-  <data name="ScanningForRunningAppHosts" xml:space="preserve">
-    <value>Scanning for running AppHosts...</value>
-  </data>
-  <data name="SelectAppHost" xml:space="preserve">
-    <value>Select an AppHost:</value>
-  </data>
-  <data name="NoInScopeAppHostsShowingAll" xml:space="preserve">
-    <value>No running AppHosts found in the current directory. Showing all running AppHosts:</value>
-  </data>
-  <data name="NoRunningAppHostsFound" xml:space="preserve">
-    <value>No running AppHosts found.</value>
   </data>
   <data name="WaitingForResource" xml:space="preserve">
     <value>Waiting for resource '{0}' to be {1}...</value>
@@ -164,5 +149,8 @@
   </data>
   <data name="TimeoutMustBePositive" xml:space="preserve">
     <value>Timeout must be a positive number of seconds.</value>
+  </data>
+  <data name="SelectAppHostAction" xml:space="preserve">
+    <value>connect to</value>
   </data>
 </root>

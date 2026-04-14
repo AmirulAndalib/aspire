@@ -3,7 +3,8 @@
 
 using System.Reflection;
 using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.Ats;
+using Aspire.Hosting.RemoteHost;
+using Aspire.TypeSystem;
 using Aspire.Hosting.CodeGeneration.TypeScript.Tests.TestTypes;
 
 namespace Aspire.Hosting.CodeGeneration.Go.Tests;
@@ -254,9 +255,21 @@ public class AtsGoCodeGeneratorTests
         var atsContext = CreateContextFromBothAssemblies();
 
         var files = _generator.GenerateDistributedApplication(atsContext);
-        
+
         Assert.Contains("go.mod", files.Keys);
         Assert.Contains("module apphost/modules/aspire", files["go.mod"]);
+    }
+
+    [Fact]
+    public void GenerateDistributedApplication_HostingAssembly_SanitizesGoKeywordParameters()
+    {
+        var atsContext = CreateContextFromBothAssemblies();
+
+        var files = _generator.GenerateDistributedApplication(atsContext);
+        var aspireGo = files["aspire.go"];
+
+        Assert.Matches(@"func \(s \*[^\)]*\) WithRelationship\([^)]*type_ string\)", aspireGo);
+        Assert.DoesNotMatch(@"func \(s \*[^\)]*\) WithRelationship\([^)]*\btype string\)", aspireGo);
     }
 
     private static List<AtsCapabilityInfo> ScanCapabilitiesFromTestAssembly()

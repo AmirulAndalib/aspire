@@ -11,6 +11,7 @@ namespace Aspire.Hosting.Backchannel;
 
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 
@@ -110,16 +111,6 @@ internal sealed class GetDashboardInfoRequest { }
 /// </summary>
 internal sealed class GetDashboardInfoResponse
 {
-    /// <summary>
-    /// Gets the base URL of the Dashboard MCP endpoint.
-    /// </summary>
-    public string? McpBaseUrl { get; init; }
-
-    /// <summary>
-    /// Gets the Dashboard MCP API token.
-    /// </summary>
-    public string? McpApiToken { get; init; }
-
     /// <summary>
     /// Gets the base URL of the Dashboard API (without login token).
     /// Use this for API calls like /api/telemetry/*.
@@ -271,7 +262,7 @@ internal sealed class ExecuteResourceCommandRequest
     public required string ResourceName { get; init; }
 
     /// <summary>
-    /// Gets the command name (e.g., "resource-start", "resource-stop", "resource-restart").
+    /// Gets the command name (e.g., "start", "stop", "restart").
     /// </summary>
     public required string CommandName { get; init; }
 }
@@ -294,7 +285,64 @@ internal sealed class ExecuteResourceCommandResponse
     /// <summary>
     /// Gets the error message if the command failed.
     /// </summary>
+    [Obsolete("Use Message instead.")]
     public string? ErrorMessage { get; init; }
+
+    /// <summary>
+    /// Gets the message associated with the command result.
+    /// </summary>
+    public string? Message { get; init; }
+
+    /// <summary>
+    /// Gets the value produced by the command.
+    /// </summary>
+    public ExecuteResourceCommandResult? Value { get; init; }
+}
+
+/// <summary>
+/// Value produced by a resource command.
+/// </summary>
+internal sealed class ExecuteResourceCommandResult
+{
+    /// <summary>
+    /// Gets the value data.
+    /// </summary>
+    public required string Value { get; init; }
+
+    /// <summary>
+    /// Gets the format of the value data.
+    /// </summary>
+    public CommandResultFormat Format { get; init; }
+
+    /// <summary>
+    /// Gets whether to immediately display the value in the dashboard.
+    /// </summary>
+    public bool DisplayImmediately { get; init; }
+}
+
+/// <summary>
+/// Specifies the format of a command result.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<CommandResultFormat>))]
+internal enum CommandResultFormat
+{
+    /// <summary>
+    /// Plain text result.
+    /// </summary>
+    [JsonStringEnumMemberName("text")]
+    Text,
+
+    /// <summary>
+    /// JSON result.
+    /// </summary>
+    [JsonStringEnumMemberName("json")]
+    Json,
+
+    /// <summary>
+    /// Markdown result.
+    /// </summary>
+    [JsonStringEnumMemberName("markdown")]
+    Markdown
 }
 
 #endregion
@@ -392,19 +440,21 @@ internal sealed class RpcResourceState
 }
 
 /// <summary>
-/// Represents dashboard URLs with authentication tokens.
+/// Represents dashboard URLs for the running AppHost.
 /// </summary>
 internal sealed class DashboardUrlsState
 {
     public bool DashboardHealthy { get; init; } = true;
 
     /// <summary>
-    /// Gets the base dashboard URL with a login token.
+    /// Gets the dashboard URL.
+    /// When browser token authentication is enabled, this value includes the login token.
     /// </summary>
     public string? BaseUrlWithLoginToken { get; init; }
 
     /// <summary>
-    /// Gets the Codespaces dashboard URL with a login token, if available.
+    /// Gets the Codespaces dashboard URL, if available.
+    /// When browser token authentication is enabled, this value includes the login token.
     /// </summary>
     public string? CodespacesUrlWithLoginToken { get; init; }
 }
@@ -466,16 +516,27 @@ internal sealed class PublishingActivityData
     public string? StepId { get; init; }
 
     /// <summary>
+    /// Gets the identifier of the parent step used for hierarchical step summaries.
+    /// </summary>
+    public string? ParentStepId { get; init; }
+
+    /// <summary>
+    /// Gets the hierarchical level of the step used for display purposes.
+    /// Nullable for backwards compatibility with older app hosts that do not send hierarchy metadata.
+    /// </summary>
+    public int? HierarchyLevel { get; init; }
+
+    /// <summary>
     /// Gets the optional completion message for tasks (appears as dimmed child text).
     /// </summary>
     public string? CompletionMessage { get; init; }
 
     /// <summary>
     /// Gets the pipeline summary information to display after pipeline completion.
-    /// This is a list of key-value pairs with deployment targets, resource names, URLs, etc.
+    /// Each item carries its own key, value, and Markdown formatting flag.
     /// The list preserves the order items were added.
     /// </summary>
-    public IReadOnlyList<KeyValuePair<string, string>>? PipelineSummary { get; init; }
+    public IReadOnlyList<BackchannelPipelineSummaryItem>? PipelineSummary { get; init; }
 
     /// <summary>
     /// Gets the input information for prompt activities, if available.
@@ -496,6 +557,27 @@ internal sealed class PublishingActivityData
     /// Gets a value indicating whether markdown formatting is enabled for the publishing activity.
     /// </summary>
     public bool EnableMarkdown { get; init; } = true;
+}
+
+/// <summary>
+/// Represents a single item in a pipeline summary for backchannel transport.
+/// </summary>
+internal sealed class BackchannelPipelineSummaryItem
+{
+    /// <summary>
+    /// Gets the key or label for the summary item.
+    /// </summary>
+    public required string Key { get; init; }
+
+    /// <summary>
+    /// Gets the string value for the summary item.
+    /// </summary>
+    public required string Value { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the value contains Markdown formatting.
+    /// </summary>
+    public bool EnableMarkdown { get; init; }
 }
 
 /// <summary>
@@ -604,6 +686,60 @@ internal class PublishingPromptInputAnswer
 {
     public string? Name { get; set; }
     public string? Value { get; set; }
+}
+
+/// <summary>
+/// Represents metadata about a pipeline step for display purposes (e.g., --list-steps).
+/// </summary>
+internal sealed class PipelineStepInfo
+{
+    /// <summary>
+    /// Gets the unique name of the step.
+    /// </summary>
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// Gets the description of the step.
+    /// </summary>
+    public string? Description { get; init; }
+
+    /// <summary>
+    /// Gets the names of steps that this step depends on.
+    /// </summary>
+    public string[] DependsOn { get; init; } = [];
+
+    /// <summary>
+    /// Gets the tags that categorize this step.
+    /// </summary>
+    public string[] Tags { get; init; } = [];
+
+    /// <summary>
+    /// Gets the name of the resource this step is associated with, if any.
+    /// </summary>
+    public string? ResourceName { get; init; }
+}
+
+/// <summary>
+/// Request for getting pipeline step metadata.
+/// </summary>
+internal sealed class GetPipelineStepsRequest
+{
+    /// <summary>
+    /// Gets or sets the target step name to filter to (including transitive dependencies).
+    /// When null, all steps are returned.
+    /// </summary>
+    public string? Step { get; init; }
+}
+
+/// <summary>
+/// Response containing pipeline step metadata.
+/// </summary>
+internal sealed class GetPipelineStepsResponse
+{
+    /// <summary>
+    /// Gets the pipeline steps in topological (execution) order.
+    /// </summary>
+    public required PipelineStepInfo[] Steps { get; init; }
 }
 
 /// <summary>
@@ -739,7 +875,7 @@ internal sealed class ResourceSnapshot
 internal sealed class ResourceSnapshotCommand
 {
     /// <summary>
-    /// Gets the command name (e.g., "resource-start", "resource-stop", "resource-restart").
+    /// Gets the command name (e.g., "start", "stop", "restart").
     /// </summary>
     public required string Name { get; init; }
 
@@ -938,6 +1074,12 @@ internal sealed class AppHostInformation
     /// Gets or sets when the AppHost process started.
     /// </summary>
     public DateTimeOffset? StartedAt { get; init; }
+
+    /// <summary>
+    /// Gets or sets when the CLI process that launched the AppHost started.
+    /// This value is only set when the AppHost is launched via the Aspire CLI.
+    /// </summary>
+    public DateTimeOffset? CliStartedAt { get; init; }
 }
 
 /// <summary>

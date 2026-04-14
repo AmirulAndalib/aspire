@@ -2,12 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Cli.Configuration;
+using Aspire.Cli.Diagnostics;
+using Aspire.Cli.Projects;
+using Aspire.Cli.Tests.TestServices;
 using Aspire.Cli.Tests.Utils;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Aspire.Cli.Tests.Projects;
 
 public class GuestAppHostProjectTests(ITestOutputHelper outputHelper) : IDisposable
 {
+    private const string AspNetCoreEnvironmentVariableName = "ASPNETCORE_ENVIRONMENT";
+
     private readonly TemporaryWorkspace _workspace = TemporaryWorkspace.Create(outputHelper);
 
     public void Dispose()
@@ -123,7 +130,7 @@ public class GuestAppHostProjectTests(ITestOutputHelper outputHelper) : IDisposa
     }
 
     [Fact]
-    public void AspireJsonConfiguration_GetAllPackages_IncludesBasePackages()
+    public void AspireJsonConfiguration_GetIntegrationReferences_IncludesBasePackages()
     {
         // Arrange
         var config = new AspireJsonConfiguration
@@ -137,17 +144,16 @@ public class GuestAppHostProjectTests(ITestOutputHelper outputHelper) : IDisposa
         };
 
         // Act
-        var packages = config.GetAllPackages().ToList();
+        var refs = config.GetIntegrationReferences("13.1.0", "/tmp").ToList();
 
         // Assert - should include base package (Aspire.Hosting) plus explicit packages
-        // Note: Aspire.Hosting.AppHost is an SDK-only package and is excluded
-        Assert.Contains(packages, p => p.Name == "Aspire.Hosting" && p.Version == "13.1.0");
-        Assert.Contains(packages, p => p.Name == "Aspire.Hosting.Redis" && p.Version == "13.1.0");
-        Assert.Equal(2, packages.Count);
+        Assert.Contains(refs, r => r.Name == "Aspire.Hosting" && r.Version == "13.1.0" && !r.IsProjectReference);
+        Assert.Contains(refs, r => r.Name == "Aspire.Hosting.Redis" && r.Version == "13.1.0" && !r.IsProjectReference);
+        Assert.Equal(2, refs.Count);
     }
 
     [Fact]
-    public void AspireJsonConfiguration_GetAllPackages_WithNoExplicitPackages_ReturnsBasePackagesOnly()
+    public void AspireJsonConfiguration_GetIntegrationReferences_WithNoExplicitPackages_ReturnsBasePackagesOnly()
     {
         // Arrange
         var config = new AspireJsonConfiguration
@@ -157,30 +163,15 @@ public class GuestAppHostProjectTests(ITestOutputHelper outputHelper) : IDisposa
         };
 
         // Act
-        var packages = config.GetAllPackages().ToList();
+        var refs = config.GetIntegrationReferences("13.1.0", "/tmp").ToList();
 
         // Assert - should include base package only (Aspire.Hosting)
-        // Note: Aspire.Hosting.AppHost is an SDK-only package and is excluded
-        Assert.Single(packages);
-        Assert.Contains(packages, p => p.Name == "Aspire.Hosting" && p.Version == "13.1.0");
+        Assert.Single(refs);
+        Assert.Contains(refs, r => r.Name == "Aspire.Hosting" && r.Version == "13.1.0");
     }
 
     [Fact]
-    public void AspireJsonConfiguration_GetAllPackages_WithWhitespaceSdkVersion_Throws()
-    {
-        var config = new AspireJsonConfiguration
-        {
-            SdkVersion = " ",
-            Language = "typescript"
-        };
-
-        var exception = Assert.Throws<InvalidOperationException>(() => config.GetAllPackages().ToList());
-
-        Assert.Contains("non-empty", exception.Message);
-    }
-
-    [Fact]
-    public void AspireJsonConfiguration_GetAllPackages_WithDefaultSdkVersion_UsesFallbackVersion()
+    public void AspireJsonConfiguration_GetIntegrationReferences_WithEmptyVersion_UsesFallbackVersion()
     {
         // Arrange
         var config = new AspireJsonConfiguration
@@ -193,15 +184,15 @@ public class GuestAppHostProjectTests(ITestOutputHelper outputHelper) : IDisposa
         };
 
         // Act
-        var packages = config.GetAllPackages("13.1.0").ToList();
+        var refs = config.GetIntegrationReferences("13.1.0", "/tmp").ToList();
 
         // Assert
-        Assert.Contains(packages, p => p.Name == "Aspire.Hosting" && p.Version == "13.1.0");
-        Assert.Contains(packages, p => p.Name == "Aspire.Hosting.Redis" && p.Version == "13.1.0");
+        Assert.Contains(refs, r => r.Name == "Aspire.Hosting" && r.Version == "13.1.0");
+        Assert.Contains(refs, r => r.Name == "Aspire.Hosting.Redis" && r.Version == "13.1.0");
     }
 
     [Fact]
-    public void AspireJsonConfiguration_GetAllPackages_WithConfiguredSdkVersion_ReturnsConfiguredVersions()
+    public void AspireJsonConfiguration_GetIntegrationReferences_WithConfiguredSdkVersion_ReturnsConfiguredVersions()
     {
         // Arrange
         var config = new AspireJsonConfiguration
@@ -216,11 +207,39 @@ public class GuestAppHostProjectTests(ITestOutputHelper outputHelper) : IDisposa
         };
 
         // Act
-        var packages = config.GetAllPackages("13.1.0").ToList();
+        var refs = config.GetIntegrationReferences("13.1.0", "/tmp").ToList();
 
         // Assert
-        Assert.Contains(packages, p => p.Name == "Aspire.Hosting" && p.Version == "13.1.0");
-        Assert.Contains(packages, p => p.Name == "Aspire.Hosting.Redis" && p.Version == "13.1.0");
+        Assert.Contains(refs, r => r.Name == "Aspire.Hosting" && r.Version == "13.1.0");
+        Assert.Contains(refs, r => r.Name == "Aspire.Hosting.Redis" && r.Version == "13.1.0");
+    }
+
+    [Fact]
+    public void AspireJsonConfiguration_GetIntegrationReferences_WithProjectReference_ReturnsProjectRef()
+    {
+        // Arrange
+        var config = new AspireJsonConfiguration
+        {
+            SdkVersion = "13.1.0",
+            Language = "typescript",
+            Packages = new Dictionary<string, string>
+            {
+                ["Aspire.Hosting.Redis"] = "13.1.0",
+                ["Aspire.Hosting.MyCustom"] = "../src/Aspire.Hosting.MyCustom/Aspire.Hosting.MyCustom.csproj"
+            }
+        };
+
+        // Act
+        var refs = config.GetIntegrationReferences("13.1.0", "/home/user/app").ToList();
+
+        // Assert
+        Assert.Contains(refs, r => r.Name == "Aspire.Hosting" && r.IsPackageReference);
+        Assert.Contains(refs, r => r.Name == "Aspire.Hosting.Redis" && r.IsPackageReference);
+        var projectRef = Assert.Single(refs, r => r.IsProjectReference);
+        Assert.Equal("Aspire.Hosting.MyCustom", projectRef.Name);
+        Assert.Null(projectRef.Version);
+        Assert.NotNull(projectRef.ProjectPath);
+        Assert.EndsWith(".csproj", projectRef.ProjectPath);
     }
 
     [Fact]
@@ -280,5 +299,262 @@ public class GuestAppHostProjectTests(ITestOutputHelper outputHelper) : IDisposa
 
         await Verify(content, extension: "json")
             .UseFileName("AspireJsonConfiguration_SettingsJson");
+    }
+
+    [Fact]
+    public void GetServerEnvironmentVariables_ParsesLaunchSettingsWithComments()
+    {
+        var project = CreateGuestAppHostProject();
+
+        var propertiesDir = _workspace.CreateDirectory("Properties");
+        var launchSettingsPath = Path.Combine(propertiesDir.FullName, "launchSettings.json");
+        File.WriteAllText(launchSettingsPath, """
+            {
+              "profiles": {
+                "https": {
+                  "commandName": "Project",
+                  "applicationUrl": "https://localhost:16319;http://localhost:16320",
+                  "environmentVariables": {
+                    "ASPNETCORE_ENVIRONMENT": "Development",
+                    "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:17269",
+                    // This is a commented-out environment variable
+                    //"ASPIRE_DASHBOARD_OTLP_HTTP_ENDPOINT_URL": "https://localhost:17269",
+                    "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:17269"
+                  }
+                }
+              }
+            }
+            """);
+
+        var envVars = project.GetServerEnvironmentVariables(_workspace.WorkspaceRoot);
+
+        Assert.Equal("https://localhost:16319;http://localhost:16320", envVars["ASPNETCORE_URLS"]);
+        Assert.Equal("Development", envVars["ASPNETCORE_ENVIRONMENT"]);
+        Assert.Equal("https://localhost:17269", envVars["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"]);
+        Assert.Equal("https://localhost:17269", envVars["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"]);
+        Assert.False(envVars.ContainsKey("ASPIRE_DASHBOARD_OTLP_HTTP_ENDPOINT_URL"));
+    }
+
+    [Fact]
+    public void GetServerEnvironmentVariables_UsesRequestedDefaultEnvironment()
+    {
+        var envVars = GuestAppHostProject.GetServerEnvironmentVariables(
+            launchProfileEnvironmentVariables: null,
+            defaultEnvironment: AppHostEnvironmentDefaults.ProductionEnvironmentName,
+            inheritedEnvironmentVariables: new Dictionary<string, string?>());
+
+        Assert.Equal("Production", envVars["DOTNET_ENVIRONMENT"]);
+        Assert.False(envVars.ContainsKey("ASPNETCORE_ENVIRONMENT"));
+    }
+
+    [Fact]
+    public void GetServerEnvironmentVariables_IgnoresLaunchProfileEnvironmentVariablesWhenRequested()
+    {
+        var envVars = GuestAppHostProject.GetServerEnvironmentVariables(
+            launchProfileEnvironmentVariables: new Dictionary<string, string>
+            {
+                ["ASPNETCORE_URLS"] = "https://localhost:16319;http://localhost:16320",
+                ["ASPNETCORE_ENVIRONMENT"] = "Development",
+                ["DOTNET_ENVIRONMENT"] = "Development",
+                ["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"] = "https://localhost:17269",
+                ["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"] = "https://localhost:18269"
+            },
+            defaultEnvironment: AppHostEnvironmentDefaults.ProductionEnvironmentName,
+            includeLaunchProfileEnvironmentVariables: false,
+            inheritedEnvironmentVariables: new Dictionary<string, string?>());
+
+        Assert.Equal("Production", envVars["DOTNET_ENVIRONMENT"]);
+        Assert.False(envVars.ContainsKey("ASPNETCORE_ENVIRONMENT"));
+        Assert.Equal("https://localhost:16319;http://localhost:16320", envVars["ASPNETCORE_URLS"]);
+        Assert.Equal("https://localhost:17269", envVars["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"]);
+        Assert.Equal("https://localhost:18269", envVars["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"]);
+        Assert.False(envVars.ContainsKey("ASPIRE_ENVIRONMENT"));
+    }
+
+    [Fact]
+    public void GetServerEnvironmentVariables_EnvironmentArgumentTakesPrecedenceOverLaunchProfileEnvironmentVariables()
+    {
+        var envVars = GuestAppHostProject.GetServerEnvironmentVariables(
+            launchProfileEnvironmentVariables: new Dictionary<string, string>
+            {
+                ["ASPNETCORE_URLS"] = "https://localhost:16319;http://localhost:16320",
+                ["ASPIRE_ENVIRONMENT"] = "Development",
+                ["ASPNETCORE_ENVIRONMENT"] = "Development",
+                ["DOTNET_ENVIRONMENT"] = "Development",
+            },
+            defaultEnvironment: AppHostEnvironmentDefaults.ProductionEnvironmentName,
+            inheritedEnvironmentVariables: new Dictionary<string, string?>(),
+            args: ["--environment", "Staging"]);
+
+        Assert.Equal("Staging", envVars["DOTNET_ENVIRONMENT"]);
+        Assert.Equal("Development", envVars["ASPNETCORE_ENVIRONMENT"]);
+        Assert.Equal("Development", envVars["ASPIRE_ENVIRONMENT"]);
+    }
+
+    [Fact]
+    public void CreateGuestEnvironmentVariables_MergesLaunchProfileContextAndAdditionalEnvironmentVariables()
+    {
+        var project = CreateGuestAppHostProject();
+
+        var aspireConfigPath = Path.Combine(_workspace.WorkspaceRoot.FullName, AspireConfigFile.FileName);
+        File.WriteAllText(aspireConfigPath, """
+            {
+              "profiles": {
+                "https": {
+                  "applicationUrl": "https://localhost:16319;http://localhost:16320",
+                  "environmentVariables": {
+                    "ASPIRE_ENVIRONMENT": "Staging",
+                    "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:17269",
+                    "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:18269"
+                  }
+                }
+              }
+            }
+            """);
+
+        var envVars = project.CreateGuestEnvironmentVariables(
+            _workspace.WorkspaceRoot,
+            new Dictionary<string, string>
+            {
+                ["CUSTOM_CONTEXT_VARIABLE"] = "context",
+                ["ASPNETCORE_URLS"] = "http://context"
+            },
+            new Dictionary<string, string>
+            {
+                ["SSL_CERT_DIR"] = "/tmp/certs"
+            });
+
+        Assert.Equal("context", envVars["CUSTOM_CONTEXT_VARIABLE"]);
+        Assert.Equal("https://localhost:16319;http://localhost:16320", envVars["ASPNETCORE_URLS"]);
+        Assert.Equal("Staging", envVars["ASPIRE_ENVIRONMENT"]);
+        Assert.Equal("Staging", envVars["DOTNET_ENVIRONMENT"]);
+        Assert.False(envVars.ContainsKey("ASPNETCORE_ENVIRONMENT"));
+        Assert.Equal("https://localhost:17269", envVars["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"]);
+        Assert.Equal("https://localhost:18269", envVars["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"]);
+        Assert.Equal("/tmp/certs", envVars["SSL_CERT_DIR"]);
+    }
+
+    [Fact]
+    public void CreateGuestEnvironmentVariables_IgnoresLaunchProfileEnvironmentVariablesWhenRequested()
+    {
+        var envVars = GuestAppHostProject.CreateGuestEnvironmentVariables(
+            contextEnvironmentVariables: new Dictionary<string, string>(),
+            launchProfileEnvironmentVariables: new Dictionary<string, string>
+            {
+                ["ASPNETCORE_URLS"] = "https://localhost:16319;http://localhost:16320",
+                ["ASPIRE_ENVIRONMENT"] = "Development",
+                ["ASPNETCORE_ENVIRONMENT"] = "Development",
+                ["DOTNET_ENVIRONMENT"] = "Development",
+                ["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"] = "https://localhost:17269",
+                ["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"] = "https://localhost:18269"
+            },
+            defaultEnvironment: AppHostEnvironmentDefaults.ProductionEnvironmentName,
+            includeLaunchProfileEnvironmentVariables: false,
+            inheritedEnvironmentVariables: new Dictionary<string, string?>());
+
+        Assert.Equal("Production", envVars["DOTNET_ENVIRONMENT"]);
+        Assert.False(envVars.ContainsKey("ASPNETCORE_ENVIRONMENT"));
+        Assert.Equal("https://localhost:16319;http://localhost:16320", envVars["ASPNETCORE_URLS"]);
+        Assert.Equal("https://localhost:17269", envVars["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"]);
+        Assert.Equal("https://localhost:18269", envVars["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"]);
+        Assert.False(envVars.ContainsKey("ASPIRE_ENVIRONMENT"));
+    }
+
+    [Fact]
+    public void CreateGuestEnvironmentVariables_EnvironmentArgumentTakesPrecedenceOverLaunchProfileEnvironmentVariables()
+    {
+        var envVars = GuestAppHostProject.CreateGuestEnvironmentVariables(
+            contextEnvironmentVariables: new Dictionary<string, string>(),
+            launchProfileEnvironmentVariables: new Dictionary<string, string>
+            {
+                ["ASPIRE_ENVIRONMENT"] = "Development",
+                ["ASPNETCORE_ENVIRONMENT"] = "Development",
+                ["DOTNET_ENVIRONMENT"] = "Development",
+            },
+            defaultEnvironment: AppHostEnvironmentDefaults.ProductionEnvironmentName,
+            inheritedEnvironmentVariables: new Dictionary<string, string?>(),
+            args: ["--environment", "Staging"]);
+
+        Assert.Equal("Staging", envVars["DOTNET_ENVIRONMENT"]);
+        Assert.Equal("Development", envVars["ASPNETCORE_ENVIRONMENT"]);
+        Assert.Equal("Development", envVars["ASPIRE_ENVIRONMENT"]);
+    }
+
+    [Fact]
+    public void CreateGuestEnvironmentVariables_InheritedAspireEnvironmentOverridesDefaultEnvironment()
+    {
+        var envVars = GuestAppHostProject.CreateGuestEnvironmentVariables(
+            contextEnvironmentVariables: new Dictionary<string, string>(),
+            launchProfileEnvironmentVariables: null,
+            defaultEnvironment: AppHostEnvironmentDefaults.ProductionEnvironmentName,
+            inheritedEnvironmentVariables: new Dictionary<string, string?>
+            {
+                [AppHostEnvironmentDefaults.AspireEnvironmentVariableName] = "Staging"
+            });
+
+        Assert.Equal("Staging", envVars["DOTNET_ENVIRONMENT"]);
+        Assert.False(envVars.ContainsKey("ASPNETCORE_ENVIRONMENT"));
+    }
+
+    [Fact]
+    public void CreateGuestEnvironmentVariables_DotnetEnvironmentTakesPrecedenceOverAspireEnvironment()
+    {
+        var envVars = GuestAppHostProject.CreateGuestEnvironmentVariables(
+            contextEnvironmentVariables: new Dictionary<string, string>
+            {
+                [AppHostEnvironmentDefaults.DotNetEnvironmentVariableName] = "Production",
+                [AppHostEnvironmentDefaults.AspireEnvironmentVariableName] = "Staging"
+            },
+            launchProfileEnvironmentVariables: null,
+            inheritedEnvironmentVariables: new Dictionary<string, string?>());
+
+        Assert.Equal("Production", envVars["DOTNET_ENVIRONMENT"]);
+        Assert.False(envVars.ContainsKey("ASPNETCORE_ENVIRONMENT"));
+        Assert.Equal("Staging", envVars["ASPIRE_ENVIRONMENT"]);
+    }
+
+    [Fact]
+    public void CreateGuestEnvironmentVariables_AspireEnvironmentTakesPrecedenceOverAspNetCoreEnvironment()
+    {
+        var envVars = GuestAppHostProject.CreateGuestEnvironmentVariables(
+            contextEnvironmentVariables: new Dictionary<string, string>
+            {
+                [AppHostEnvironmentDefaults.AspireEnvironmentVariableName] = "Testing",
+                [AspNetCoreEnvironmentVariableName] = "Staging"
+            },
+            launchProfileEnvironmentVariables: null,
+            inheritedEnvironmentVariables: new Dictionary<string, string?>());
+
+        Assert.Equal("Testing", envVars["DOTNET_ENVIRONMENT"]);
+        Assert.Equal("Staging", envVars["ASPNETCORE_ENVIRONMENT"]);
+        Assert.Equal("Testing", envVars["ASPIRE_ENVIRONMENT"]);
+    }
+
+    private static GuestAppHostProject CreateGuestAppHostProject()
+    {
+        var language = new LanguageInfo(
+            LanguageId: "typescript/nodejs",
+            DisplayName: "TypeScript (Node.js)",
+            PackageName: "Aspire.Hosting.CodeGeneration.TypeScript",
+            DetectionPatterns: ["apphost.ts"],
+            CodeGenerator: "TypeScript");
+
+        var configuration = new ConfigurationBuilder().Build();
+
+        var logFilePath = Path.Combine(Path.GetTempPath(), $"test-guest-{Guid.NewGuid()}.log");
+
+        return new GuestAppHostProject(
+            language: language,
+            interactionService: new TestInteractionService(),
+            backchannel: new TestAppHostBackchannel(),
+            appHostServerProjectFactory: new TestAppHostServerProjectFactory(),
+            certificateService: new TestCertificateService(),
+            runner: new TestDotNetCliRunner(),
+            packagingService: new TestPackagingService(),
+            configuration: configuration,
+            features: new Features(configuration, NullLogger<Features>.Instance),
+            languageDiscovery: new TestLanguageDiscovery(),
+            logger: NullLogger<GuestAppHostProject>.Instance,
+            fileLoggerProvider: new FileLoggerProvider(logFilePath, new TestStartupErrorWriter()));
     }
 }

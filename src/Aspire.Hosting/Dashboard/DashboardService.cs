@@ -360,7 +360,7 @@ internal sealed partial class DashboardService(DashboardServiceData serviceData,
 
     public override async Task<ResourceCommandResponse> ExecuteResourceCommand(ResourceCommandRequest request, ServerCallContext context)
     {
-        var (result, errorMessage) = await serviceData.ExecuteCommandAsync(request.ResourceName, request.CommandName, context.CancellationToken).ConfigureAwait(false);
+        var (result, message, value) = await serviceData.ExecuteCommandAsync(request.ResourceName, request.CommandName, context.CancellationToken).ConfigureAwait(false);
         var responseKind = result switch
         {
             ExecuteCommandResultType.Success => ResourceCommandResponseKind.Succeeded,
@@ -369,11 +369,35 @@ internal sealed partial class DashboardService(DashboardServiceData serviceData,
             _ => ResourceCommandResponseKind.Undefined
         };
 
-        return new ResourceCommandResponse
+        var response = new ResourceCommandResponse
         {
             Kind = responseKind,
-            ErrorMessage = errorMessage ?? string.Empty
+            Message = message ?? string.Empty,
         };
+
+#pragma warning disable CS0612 // Type or member is obsolete
+        response.ErrorMessage = message ?? string.Empty;
+#pragma warning restore CS0612 // Type or member is obsolete
+
+        if (value is not null)
+        {
+            static Aspire.DashboardService.Proto.V1.CommandResultFormat MapFormat(ApplicationModel.CommandResultFormat format) => format switch
+            {
+                ApplicationModel.CommandResultFormat.Text => Aspire.DashboardService.Proto.V1.CommandResultFormat.Text,
+                ApplicationModel.CommandResultFormat.Json => Aspire.DashboardService.Proto.V1.CommandResultFormat.Json,
+                ApplicationModel.CommandResultFormat.Markdown => Aspire.DashboardService.Proto.V1.CommandResultFormat.Markdown,
+                _ => Aspire.DashboardService.Proto.V1.CommandResultFormat.None
+            };
+
+            response.Result = new ResourceCommandResult
+            {
+                Value = value.Value,
+                Format = MapFormat(value.Format),
+                DisplayImmediately = value.DisplayImmediately
+            };
+        }
+
+        return response;
     }
 
     private async Task ExecuteAsync(Func<CancellationToken, Task> execute, ServerCallContext serverCallContext)

@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Aspire.Hosting.JavaScript\Aspire.Hosting.JavaScript.csproj" />
-    <ProjectReference Include="..\..\src\Aspire.Hosting.Azure.AIFoundry\Aspire.Hosting.Azure.AIFoundry.csproj" />
+    <ProjectReference Include="..\..\src\Aspire.Hosting.Foundry\Aspire.Hosting.Foundry.csproj" />
     <ProjectReference Include="..\..\src\Aspire.Hosting.Azure.AppConfiguration\Aspire.Hosting.Azure.AppConfiguration.csproj" />
     <ProjectReference Include="..\..\src\Aspire.Hosting.Azure.AppService\Aspire.Hosting.Azure.AppService.csproj" />
     <ProjectReference Include="..\..\src\Aspire.Hosting\Aspire.Hosting.csproj" />
@@ -50,6 +50,7 @@
     <Compile Include="$(TestsSharedDir)\TestInteractionService.cs" />
     <Compile Include="$(TestsSharedDir)\TestModuleInitializer.cs" />
     <Compile Include="$(TestsSharedDir)\TestPipelineActivityReporter.cs" />
+    <Compile Include="$(TestsSharedDir)\InMemoryDeploymentStateManager.cs" />
     
     <Compile Include="$(SharedDir)Model\KnownProperties.cs" Link="KnownProperties.cs" />
     <Compile Include="$(SharedDir)StringComparers.cs" Link="StringComparers.cs" />

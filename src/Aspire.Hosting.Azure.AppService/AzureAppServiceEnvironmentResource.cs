@@ -147,11 +147,11 @@ public class AzureAppServiceEnvironmentResource :
 
         if (!string.IsNullOrEmpty(dashboardUri))
         {
-            context.Summary.Add("📊 Dashboard", dashboardUri);
+            context.Summary.Add("📊 Dashboard", new MarkdownString($"[{dashboardUri}]({dashboardUri})"));
         }
 
         await context.ReportingStep.CompleteAsync(
-            $"Dashboard available at [{dashboardUri}]({dashboardUri})",
+            new MarkdownString($"Dashboard available at [{dashboardUri}]({dashboardUri})"),
             CompletionState.Completed,
             context.CancellationToken).ConfigureAwait(false);
     }
@@ -199,7 +199,7 @@ public class AzureAppServiceEnvironmentResource :
             // Report each error through the activity reporter for user-friendly display
             foreach (var error in errors)
             {
-                context.ReportingStep.Log(LogLevel.Error, error, enableMarkdown: false);
+                context.ReportingStep.Log(LogLevel.Error, error);
             }
 
             await context.ReportingStep.CompleteAsync(
@@ -273,6 +273,11 @@ public class AzureAppServiceEnvironmentResource :
     /// Gets the suffix added to each web app created in this App Service Environment.
     /// </summary>
     internal BicepOutputReference WebSiteSuffix => new("webSiteSuffix", this);
+
+    /// <summary>
+    /// When true, HTTP endpoints are not upgraded to HTTPS. Default is false (HTTP→HTTPS upgrade is enabled).
+    /// </summary>
+    internal bool PreserveHttpEndpoints { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the Aspire dashboard should be included in the container app environment.

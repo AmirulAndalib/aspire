@@ -22,6 +22,7 @@ public sealed class EndpointAnnotation : IResourceAnnotation
     private bool _portSetToNull;
     private int? _targetPort;
     private bool _targetPortSetToNull;
+    private bool? _tlsEnabled;
     private readonly NetworkIdentifier _networkID;
 
     /// <summary>
@@ -168,7 +169,7 @@ public sealed class EndpointAnnotation : IResourceAnnotation
     /// </summary>
     public string Transport
     {
-        get => _transport ?? (UriScheme == "http" || UriScheme == "https" ? "http" : Protocol.ToString().ToLowerInvariant());
+        get => _transport ?? (string.Equals(UriScheme, "http", StringComparisons.EndpointAnnotationUriScheme) || string.Equals(UriScheme, "https", StringComparisons.EndpointAnnotationUriScheme) ? "http" : Protocol.ToString().ToLowerInvariant());
         set => _transport = value;
     }
 
@@ -183,6 +184,36 @@ public sealed class EndpointAnnotation : IResourceAnnotation
     /// </summary>
     /// <remarks>Defaults to <c>true</c>.</remarks>
     public bool IsProxied { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this endpoint is excluded from the default set when referencing the resource's endpoints
+    /// via <c>WithReference(resource)</c>. When <c>true</c>, the endpoint is excluded from the default set and must be
+    /// referenced explicitly using <c>WithReference(resource.GetEndpoint("name"))</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>Defaults to <c>false</c>.</para>
+    /// <para>
+    /// This is useful for resources that expose auxiliary endpoints (e.g., management dashboards, health check ports)
+    /// that should not be included in service discovery by default.
+    /// </para>
+    /// </remarks>
+    public bool ExcludeReferenceEndpoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether TLS is enabled for this endpoint.
+    /// </summary>
+    /// <remarks>
+    /// This property is used to track TLS state on the endpoint so that connection string expressions
+    /// can dynamically include TLS-related parameters (e.g., <c>ssl=true</c> for Redis) at resolution time
+    /// rather than at expression build time. For HTTP-based endpoints, the <see cref="UriScheme"/> property
+    /// being set to <c>https</c> already implies TLS. This property is primarily useful for non-HTTP protocols
+    /// (e.g., Redis, databases) that need explicit TLS configuration in their connection strings.
+    /// </remarks>
+    public bool TlsEnabled
+    {
+        get => _tlsEnabled ?? string.Equals(UriScheme, "https", StringComparisons.EndpointAnnotationUriScheme);
+        set => _tlsEnabled = value;
+    }
 
     /// <summary>
     /// Gets or sets a value indicating whether the endpoint is from a launch profile.

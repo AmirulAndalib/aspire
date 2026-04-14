@@ -86,6 +86,7 @@ public class RootCommandTests(ITestOutputHelper outputHelper)
             options.ErrorTextWriter = errorWriter;
             options.FirstTimeUseNoticeSentinelFactory = _ => sentinel;
             options.BannerServiceFactory = _ => bannerService;
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
         });
         var provider = services.BuildServiceProvider();
 
@@ -261,6 +262,7 @@ public class RootCommandTests(ITestOutputHelper outputHelper)
             options.ErrorTextWriter = errorWriter;
             options.FirstTimeUseNoticeSentinelFactory = _ => sentinel;
             options.BannerServiceFactory = _ => bannerService;
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
         });
         var provider = services.BuildServiceProvider();
 
@@ -331,6 +333,7 @@ public class RootCommandTests(ITestOutputHelper outputHelper)
         {
             options.FirstTimeUseNoticeSentinelFactory = _ => sentinel;
             options.BannerServiceFactory = _ => bannerService;
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
         });
         var provider = services.BuildServiceProvider();
 
@@ -342,6 +345,47 @@ public class RootCommandTests(ITestOutputHelper outputHelper)
         await Program.DisplayFirstTimeUseNoticeIfNeededAsync(provider, []);
         Assert.True(bannerService.WasBannerDisplayed);
         Assert.True(sentinel.WasCreated);
+    }
+
+    [Fact]
+    public async Task FirstTimeUseNotice_BannerNotDisplayedInNonInteractiveEnvironment()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var sentinel = new TestFirstTimeUseNoticeSentinel { SentinelExists = false };
+        var bannerService = new TestBannerService();
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.FirstTimeUseNoticeSentinelFactory = _ => sentinel;
+            options.BannerServiceFactory = _ => bannerService;
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateNonInteractiveHostEnvironment();
+        });
+        var provider = services.BuildServiceProvider();
+
+        await Program.DisplayFirstTimeUseNoticeIfNeededAsync(provider, []);
+
+        Assert.False(bannerService.WasBannerDisplayed);
+        Assert.True(sentinel.WasCreated);
+    }
+
+    [Fact]
+    public async Task Banner_DisplayedWithExplicitBannerFlag_InNonInteractiveEnvironment()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var sentinel = new TestFirstTimeUseNoticeSentinel { SentinelExists = true }; // Not first run
+        var bannerService = new TestBannerService();
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.FirstTimeUseNoticeSentinelFactory = _ => sentinel;
+            options.BannerServiceFactory = _ => bannerService;
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateNonInteractiveHostEnvironment();
+        });
+        var provider = services.BuildServiceProvider();
+
+        await Program.DisplayFirstTimeUseNoticeIfNeededAsync(provider, [CommonOptionNames.Banner]);
+
+        Assert.True(bannerService.WasBannerDisplayed);
     }
 
     [Fact]
@@ -373,4 +417,50 @@ public class RootCommandTests(ITestOutputHelper outputHelper)
         Assert.True(hasSetupCommand);
     }
 
+    [Fact]
+    public void AllVisibleCommands_HaveHelpGroup()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.BundleServiceFactory = _ => new TestBundleService(isBundle: true);
+        });
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<RootCommand>();
+
+        // Either the subcommand isn't a BaseCommand, or it hasn't specified a HelpGroup.
+        var missingGroup = command.Subcommands
+            .Where(sub => !sub.Hidden)
+            .Where(cmd => cmd is not BaseCommand baseCmd || baseCmd.HelpGroup is HelpGroup.None)
+            .Select(cmd => cmd.Name)
+            .ToList();
+
+        Assert.True(missingGroup.Count == 0,
+            $"The following visible commands are missing a HelpGroup: {string.Join(", ", missingGroup)}. " +
+            "Add 'internal override HelpGroup HelpGroup => HelpGroup.XXX;' to each command class.");
+    }
+
+    [Fact]
+    public void GroupedHelp_ContainsAllVisibleCommands()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.BundleServiceFactory = _ => new TestBundleService(isBundle: true);
+        });
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<RootCommand>();
+        var helpWriter = new StringWriter();
+        GroupedHelpWriter.WriteHelp(command, helpWriter, 120);
+
+        var helpOutput = helpWriter.ToString();
+        var visibleCommands = command.Subcommands.Where(sub => !sub.Hidden).ToList();
+
+        foreach (var sub in visibleCommands)
+        {
+            Assert.Contains(sub.Name, helpOutput);
+        }
+    }
 }

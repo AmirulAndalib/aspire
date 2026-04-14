@@ -7,8 +7,8 @@ using Aspire.Dashboard.Model;
 using Aspire.Dashboard.Model.Assistant;
 using Aspire.Dashboard.Model.Otlp;
 using Aspire.Dashboard.Otlp.Model;
-using Aspire.Dashboard.Otlp.Model.Serialization;
 using Aspire.Dashboard.Otlp.Storage;
+using Aspire.Otlp.Serialization;
 
 namespace Aspire.Dashboard.Api;
 
@@ -21,7 +21,6 @@ internal sealed class TelemetryApiService(
 {
     private const int DefaultLimit = 200;
     private const int DefaultTraceLimit = 100;
-    private const int MaxQueryCount = 10000;
 
     private readonly IOutgoingPeerResolver[] _outgoingPeerResolvers = outgoingPeerResolvers.ToArray();
 
@@ -30,7 +29,7 @@ internal sealed class TelemetryApiService(
     /// Returns null if resource filter is specified but not found.
     /// Supports multiple resource names.
     /// </summary>
-    public TelemetryApiResponse<OtlpTelemetryDataJson>? GetSpans(string[]? resourceNames, string? traceId, bool? hasError, int? limit)
+    public TelemetryApiResponse? GetSpans(string[]? resourceNames, string? traceId, bool? hasError, int? limit)
     {
         // Resolve resource keys for all specified resources
         var resources = telemetryRepository.GetResources();
@@ -50,7 +49,7 @@ internal sealed class TelemetryApiService(
             {
                 ResourceKey = resourceKey,
                 StartIndex = 0,
-                Count = MaxQueryCount,
+                Count = int.MaxValue,
                 Filters = [],
                 FilterText = string.Empty
             });
@@ -88,7 +87,7 @@ internal sealed class TelemetryApiService(
 
         var otlpData = TelemetryExportService.ConvertSpansToOtlpJson(spans, _outgoingPeerResolvers);
 
-        return new TelemetryApiResponse<OtlpTelemetryDataJson>
+        return new TelemetryApiResponse
         {
             Data = otlpData,
             TotalCount = totalCount,
@@ -101,7 +100,7 @@ internal sealed class TelemetryApiService(
     /// Returns null if resource filter is specified but not found.
     /// Supports multiple resource names.
     /// </summary>
-    public TelemetryApiResponse<OtlpTelemetryDataJson>? GetTraces(string[]? resourceNames, bool? hasError, int? limit)
+    public TelemetryApiResponse? GetTraces(string[]? resourceNames, bool? hasError, int? limit)
     {
         // Resolve resource keys for all specified resources
         var resources = telemetryRepository.GetResources();
@@ -121,7 +120,7 @@ internal sealed class TelemetryApiService(
             {
                 ResourceKey = resourceKey,
                 StartIndex = 0,
-                Count = MaxQueryCount,
+                Count = int.MaxValue,
                 Filters = [],
                 FilterText = string.Empty
             });
@@ -153,7 +152,7 @@ internal sealed class TelemetryApiService(
 
         var otlpData = TelemetryExportService.ConvertSpansToOtlpJson(spans, _outgoingPeerResolvers);
 
-        return new TelemetryApiResponse<OtlpTelemetryDataJson>
+        return new TelemetryApiResponse
         {
             Data = otlpData,
             TotalCount = totalCount,
@@ -165,18 +164,9 @@ internal sealed class TelemetryApiService(
     /// Gets a specific trace by ID with all spans in OTLP format.
     /// Returns null if trace not found.
     /// </summary>
-    public TelemetryApiResponse<OtlpTelemetryDataJson>? GetTrace(string traceId)
+    public TelemetryApiResponse? GetTrace(string traceId)
     {
-        var result = telemetryRepository.GetTraces(new GetTracesRequest
-        {
-            ResourceKey = null,
-            StartIndex = 0,
-            Count = MaxQueryCount,
-            Filters = [],
-            FilterText = string.Empty
-        });
-
-        var trace = result.PagedResult.Items.FirstOrDefault(t => OtlpHelpers.MatchTelemetryId(t.TraceId, traceId));
+        var trace = telemetryRepository.GetTrace(traceId);
         if (trace is null)
         {
             return null;
@@ -186,7 +176,7 @@ internal sealed class TelemetryApiService(
 
         var otlpData = TelemetryExportService.ConvertSpansToOtlpJson(spans, _outgoingPeerResolvers);
 
-        return new TelemetryApiResponse<OtlpTelemetryDataJson>
+        return new TelemetryApiResponse
         {
             Data = otlpData,
             TotalCount = spans.Count,
@@ -199,7 +189,7 @@ internal sealed class TelemetryApiService(
     /// Returns null if resource filter is specified but not found.
     /// Supports multiple resource names.
     /// </summary>
-    public TelemetryApiResponse<OtlpTelemetryDataJson>? GetLogs(string[]? resourceNames, string? traceId, string? severity, int? limit)
+    public TelemetryApiResponse? GetLogs(string[]? resourceNames, string? traceId, string? severity, int? limit)
     {
         // Resolve resource keys for all specified resources
         var resources = telemetryRepository.GetResources();
@@ -246,7 +236,7 @@ internal sealed class TelemetryApiService(
             {
                 ResourceKey = resourceKey,
                 StartIndex = 0,
-                Count = MaxQueryCount,
+                Count = int.MaxValue,
                 Filters = filters
             });
             allLogs.AddRange(result.Items);
@@ -263,7 +253,7 @@ internal sealed class TelemetryApiService(
 
         var otlpData = TelemetryExportService.ConvertLogsToOtlpJson(logs);
 
-        return new TelemetryApiResponse<OtlpTelemetryDataJson>
+        return new TelemetryApiResponse
         {
             Data = otlpData,
             TotalCount = totalCount,
@@ -391,12 +381,12 @@ internal sealed class TelemetryApiService(
     /// <summary>
     /// Gets the list of available resources that have telemetry data.
     /// </summary>
-    public ResourceInfo[] GetResources()
+    public ResourceInfoJson[] GetResources()
     {
         var resources = telemetryRepository.GetResources();
         return resources
             .Where(r => !r.UninstrumentedPeer) // Exclude uninstrumented peers
-            .Select(r => new ResourceInfo
+            .Select(r => new ResourceInfoJson
             {
                 Name = r.ResourceName,
                 InstanceId = r.InstanceId,
@@ -432,51 +422,4 @@ internal sealed class TelemetryApiService(
         }
         return keys;
     }
-}
-
-/// <summary>
-/// Generic response wrapper for telemetry API responses.
-/// </summary>
-public sealed class TelemetryApiResponse<T>
-{
-    public required T Data { get; init; }
-    public required int TotalCount { get; init; }
-    public required int ReturnedCount { get; init; }
-}
-
-/// <summary>
-/// Information about a resource that has telemetry data.
-/// </summary>
-public sealed class ResourceInfo
-{
-    /// <summary>
-    /// The base resource name (e.g., "catalogservice").
-    /// </summary>
-    public required string Name { get; init; }
-
-    /// <summary>
-    /// The instance ID if this is a replica (e.g., "abc123"), or null if single instance.
-    /// </summary>
-    public string? InstanceId { get; init; }
-
-    /// <summary>
-    /// The full display name including instance ID (e.g., "catalogservice-abc123" or "catalogservice").
-    /// Use this when querying the telemetry API.
-    /// </summary>
-    public required string DisplayName { get; init; }
-
-    /// <summary>
-    /// Whether this resource has structured logs.
-    /// </summary>
-    public bool HasLogs { get; init; }
-
-    /// <summary>
-    /// Whether this resource has traces/spans.
-    /// </summary>
-    public bool HasTraces { get; init; }
-
-    /// <summary>
-    /// Whether this resource has metrics.
-    /// </summary>
-    public bool HasMetrics { get; init; }
 }

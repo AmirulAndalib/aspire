@@ -12,9 +12,9 @@ permissions:
 jobs:
   generate-and-pr:
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'dotnet' }}
+    if: ${{ github.repository_owner == 'microsoft' }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Restore
         run: ./restore.sh
@@ -23,13 +23,15 @@ jobs:
         run: ./dotnet.sh build src/Aspire.Cli/Aspire.Cli.csproj --configuration Release
 
       - name: Discover and dump ATS capabilities
+        env:
+          ASPIRE_REPO_ROOT: ${{ github.workspace }}
         run: |
-          ASPIRE_CLI="./dotnet.sh run --no-build --project src/Aspire.Cli/Aspire.Cli.csproj --configuration Release --"
+          ASPIRE_CLI="./dotnet.sh run --no-build --project src/Aspire.Cli/Aspire.Cli.csproj --configuration Release -- --nologo"
           FAILURES=0
 
           # Dump core Aspire.Hosting capabilities (no integration argument)
           echo "::group::Aspire.Hosting (core)"
-          if ! $ASPIRE_CLI sdk dump --ci -o src/Aspire.Hosting/api/Aspire.Hosting.ats.txt; then
+          if ! $ASPIRE_CLI sdk dump --format ci -o src/Aspire.Hosting/api/Aspire.Hosting.ats.txt; then
             echo "::error::Failed to dump core Aspire.Hosting capabilities"
             exit 1
           fi
@@ -61,7 +63,7 @@ jobs:
             if [ -f "$csproj" ]; then
               echo "::group::$proj_name"
               mkdir -p "$proj/api"
-              if ! $ASPIRE_CLI sdk dump --ci "$csproj" -o "$proj/api/$proj_name.ats.txt"; then
+              if ! $ASPIRE_CLI sdk dump --format ci "$csproj" -o "$proj/api/$proj_name.ats.txt"; then
                 echo "::error::Failed to dump ATS capabilities for $proj_name"
                 FAILURES=$((FAILURES + 1))
               fi
@@ -74,10 +76,17 @@ jobs:
             exit 1
           fi
 
-      - name: Create or update pull request
-        uses: dotnet/actions-create-pull-request@e8d799aa1f8b17f324f9513832811b0a62f1e0b1
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          app-id: ${{ secrets.ASPIRE_BOT_APP_ID }}
+          private-key: ${{ secrets.ASPIRE_BOT_PRIVATE_KEY }}
+
+      - name: Create or update pull request
+        uses: ./.github/actions/create-pull-request
+        with:
+          token: ${{ steps.app-token.outputs.token }}
           branch: update-ats-diffs
           base: main
           labels: |

@@ -2,8 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text.Json.Nodes;
-using Aspire.Hosting.Ats;
+using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.RemoteHost.Ats;
+using Aspire.TypeSystem;
 using Xunit;
 
 namespace Aspire.Hosting.RemoteHost.Tests;
@@ -277,6 +278,29 @@ public class CapabilityDispatcherTests
     }
 
     [Fact]
+    public void Invoke_CancellationTokenPropertyResultCanBePassedToCapability()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestCancellationTokenContext).Assembly]);
+        using var cts = new CancellationTokenSource();
+
+        var context = new TestCancellationTokenContext { CancellationToken = cts.Token };
+        var handleId = handles.Register(context, "Aspire.Hosting.RemoteHost.Tests/Aspire.Hosting.RemoteHost.Tests.TestCancellationTokenContext");
+        var getArgs = new JsonObject { ["context"] = new JsonObject { ["$handle"] = handleId } };
+
+        var tokenResult = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/TestCancellationTokenContext.cancellationToken", getArgs);
+
+        Assert.NotNull(tokenResult);
+        cts.Cancel();
+
+        var invokeArgs = new JsonObject { ["cancellationToken"] = tokenResult };
+        var result = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/canObserveCancellation", invokeArgs);
+
+        Assert.NotNull(result);
+        Assert.True(result.GetValue<bool>());
+    }
+
+    [Fact]
     public void Constructor_RegistersVersionedContextTypeProperties()
     {
         var dispatcher = CreateDispatcher(typeof(VersionedContextType).Assembly);
@@ -543,6 +567,38 @@ public class CapabilityDispatcherTests
     }
 
     [Fact]
+    public void Invoke_ValueTaskInstanceMethod()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestTypeWithMethods).Assembly]);
+
+        var context = new TestTypeWithMethods();
+        var handleId = handles.Register(context, "Aspire.Hosting.RemoteHost.Tests/Aspire.Hosting.RemoteHost.Tests.TestTypeWithMethods");
+        var args = new JsonObject
+        {
+            ["context"] = new JsonObject { ["$handle"] = handleId },
+            ["input"] = "value-task"
+        };
+
+        var result = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/TestTypeWithMethods.processValueTaskAsync", args);
+
+        Assert.NotNull(result);
+        Assert.Equal("VALUE-TASK", result.GetValue<string>());
+    }
+
+    [Fact]
+    public void Invoke_StaticValueTaskMethod()
+    {
+        var dispatcher = CreateDispatcher(typeof(TestCapabilities).Assembly);
+        var args = new JsonObject { ["value"] = "value-task" };
+
+        var result = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/asyncValueTaskWithResult", args);
+
+        Assert.NotNull(result);
+        Assert.Equal("VALUE-TASK", result.GetValue<string>());
+    }
+
+    [Fact]
     public void Constructor_SkipsNonPublicMethods()
     {
         var dispatcher = CreateDispatcher(typeof(TestTypeWithMethods).Assembly);
@@ -651,6 +707,55 @@ public class CapabilityDispatcherTests
 
         Assert.NotNull(result);
         Assert.Equal(42, result.GetValue<int>());
+    }
+
+    [Fact]
+    public void Invoke_SyncCapabilityWithoutBackgroundThreadOptIn_RunsInline()
+    {
+        var dispatcher = CreateDispatcher(typeof(TestCapabilitiesWithBackgroundThreadDispatch).Assembly);
+        var callerThreadId = Environment.CurrentManagedThreadId;
+
+        var result = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/syncInlineThreadProbe", null);
+
+        Assert.NotNull(result);
+        Assert.Equal(callerThreadId, result.GetValue<int>());
+    }
+
+    [Fact]
+    public void Invoke_SyncCapabilityWithBackgroundThreadOptIn_RunsOnBackgroundThread()
+    {
+        var dispatcher = CreateDispatcher(typeof(TestCapabilitiesWithBackgroundThreadDispatch).Assembly);
+        var callerThreadId = Environment.CurrentManagedThreadId;
+
+        var result = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/syncBackgroundThreadProbe", null);
+
+        Assert.NotNull(result);
+        Assert.NotEqual(callerThreadId, result.GetValue<int>());
+    }
+
+    [Fact]
+    public void Invoke_ValueTaskCapabilityWithBackgroundThreadOptIn_RunsInline()
+    {
+        var dispatcher = CreateDispatcher(typeof(TestCapabilitiesWithBackgroundThreadDispatch).Assembly);
+        var callerThreadId = Environment.CurrentManagedThreadId;
+
+        var result = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/valueTaskBackgroundThreadProbe", null);
+
+        Assert.NotNull(result);
+        Assert.Equal(callerThreadId, result.GetValue<int>());
+    }
+
+    [Fact]
+    public void Invoke_NonGenericValueTaskCapabilityWithBackgroundThreadOptIn_RunsInline()
+    {
+        var dispatcher = CreateDispatcher(typeof(TestCapabilitiesWithBackgroundThreadDispatch).Assembly);
+        var callerThreadId = Environment.CurrentManagedThreadId;
+
+        TestCapabilitiesWithBackgroundThreadDispatch.ResetLastObservedThreadId();
+
+        dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/nonGenericValueTaskBackgroundThreadProbe", null);
+
+        Assert.Equal(callerThreadId, TestCapabilitiesWithBackgroundThreadDispatch.LastObservedThreadId);
     }
 
     [Fact]
@@ -835,6 +940,28 @@ public class CapabilityDispatcherTests
     }
 
     [Fact]
+    public void Invoke_ListGet_ReturnsItemFromTypedList()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestTypeCategoryCapabilities).Assembly, typeof(AspireExportAttribute).Assembly]);
+
+        var listResult = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/returnTypedMutableList", null);
+        var listHandle = (listResult as JsonObject)?["$handle"]?.GetValue<string>();
+        Assert.NotNull(listHandle);
+
+        var args = new JsonObject
+        {
+            ["list"] = new JsonObject { ["$handle"] = listHandle },
+            ["index"] = 1
+        };
+
+        var result = dispatcher.Invoke("Aspire.Hosting/List.get", args);
+
+        Assert.NotNull(result);
+        Assert.Equal(20, result.GetValue<int>());
+    }
+
+    [Fact]
     public void Invoke_ListRemoveAt_RemovesItem()
     {
         var handles = new HandleRegistry();
@@ -959,6 +1086,50 @@ public class CapabilityDispatcherTests
     }
 
     [Fact]
+    public void Invoke_DictGet_ReturnsValueFromTypedDictionary()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestTypeCategoryCapabilities).Assembly, typeof(AspireExportAttribute).Assembly]);
+
+        var dictResult = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/returnTypedMutableDict", null);
+        var dictHandle = (dictResult as JsonObject)?["$handle"]?.GetValue<string>();
+        Assert.NotNull(dictHandle);
+
+        var args = new JsonObject
+        {
+            ["dict"] = new JsonObject { ["$handle"] = dictHandle },
+            ["key"] = "key1"
+        };
+
+        var result = dispatcher.Invoke("Aspire.Hosting/Dict.get", args);
+
+        Assert.NotNull(result);
+        Assert.Equal(10, result.GetValue<int>());
+    }
+
+    [Fact]
+    public void Invoke_DictGet_ReturnsValueFromIntKeyDictionary()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestTypeCategoryCapabilities).Assembly, typeof(AspireExportAttribute).Assembly]);
+
+        var dictResult = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/returnIntKeyMutableDict", null);
+        var dictHandle = (dictResult as JsonObject)?["$handle"]?.GetValue<string>();
+        Assert.NotNull(dictHandle);
+
+        var args = new JsonObject
+        {
+            ["dict"] = new JsonObject { ["$handle"] = dictHandle },
+            ["key"] = 1
+        };
+
+        var result = dispatcher.Invoke("Aspire.Hosting/Dict.get", args);
+
+        Assert.NotNull(result);
+        Assert.Equal("one", result.GetValue<string>());
+    }
+
+    [Fact]
     public void Invoke_DictRemove_RemovesKey()
     {
         var handles = new HandleRegistry();
@@ -1049,6 +1220,49 @@ public class CapabilityDispatcherTests
         Assert.Equal(2, keysArray.Count);
         Assert.Contains("key1", keysArray.Select(k => k?.GetValue<string>()));
         Assert.Contains("key2", keysArray.Select(k => k?.GetValue<string>()));
+    }
+
+    [Fact]
+    public void Invoke_DictKeys_ReturnsAllIntKeys()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestTypeCategoryCapabilities).Assembly, typeof(AspireExportAttribute).Assembly]);
+
+        var dictResult = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/returnIntKeyMutableDict", null);
+        var dictHandle = (dictResult as JsonObject)?["$handle"]?.GetValue<string>();
+        Assert.NotNull(dictHandle);
+
+        var args = new JsonObject
+        {
+            ["dict"] = new JsonObject { ["$handle"] = dictHandle }
+        };
+
+        var result = dispatcher.Invoke("Aspire.Hosting/Dict.keys", args);
+
+        Assert.NotNull(result);
+        var keysArray = Assert.IsType<JsonArray>(result);
+        Assert.Equal(2, keysArray.Count);
+        Assert.Contains(1, keysArray.Select(k => k?.GetValue<int>()));
+        Assert.Contains(2, keysArray.Select(k => k?.GetValue<int>()));
+    }
+
+    [Fact]
+    public void Invoke_DictToObject_ThrowsForNonStringKeyDictionary()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestTypeCategoryCapabilities).Assembly, typeof(AspireExportAttribute).Assembly]);
+
+        var dictResult = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/returnIntKeyMutableDict", null);
+        var dictHandle = (dictResult as JsonObject)?["$handle"]?.GetValue<string>();
+        Assert.NotNull(dictHandle);
+
+        var args = new JsonObject
+        {
+            ["dict"] = new JsonObject { ["$handle"] = dictHandle }
+        };
+
+        var ex = Assert.Throws<CapabilityException>(() => dispatcher.Invoke("Aspire.Hosting/Dict.toObject", args));
+        Assert.Contains("only supports string-key dictionaries", ex.Message);
     }
 
     [Fact]
@@ -1153,6 +1367,440 @@ public class CapabilityDispatcherTests
         Assert.Equal("No value", result.GetValue<string>());
     }
 
+    [Fact]
+    public void GetDto_DeserializesEnumPropertyFromString()
+    {
+        var args = new JsonObject
+        {
+            ["dto"] = new JsonObject
+            {
+                ["label"] = "test-item",
+                ["status"] = "ValueB"
+            }
+        };
+
+        var result = args.GetDto<TestDtoWithEnum>("dto");
+
+        Assert.NotNull(result);
+        Assert.Equal("test-item", result.Label);
+        Assert.Equal(TestDispatchEnum.ValueB, result.Status);
+    }
+
+    [Fact]
+    public void GetDto_DeserializesEnumPropertyFromStringCaseInsensitive()
+    {
+        var args = new JsonObject
+        {
+            ["dto"] = new JsonObject
+            {
+                ["label"] = "item",
+                ["status"] = "valuec"
+            }
+        };
+
+        var result = args.GetDto<TestDtoWithEnum>("dto");
+
+        Assert.NotNull(result);
+        Assert.Equal(TestDispatchEnum.ValueC, result.Status);
+    }
+
+    [Fact]
+    public void GetDto_ReturnsNullWhenPropertyMissing()
+    {
+        var args = new JsonObject();
+
+        var result = args.GetDto<TestDtoWithEnum>("dto");
+
+        Assert.Null(result);
+    }
+
+    // Builder-to-resource unwrapping tests
+    // These test the scenario where a handle contains an IResourceBuilder<T> but the
+    // property/method being invoked is declared on the resource type T.
+    // This happens in TypeScript polyglot apps when ATS maps both IResourceBuilder<T>
+    // and T to the same type ID.
+    [Fact]
+    public void Invoke_PropertyGetter_ResolvesBuilderToResource()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestResourceWithProperties).Assembly]);
+
+        // Create a resource and wrap it in a builder, but register the BUILDER in the handle registry
+        var resource = new TestResourceWithProperties("test-resource") { Color = "blue" };
+        var builder = new TestResourceBuilder<TestResourceWithProperties>(resource);
+        var handleId = handles.Register(builder, "Aspire.Hosting.RemoteHost.Tests/Aspire.Hosting.RemoteHost.Tests.TestResourceWithProperties");
+        var args = new JsonObject { ["context"] = new JsonObject { ["$handle"] = handleId } };
+
+        // Invoke the property getter - the property is on TestResourceWithProperties, but handle contains the builder
+        var result = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/TestResourceWithProperties.color", args);
+
+        Assert.NotNull(result);
+        Assert.Equal("blue", result.GetValue<string>());
+    }
+
+    [Fact]
+    public void Invoke_PropertySetter_ResolvesBuilderToResource()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestResourceWithProperties).Assembly]);
+
+        var resource = new TestResourceWithProperties("test-resource") { Color = "red" };
+        var builder = new TestResourceBuilder<TestResourceWithProperties>(resource);
+        var handleId = handles.Register(builder, "Aspire.Hosting.RemoteHost.Tests/Aspire.Hosting.RemoteHost.Tests.TestResourceWithProperties");
+        var args = new JsonObject
+        {
+            ["context"] = new JsonObject { ["$handle"] = handleId },
+            ["value"] = "green"
+        };
+
+        dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/TestResourceWithProperties.setColor", args);
+
+        Assert.Equal("green", resource.Color);
+    }
+
+    [Fact]
+    public void Invoke_InstanceMethod_ResolvesBuilderToResource()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestResourceWithMethods).Assembly]);
+
+        var resource = new TestResourceWithMethods("test-resource");
+        var builder = new TestResourceBuilder<TestResourceWithMethods>(resource);
+        var handleId = handles.Register(builder, "Aspire.Hosting.RemoteHost.Tests/Aspire.Hosting.RemoteHost.Tests.TestResourceWithMethods");
+        var args = new JsonObject
+        {
+            ["context"] = new JsonObject { ["$handle"] = handleId },
+            ["prefix"] = "hello"
+        };
+
+        var result = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/TestResourceWithMethods.greet", args);
+
+        Assert.NotNull(result);
+        Assert.Equal("hello, test-resource!", result.GetValue<string>());
+    }
+
+    [Fact]
+    public void Invoke_PropertyGetter_WorksDirectlyOnResource()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestResourceWithProperties).Assembly]);
+
+        // When the handle contains the resource directly (not wrapped in a builder), it should still work
+        var resource = new TestResourceWithProperties("test-resource") { Color = "yellow" };
+        var handleId = handles.Register(resource, "Aspire.Hosting.RemoteHost.Tests/Aspire.Hosting.RemoteHost.Tests.TestResourceWithProperties");
+        var args = new JsonObject { ["context"] = new JsonObject { ["$handle"] = handleId } };
+
+        var result = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/TestResourceWithProperties.color", args);
+
+        Assert.NotNull(result);
+        Assert.Equal("yellow", result.GetValue<string>());
+    }
+
+    [Fact]
+    public void Invoke_PropertyGetter_ResolvesInheritedPropertyViaBuilder()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestResourceWithProperties).Assembly]);
+
+        var resource = new TestResourceWithProperties("my-resource") { Color = "red" };
+        var builder = new TestResourceBuilder<TestResourceWithProperties>(resource);
+        var handleId = handles.Register(builder, "Aspire.Hosting.RemoteHost.Tests/Aspire.Hosting.RemoteHost.Tests.TestResourceWithProperties");
+        var args = new JsonObject { ["context"] = new JsonObject { ["$handle"] = handleId } };
+
+        var result = dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/TestResourceWithProperties.name", args);
+
+        Assert.NotNull(result);
+        Assert.Equal("my-resource", result.GetValue<string>());
+    }
+
+    [Fact]
+    public void Invoke_PropertyGetter_ThrowsWhenHandleIsUnrelatedType()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestResourceWithProperties).Assembly]);
+
+        var handleId = handles.Register("not-a-resource", "Aspire.Hosting.RemoteHost.Tests/Aspire.Hosting.RemoteHost.Tests.TestResourceWithProperties");
+        var args = new JsonObject { ["context"] = new JsonObject { ["$handle"] = handleId } };
+
+        var ex = Assert.Throws<CapabilityException>(() =>
+            dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/TestResourceWithProperties.color", args));
+
+        Assert.Equal(AtsErrorCodes.TypeMismatch, ex.Error.Code);
+        Assert.Contains("parameter 'context'", ex.Message);
+        Assert.Contains("TestResourceWithProperties", ex.Message);
+    }
+
+    [Fact]
+    public void Invoke_TypeMismatch_UsesResourceNamesInsteadOfClrTypes()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestPolyglotErrorCapabilities).Assembly]);
+
+        var target = new TestResourceWithProperties("frontend");
+        var wrongSource = new TestResourceWithProperties("backend");
+        var targetHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(target), "target-type");
+        var sourceHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(wrongSource), "source-type");
+        var args = new JsonObject
+        {
+            ["builder"] = new JsonObject { ["$handle"] = targetHandleId },
+            ["source"] = new JsonObject { ["$handle"] = sourceHandleId }
+        };
+
+        var ex = Assert.Throws<CapabilityException>(() =>
+            dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/withReference", args));
+
+        Assert.Equal(AtsErrorCodes.TypeMismatch, ex.Error.Code);
+        Assert.Contains("Could not invoke 'withReference' on resource 'frontend'", ex.Message);
+        Assert.Contains("parameter 'source' expects a resource builder for a resource with a connection string", ex.Message);
+        Assert.Contains("a resource builder for a TestResourceWithProperties named 'backend'", ex.Message);
+        Assert.DoesNotContain("Aspire.Hosting.", ex.Message);
+    }
+
+    [Fact]
+    public void Invoke_InternalError_IsWrappedWithTargetResourceAndScrubbedMethodName()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestPolyglotErrorCapabilities).Assembly]);
+
+        var resource = new TestResourceWithProperties("api");
+        var builderHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(resource), "target-type");
+        var args = new JsonObject
+        {
+            ["builder"] = new JsonObject { ["$handle"] = builderHandleId }
+        };
+
+        var ex = Assert.Throws<CapabilityException>(() =>
+            dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/withEndpoint", args));
+
+        Assert.Equal(AtsErrorCodes.InternalError, ex.Error.Code);
+        Assert.Contains("Could not invoke 'withEndpoint' on resource 'api'", ex.Message);
+        Assert.Contains("Multiple calls to withEndpoint can conflict.", ex.Message);
+        Assert.DoesNotContain("WithEndpoint", ex.Message);
+    }
+
+    [Fact]
+    public void Invoke_GenericBuilderCapability_AllowsBuilderHandleAndPreservesUnderlyingMessage()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestGenericPolyglotErrorCapabilities).Assembly]);
+
+        var resource = new TestEndpointResource("officiator");
+        var builderHandleId = handles.Register(new TestResourceBuilder<TestEndpointResource>(resource), "target-type");
+        var args = new JsonObject
+        {
+            ["builder"] = new JsonObject { ["$handle"] = builderHandleId }
+        };
+
+        var ex = Assert.Throws<CapabilityException>(() =>
+            dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/withHttpEndpoint", args));
+
+        Assert.Equal(AtsErrorCodes.InternalError, ex.Error.Code);
+        Assert.Contains("Endpoint with name 'http' already exists on resource 'officiator'.", ex.Message);
+        Assert.Contains("Multiple calls to withEndpoint", ex.Message);
+        Assert.DoesNotContain("WithEndpoint", ex.Message);
+    }
+
+    [Fact]
+    public void Invoke_GenericBuilderCapability_TypeMismatchUsesConstraintDescription()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestGenericPolyglotErrorCapabilities).Assembly]);
+
+        var resource = new TestEndpointResource("officiator");
+        var resourceHandleId = handles.Register(resource, "target-type");
+        var args = new JsonObject
+        {
+            ["builder"] = new JsonObject { ["$handle"] = resourceHandleId }
+        };
+
+        var ex = Assert.Throws<CapabilityException>(() =>
+            dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/withHttpEndpoint", args));
+
+        Assert.Equal(AtsErrorCodes.TypeMismatch, ex.Error.Code);
+        Assert.Contains("expects a resource builder for a resource with endpoints", ex.Message);
+        Assert.Contains("got resource 'officiator'", ex.Message);
+    }
+
+    [Fact]
+    public void Invoke_GenericBuilderCapability_WithIncompatibleBuilderHandle_UsesFriendlyTypeMismatch()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestGenericPolyglotErrorCapabilities).Assembly]);
+
+        var resource = new TestResourceWithProperties("backend");
+        var builderHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(resource), "target-type");
+        var args = new JsonObject
+        {
+            ["builder"] = new JsonObject { ["$handle"] = builderHandleId }
+        };
+
+        var ex = Assert.Throws<CapabilityException>(() =>
+            dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/withHttpEndpoint", args));
+
+        Assert.Equal(AtsErrorCodes.TypeMismatch, ex.Error.Code);
+        Assert.Contains("expects a resource builder for a resource with endpoints", ex.Message);
+        Assert.Contains("got a resource builder for a TestResourceWithProperties named 'backend'", ex.Message);
+        Assert.Equal("builder", ex.Error.Details?.Parameter);
+        Assert.Equal("a resource builder for a resource with endpoints", ex.Error.Details?.Expected);
+        Assert.Equal("a resource builder for a TestResourceWithProperties named 'backend'", ex.Error.Details?.Actual);
+    }
+
+    [Fact]
+    public void Invoke_PropertySetter_WithHandleValue_UsesTargetAndActualResourceNames()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestResourceWithProperties).Assembly]);
+
+        var target = new TestResourceWithProperties("frontend");
+        var wrongValue = new TestResourceWithProperties("backend");
+        var targetHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(target), "target-type");
+        var valueHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(wrongValue), "value-type");
+        var args = new JsonObject
+        {
+            ["context"] = new JsonObject { ["$handle"] = targetHandleId },
+            ["value"] = new JsonObject { ["$handle"] = valueHandleId }
+        };
+
+        var ex = Assert.Throws<CapabilityException>(() =>
+            dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/TestResourceWithProperties.setColor", args));
+
+        Assert.Equal(AtsErrorCodes.TypeMismatch, ex.Error.Code);
+        Assert.Contains("Could not invoke 'setColor' on resource 'frontend'", ex.Message);
+        Assert.Contains("parameter 'value' expects a string", ex.Message);
+        Assert.Contains("named 'backend'", ex.Message);
+        Assert.Equal("value", ex.Error.Details?.Parameter);
+        Assert.Equal("a string", ex.Error.Details?.Expected);
+        Assert.Equal("a resource builder for a TestResourceWithProperties named 'backend'", ex.Error.Details?.Actual);
+    }
+
+    [Fact]
+    public void Invoke_TypeMismatch_PopulatesFriendlyErrorDetails()
+    {
+        var handles = new HandleRegistry();
+        var dispatcher = new CapabilityDispatcher(handles, CreateTestMarshaller(handles), [typeof(TestPolyglotErrorCapabilities).Assembly]);
+
+        var target = new TestResourceWithProperties("frontend");
+        var wrongSource = new TestResourceWithProperties("backend");
+        var targetHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(target), "target-type");
+        var sourceHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(wrongSource), "source-type");
+        var args = new JsonObject
+        {
+            ["builder"] = new JsonObject { ["$handle"] = targetHandleId },
+            ["source"] = new JsonObject { ["$handle"] = sourceHandleId }
+        };
+
+        var ex = Assert.Throws<CapabilityException>(() =>
+            dispatcher.Invoke("Aspire.Hosting.RemoteHost.Tests/withReference", args));
+
+        Assert.Equal("source", ex.Error.Details?.Parameter);
+        Assert.Equal("a resource builder for a resource with a connection string", ex.Error.Details?.Expected);
+        Assert.Equal("a resource builder for a TestResourceWithProperties named 'backend'", ex.Error.Details?.Actual);
+    }
+
+    [Fact]
+    public void PolyglotFormatter_CreateInternalError_UsesBuilderHandleResourceName()
+    {
+        var handles = new HandleRegistry();
+        var resource = new TestResourceWithProperties("orders");
+        var builderHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(resource), "target-type");
+        var args = new JsonObject
+        {
+            ["builder"] = new JsonObject { ["$handle"] = builderHandleId }
+        };
+
+        var ex = PolyglotCapabilityErrorFormatter.CreateInternalError(
+            "Aspire.Hosting.RemoteHost.Tests/withEndpoint",
+            "withEndpoint",
+            "WithEndpoint",
+            args,
+            handles,
+            new InvalidOperationException("WithEndpoint failed.\r\nTry again."),
+            targetParameterName: "builder");
+
+        var capabilityException = ex.ToCapabilityException();
+
+        Assert.Equal(AtsErrorCodes.InternalError, capabilityException.Error.Code);
+        Assert.Equal("Could not invoke 'withEndpoint' on resource 'orders': withEndpoint failed. Try again.", capabilityException.Message);
+        Assert.DoesNotContain("WithEndpoint", capabilityException.Message);
+    }
+
+    [Fact]
+    public void PolyglotFormatter_CreateInternalError_StripsBareCarriageReturnArtifacts()
+    {
+        var handles = new HandleRegistry();
+        var resource = new TestResourceWithProperties("orders");
+        var builderHandleId = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(resource), "target-type");
+        var args = new JsonObject
+        {
+            ["builder"] = new JsonObject { ["$handle"] = builderHandleId }
+        };
+
+        var ex = PolyglotCapabilityErrorFormatter.CreateInternalError(
+            "Aspire.Hosting.RemoteHost.Tests/withEndpoint",
+            "withEndpoint",
+            "WithEndpoint",
+            args,
+            handles,
+            new InvalidOperationException("The service collection cannot be modified because it is read-only.\r"),
+            targetParameterName: "builder");
+
+        var capabilityException = ex.ToCapabilityException();
+
+        Assert.Equal(
+            "Could not invoke 'withEndpoint' on resource 'orders': The service collection cannot be modified because it is read-only.",
+            capabilityException.Message);
+        Assert.DoesNotContain('\r', capabilityException.Message);
+    }
+
+    [Fact]
+    public void PolyglotFormatter_CreateTypeMismatch_UsesBuilderResourceNames()
+    {
+        var handles = new HandleRegistry();
+        var target = new TestResourceWithProperties("frontend");
+        var wrongSource = new TestResourceWithProperties("backend");
+        var args = new JsonObject
+        {
+            ["builder"] = new JsonObject { ["$handle"] = handles.Register(new TestResourceBuilder<TestResourceWithProperties>(target), "target-type") }
+        };
+
+        var ex = PolyglotCapabilityErrorFormatter.CreateTypeMismatch(
+            "Aspire.Hosting.RemoteHost.Tests/withReference",
+            "withReference",
+            args,
+            handles,
+            "source",
+            typeof(IResourceBuilder<IResourceWithConnectionString>),
+            new TestResourceBuilder<TestResourceWithProperties>(wrongSource),
+            "builder");
+
+        var capabilityException = ex.ToCapabilityException();
+
+        Assert.Equal(AtsErrorCodes.TypeMismatch, capabilityException.Error.Code);
+        Assert.Contains("Could not invoke 'withReference' on resource 'frontend'", capabilityException.Message);
+        Assert.Contains("resource builder for a TestResourceWithProperties named 'backend'", capabilityException.Message);
+        Assert.Equal("a resource builder for a resource with a connection string", capabilityException.Error.Details?.Expected);
+        Assert.Equal("a resource builder for a TestResourceWithProperties named 'backend'", capabilityException.Error.Details?.Actual);
+    }
+
+    [Fact]
+    public void PolyglotFormatter_CreateInternalError_WithoutTargetHandle_OmitsResourceContext()
+    {
+        var handles = new HandleRegistry();
+
+        var ex = PolyglotCapabilityErrorFormatter.CreateInternalError(
+            "Aspire.Hosting.RemoteHost.Tests/createGlobal",
+            "createGlobal",
+            "CreateGlobal",
+            args: null,
+            handles,
+            new InvalidOperationException("CreateGlobal failed."));
+
+        var capabilityException = ex.ToCapabilityException();
+
+        Assert.Equal("Could not invoke 'createGlobal': createGlobal failed.", capabilityException.Message);
+        Assert.DoesNotContain("on resource", capabilityException.Message);
+    }
+
     private static CapabilityDispatcher CreateDispatcher(params System.Reflection.Assembly[] assemblies)
     {
         var handles = new HandleRegistry();
@@ -1186,13 +1834,13 @@ public class CapabilityDispatcherTests
 /// </summary>
 internal static class TestCapabilities
 {
-    [AspireExport("testMethod", Description = "Test method")]
+    [AspireExport(Description = "Test method")]
     public static string TestMethod(string value)
     {
         return value.ToUpperInvariant();
     }
 
-    [AspireExport("withOptional", Description = "Method with optional parameter")]
+    [AspireExport(Description = "Method with optional parameter")]
     public static string WithOptional(string required, string optional = "default")
     {
         return $"{required}:{optional}";
@@ -1205,18 +1853,61 @@ internal static class TestCapabilities
         _ = value; // Use the parameter to avoid warning
     }
 
-    [AspireExport("asyncWithResult", Description = "Async method returning Task<T>")]
+    [AspireExport(Description = "Async method returning Task<T>")]
     public static async Task<string> AsyncWithResult(string value)
     {
         await Task.Delay(1);
         return value.ToUpperInvariant();
     }
 
-    [AspireExport("asyncThrows", Description = "Async method that throws")]
+    [AspireExport(Description = "Async method returning ValueTask<T>")]
+    public static async ValueTask<string> AsyncValueTaskWithResult(string value)
+    {
+        await Task.Delay(1);
+        return value.ToUpperInvariant();
+    }
+
+    [AspireExport(Description = "Async method that throws")]
     public static async Task<string> AsyncThrows(string value)
     {
         await Task.Delay(1);
         throw new InvalidOperationException("Async error: " + value);
+    }
+
+    [AspireExport(Description = "Tests cancellation token round-tripping")]
+    public static bool CanObserveCancellation(CancellationToken cancellationToken)
+    {
+        return cancellationToken.IsCancellationRequested;
+    }
+}
+
+/// <summary>
+/// Test capabilities that exercise polyglot-specific error shaping.
+/// </summary>
+internal static class TestPolyglotErrorCapabilities
+{
+    [AspireExport("withReference", Description = "Adds a reference to another resource")]
+    public static void WithReference(IResourceBuilder<TestResourceWithProperties> builder, IResourceBuilder<IResourceWithConnectionString> source)
+    {
+        _ = builder;
+        _ = source;
+    }
+
+    [AspireExport("withEndpoint", Description = "Adds an endpoint")]
+    public static void WithEndpoint(IResourceBuilder<TestResourceWithProperties> builder)
+    {
+        _ = builder;
+        throw new InvalidOperationException("Multiple calls to WithEndpoint can conflict.");
+    }
+}
+
+internal static class TestGenericPolyglotErrorCapabilities
+{
+    [AspireExport("withHttpEndpoint", Description = "Adds an HTTP endpoint")]
+    public static void WithHttpEndpoint<T>(IResourceBuilder<T> builder) where T : IResourceWithEndpoints
+    {
+        throw new DistributedApplicationException(
+            $"Endpoint with name 'http' already exists on resource '{builder.Resource.Name}'. Endpoint name may not have been explicitly specified and was derived automatically from scheme argument (e.g. 'http', 'https', or 'tcp'). Multiple calls to WithEndpoint (and related methods) may result in a conflict if name argument is not specified. Each endpoint must have a unique name. For more information on networking in Aspire see: https://aka.ms/dotnet/aspire/networking");
     }
 }
 
@@ -1232,6 +1923,12 @@ internal sealed class TestContextType
 
     // This property should be skipped - IDisposable is not ATS-compatible
     public IDisposable? NonAtsProperty { get; set; }
+}
+
+[AspireExport(ExposeProperties = true)]
+internal sealed class TestCancellationTokenContext
+{
+    public CancellationToken CancellationToken { get; set; }
 }
 
 /// <summary>
@@ -1299,6 +1996,12 @@ internal sealed class TestTypeWithMethods
         return input.ToUpperInvariant();
     }
 
+    public async ValueTask<string> ProcessValueTaskAsync(string input)
+    {
+        await Task.Delay(1);
+        return input.ToUpperInvariant();
+    }
+
     // This should NOT be exposed - private method
 #pragma warning disable IDE0051 // Remove unused private member - testing that private methods are not exposed
     private void PrivateMethod()
@@ -1316,7 +2019,7 @@ internal static class TestCapabilitiesWithCallback
     /// <summary>
     /// A method that accepts a callback but doesn't invoke it.
     /// </summary>
-    [AspireExport("withCallback", Description = "Method with callback parameter")]
+    [AspireExport(Description = "Method with callback parameter")]
     public static string WithCallback(string value, Action callback)
     {
         // The callback is provided but we don't invoke it in this test
@@ -1327,7 +2030,7 @@ internal static class TestCapabilitiesWithCallback
     /// <summary>
     /// A method that invokes the callback.
     /// </summary>
-    [AspireExport("invokeCallback", Description = "Method that invokes callback")]
+    [AspireExport(Description = "Method that invokes callback")]
     public static void InvokeCallback(Func<Task> callback)
     {
         callback().GetAwaiter().GetResult();
@@ -1336,7 +2039,7 @@ internal static class TestCapabilitiesWithCallback
     /// <summary>
     /// A method that invokes a typed callback with arguments.
     /// </summary>
-    [AspireExport("invokeTypedCallback", Description = "Method that invokes typed callback")]
+    [AspireExport(Description = "Method that invokes typed callback")]
     public static void InvokeTypedCallback(Func<string, Task> callback)
     {
         callback("hello from C#").GetAwaiter().GetResult();
@@ -1345,10 +2048,45 @@ internal static class TestCapabilitiesWithCallback
     /// <summary>
     /// A method with an async callback that returns a value.
     /// </summary>
-    [AspireExport("withAsyncCallback", Description = "Method with async callback returning value")]
+    [AspireExport(Description = "Method with async callback returning value")]
     public static int WithAsyncCallback(Func<Task<int>> callback)
     {
         return callback().GetAwaiter().GetResult();
+    }
+}
+
+internal static class TestCapabilitiesWithBackgroundThreadDispatch
+{
+    public static int LastObservedThreadId { get; private set; }
+
+    public static void ResetLastObservedThreadId()
+    {
+        LastObservedThreadId = 0;
+    }
+
+    [AspireExport(Description = "Captures the current thread for inline sync invocation")]
+    public static int SyncInlineThreadProbe()
+    {
+        return Environment.CurrentManagedThreadId;
+    }
+
+    [AspireExport(Description = "Captures the current thread for background-thread sync invocation", RunSyncOnBackgroundThread = true)]
+    public static int SyncBackgroundThreadProbe()
+    {
+        return Environment.CurrentManagedThreadId;
+    }
+
+    [AspireExport(Description = "Captures the current thread for ValueTask<T> invocation", RunSyncOnBackgroundThread = true)]
+    public static ValueTask<int> ValueTaskBackgroundThreadProbe()
+    {
+        return ValueTask.FromResult(Environment.CurrentManagedThreadId);
+    }
+
+    [AspireExport(Description = "Captures the current thread for ValueTask invocation", RunSyncOnBackgroundThread = true)]
+    public static ValueTask NonGenericValueTaskBackgroundThreadProbe()
+    {
+        LastObservedThreadId = Environment.CurrentManagedThreadId;
+        return ValueTask.CompletedTask;
     }
 }
 
@@ -1357,13 +2095,13 @@ internal static class TestCapabilitiesWithCallback
 /// </summary>
 internal static class TestTypeCategoryCapabilities
 {
-    [AspireExport("sumArray", Description = "Sums an integer array")]
+    [AspireExport(Description = "Sums an integer array")]
     public static int SumArray(int[] values)
     {
         return values.Sum();
     }
 
-    [AspireExport("returnArray", Description = "Returns a string array")]
+    [AspireExport(Description = "Returns a string array")]
     public static string[] ReturnArray(int count)
     {
         return Enumerable.Range(0, count).Select(i => $"item{i}").ToArray();
@@ -1375,16 +2113,22 @@ internal static class TestTypeCategoryCapabilities
         return values.Sum();
     }
 
-    [AspireExport("acceptUnion", Description = "Accepts a union of string or int")]
+    [AspireExport(Description = "Accepts a union of string or int")]
     public static string AcceptUnion([AspireUnion(typeof(string), typeof(int))] object value)
     {
         return value.ToString()!;
     }
 
-    [AspireExport("returnMutableList", Description = "Returns a mutable List<string>")]
+    [AspireExport(Description = "Returns a mutable List<string>")]
     public static List<object> ReturnMutableList()
     {
         return ["first", "second", "third"];
+    }
+
+    [AspireExport("returnTypedMutableList", Description = "Returns a mutable List<int>")]
+    public static List<int> ReturnTypedMutableList()
+    {
+        return [10, 20, 30];
     }
 
     [AspireExport("returnMutableDict", Description = "Returns a mutable Dictionary<string, object>")]
@@ -1394,6 +2138,26 @@ internal static class TestTypeCategoryCapabilities
         {
             ["key1"] = "value1",
             ["key2"] = 42
+        };
+    }
+
+    [AspireExport("returnTypedMutableDict", Description = "Returns a mutable Dictionary<string, int>")]
+    public static Dictionary<string, int> ReturnTypedMutableDict()
+    {
+        return new Dictionary<string, int>
+        {
+            ["key1"] = 10,
+            ["key2"] = 20
+        };
+    }
+
+    [AspireExport("returnIntKeyMutableDict", Description = "Returns a mutable Dictionary<int, string>")]
+    public static Dictionary<int, string> ReturnIntKeyMutableDict()
+    {
+        return new Dictionary<int, string>
+        {
+            [1] = "one",
+            [2] = "two"
         };
     }
 }
@@ -1413,21 +2177,79 @@ internal enum TestDispatchEnum
 /// </summary>
 internal static class TestEnumCapabilities
 {
-    [AspireExport("acceptEnum", Description = "Accepts an enum parameter")]
+    [AspireExport(Description = "Accepts an enum parameter")]
     public static string AcceptEnum(TestDispatchEnum value)
     {
         return $"Received: {value}";
     }
 
-    [AspireExport("returnEnum", Description = "Returns an enum value")]
+    [AspireExport(Description = "Returns an enum value")]
     public static TestDispatchEnum ReturnEnum(string name)
     {
         return Enum.Parse<TestDispatchEnum>(name);
     }
 
-    [AspireExport("acceptOptionalEnum", Description = "Accepts an optional enum parameter")]
+    [AspireExport(Description = "Accepts an optional enum parameter")]
     public static string AcceptOptionalEnum(TestDispatchEnum? value = null)
     {
         return value.HasValue ? $"Received: {value.Value}" : "No value";
+    }
+}
+
+/// <summary>
+/// Test DTO with an enum property for GetDto deserialization tests.
+/// </summary>
+internal sealed class TestDtoWithEnum
+{
+    public string? Label { get; set; }
+    public TestDispatchEnum Status { get; set; }
+}
+
+/// <summary>
+/// A minimal IResourceBuilder implementation for testing builder-to-resource unwrapping.
+/// </summary>
+internal sealed class TestResourceBuilder<T> : IResourceBuilder<T> where T : IResource
+{
+    public TestResourceBuilder(T resource)
+    {
+        Resource = resource;
+    }
+
+    public T Resource { get; }
+    public IDistributedApplicationBuilder ApplicationBuilder => throw new NotImplementedException();
+
+    public IResourceBuilder<T> WithAnnotation<TAnnotation>(TAnnotation annotation, ResourceAnnotationMutationBehavior behavior = ResourceAnnotationMutationBehavior.Append) where TAnnotation : IResourceAnnotation
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// Test resource type with properties that should be accessible via builder handles.
+/// </summary>
+[AspireExport(ExposeProperties = true)]
+internal sealed class TestResourceWithProperties : Resource
+{
+    public TestResourceWithProperties(string name) : base(name) { }
+
+    public string Color { get; set; } = "default";
+}
+
+internal sealed class TestEndpointResource : Resource, IResourceWithEndpoints
+{
+    public TestEndpointResource(string name) : base(name)
+    {
+    }
+}
+
+/// <summary>
+/// Test resource type with instance methods that should be accessible via builder handles.
+/// </summary>
+[AspireExport(ExposeMethods = true)]
+internal sealed class TestResourceWithMethods : Resource
+{
+    public TestResourceWithMethods(string name) : base(name) { }
+
+    public string Greet(string prefix)
+    {
+        return $"{prefix}, {Name}!";
     }
 }

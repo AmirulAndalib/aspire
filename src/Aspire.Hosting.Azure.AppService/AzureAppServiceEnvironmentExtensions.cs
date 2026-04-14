@@ -40,6 +40,7 @@ public static partial class AzureAppServiceEnvironmentExtensions
     /// <param name="builder">The distributed application builder.</param>
     /// <param name="name">The name of the resource.</param>
     /// <returns><see cref="IResourceBuilder{T}"/></returns>
+    [AspireExport(Description = "Adds an Azure App Service environment resource")]
     public static IResourceBuilder<AzureAppServiceEnvironmentResource> AddAzureAppServiceEnvironment(this IDistributedApplicationBuilder builder, string name)
     {
         builder.AddAzureAppServiceInfrastructureCore();
@@ -226,11 +227,38 @@ public static partial class AzureAppServiceEnvironmentExtensions
     }
 
     /// <summary>
+    /// Configures whether HTTP endpoints should be automatically upgraded to HTTPS for the Azure App Service environment.
+    /// By default, HTTP endpoints are upgraded to HTTPS for security and WebSocket compatibility.
+    /// </summary>
+    /// <param name="builder">The <see cref="IResourceBuilder{AzureAppServiceEnvironmentResource}"/> to configure.</param>
+    /// <param name="upgrade">Whether to upgrade HTTP endpoints to HTTPS. Default is true.</param>
+    /// <returns>A reference to the <see cref="IResourceBuilder{T}"/> for chaining additional configuration.</returns>
+    /// <remarks>
+    /// When disabled (<c>false</c>), HTTP endpoints will use HTTP scheme and port 80 in Azure App Service.
+    /// Note that Azure App Service forces HTTP to HTTPS redirects at the platform level,
+    /// so disabling upgrade primarily affects connection strings generated for dependent resources.
+    /// </remarks>
+    /// <example>
+    /// Preserve HTTP endpoints instead of automatically upgrading them to HTTPS:
+    /// <code>
+    /// var appService = builder.AddAzureAppServiceEnvironment("appservice")
+    ///     .WithHttpsUpgrade(false);
+    /// </code>
+    /// </example>
+    [AspireExport(Description = "Configures whether HTTP endpoints are automatically upgraded to HTTPS in Azure App Service")]
+    public static IResourceBuilder<AzureAppServiceEnvironmentResource> WithHttpsUpgrade(this IResourceBuilder<AzureAppServiceEnvironmentResource> builder, bool upgrade = true)
+    {
+        builder.Resource.PreserveHttpEndpoints = !upgrade;
+        return builder;
+    }
+
+    /// <summary>
     /// Configures whether the Aspire dashboard should be included in the Azure App Service environment.
     /// </summary>
     /// <param name="builder">The <see cref="IResourceBuilder{AzureAppServiceEnvironmentResource}"/> to configure.</param>
     /// <param name="enable">Whether to include the Aspire dashboard. Default is true.</param>
-    /// <returns>A reference to the <see cref="IResourceBuilder{T}"/> for chaining additional configuration."/></returns>
+    /// <returns>A reference to the <see cref="IResourceBuilder{T}"/> for chaining additional configuration.</returns>
+    [AspireExport(Description = "Configures whether the Aspire dashboard is included in the Azure App Service environment")]
     public static IResourceBuilder<AzureAppServiceEnvironmentResource> WithDashboard(this IResourceBuilder<AzureAppServiceEnvironmentResource> builder, bool enable = true)
     {
         builder.Resource.EnableDashboard = enable;
@@ -242,6 +270,7 @@ public static partial class AzureAppServiceEnvironmentExtensions
     /// </summary>
     /// <param name="builder">The AzureAppServiceEnvironmentResource to configure.</param>
     /// <returns><see cref="IResourceBuilder{T}"/></returns>
+    [AspireExport(Description = "Enables Azure Application Insights for the Azure App Service environment")]
     public static IResourceBuilder<AzureAppServiceEnvironmentResource> WithAzureApplicationInsights(this IResourceBuilder<AzureAppServiceEnvironmentResource> builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -255,6 +284,7 @@ public static partial class AzureAppServiceEnvironmentExtensions
     /// <param name="builder">The AzureAppServiceEnvironmentResource to configure.</param>
     /// <param name="applicationInsightsLocation">The location for Application Insights.</param>
     /// <returns><see cref="IResourceBuilder{T}"/></returns>
+    [AspireExport("withAzureApplicationInsightsLocation", Description = "Enables Azure Application Insights for the Azure App Service environment with a specific location")]
     public static IResourceBuilder<AzureAppServiceEnvironmentResource> WithAzureApplicationInsights(this IResourceBuilder<AzureAppServiceEnvironmentResource> builder, string applicationInsightsLocation)
     {
         builder.WithAzureApplicationInsights();
@@ -268,6 +298,7 @@ public static partial class AzureAppServiceEnvironmentExtensions
     /// <param name="builder">The AzureAppServiceEnvironmentResource to configure.</param>
     /// <param name="applicationInsightsLocation">The location parameter for Application Insights.</param>
     /// <returns><see cref="IResourceBuilder{T}"/></returns>
+    [AspireExport("withAzureApplicationInsightsLocationParameter", Description = "Enables Azure Application Insights for the Azure App Service environment using a location parameter")]
     public static IResourceBuilder<AzureAppServiceEnvironmentResource> WithAzureApplicationInsights(this IResourceBuilder<AzureAppServiceEnvironmentResource> builder, IResourceBuilder<ParameterResource> applicationInsightsLocation)
     {
         builder.WithAzureApplicationInsights();
@@ -281,6 +312,7 @@ public static partial class AzureAppServiceEnvironmentExtensions
     /// <param name="builder">The AzureAppServiceEnvironmentResource builder to configure.</param>
     /// <param name="applicationInsightsBuilder">The Application Insights resource builder.</param>
     /// <returns><see cref="IResourceBuilder{T}"/></returns>
+    [AspireExport("withAzureApplicationInsightsResource", Description = "Enables Azure Application Insights for the Azure App Service environment using an existing Application Insights resource")]
     public static IResourceBuilder<AzureAppServiceEnvironmentResource> WithAzureApplicationInsights(this IResourceBuilder<AzureAppServiceEnvironmentResource> builder, IResourceBuilder<AzureApplicationInsightsResource> applicationInsightsBuilder)
     {
         builder.WithAzureApplicationInsights();
@@ -294,6 +326,7 @@ public static partial class AzureAppServiceEnvironmentExtensions
     /// <param name="builder">The AzureAppServiceEnvironmentResource to configure.</param>
     /// <param name="deploymentSlot">The deployment slot parameter for all App Services in the App Service Environment.</param>
     /// <returns><see cref="IResourceBuilder{T}"/></returns>
+    [AspireExport("withDeploymentSlotParameter", Description = "Configures the deployment slot for all Azure App Services in the environment using a parameter")]
     public static IResourceBuilder<AzureAppServiceEnvironmentResource> WithDeploymentSlot(this IResourceBuilder<AzureAppServiceEnvironmentResource> builder, IResourceBuilder<ParameterResource> deploymentSlot)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -309,6 +342,7 @@ public static partial class AzureAppServiceEnvironmentExtensions
     /// <param name="builder">The AzureAppServiceEnvironmentResource to configure.</param>
     /// <param name="deploymentSlot">The deployment slot for all App Services in the App Service Environment.</param>
     /// <returns><see cref="IResourceBuilder{T}"/></returns>
+    [AspireExport(Description = "Configures the deployment slot for all Azure App Services in the environment")]
     public static IResourceBuilder<AzureAppServiceEnvironmentResource> WithDeploymentSlot(this IResourceBuilder<AzureAppServiceEnvironmentResource> builder, string deploymentSlot)
     {
         ArgumentNullException.ThrowIfNull(builder);

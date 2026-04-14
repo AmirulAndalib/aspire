@@ -10,7 +10,7 @@ console.log("Aspire TypeScript AppHost starting...\n");
 // Create the distributed application builder
 const builder = await createBuilder();
 
-var ec = await builder.executionContext.get();
+const ec = await builder.executionContext.get();
 
 const isPublishMode = await ec.isPublishMode.get();
 console.log(`isRunMode: ${await ec.isRunMode.get()}`);
@@ -19,17 +19,18 @@ console.log(`isPublishMode: ${isPublishMode}`);
 // Add Docker Compose environment for publishing
 await builder.addDockerComposeEnvironment("compose");
 
-var dir = await builder.appHostDirectory.get();
+const dir = await builder.appHostDirectory.get();
 console.log(`AppHost directory: ${dir}`);
 
 // Add PostgreSQL server and database
-const postgres = await builder.addPostgres("postgres");
-const db = await postgres.addDatabase("db");
+const postgres = builder.addPostgres("postgres");
+const db = postgres.addDatabase("db");
 
 console.log("Added PostgreSQL server with database 'db'");
 
 // Add Express API that connects to PostgreSQL (uses npm run dev with tsx)
-const api = await builder
+// No await needed — withReference/waitFor accept promises directly
+const api = builder
     .addNodeApp("api", "./express-api", "src/server.ts")
     .withRunScript("dev")
     .withHttpEndpoint({ env: "PORT" })
@@ -38,26 +39,26 @@ const api = await builder
 
 console.log("Added Express API with reference to PostgreSQL database");
 
-// Also keep Redis as an example of another service with persistent lifetime
-const cache = await builder
+// Redis
+builder
     .addRedis("cache")
     .withLifetime(ContainerLifetime.Persistent);
 
 console.log("Added Redis cache");
 
-// Add Vite frontend that connects to the API (using withServiceReference for endpoints)
-await builder
+// Vite frontend — withReference/waitFor accept the un-awaited 'api' promise
+builder
     .addViteApp("frontend", "./vite-frontend")
-    .withServiceReference(api)
+    .withReference(api)
     .waitFor(api)
     .withEnvironment("CUSTOM_ENV", "value")
     .withEnvironmentCallback(async (ctx: EnvironmentCallbackContext) => {
-        // Custom environment callback logic
+        // await needed here because getEndpoint returns a value we use
         var ep = await api.getEndpoint("http");
-
-        ctx.environmentVariables.set("API_ENDPOINT", refExpr`${ep}`);
+        await ctx.environmentVariables.set("API_ENDPOINT", refExpr`${ep}`);
     });
 
 console.log("Added Vite frontend with reference to API");
 
+// build() flushes all pending promises before running
 await builder.build().run();

@@ -3,10 +3,10 @@
 
 using Aspire.Cli.Configuration;
 using Aspire.Cli.Interaction;
-using Aspire.Cli.Packaging;
 using Aspire.Cli.Projects;
+using Aspire.Cli.Resources;
+using Aspire.Cli.Utils;
 using Microsoft.Extensions.Logging;
-using Semver;
 
 namespace Aspire.Cli.Scaffolding;
 
@@ -16,64 +16,63 @@ namespace Aspire.Cli.Scaffolding;
 /// </summary>
 internal sealed class ScaffoldingService : IScaffoldingService
 {
+    private const string PackageJsonFileName = "package.json";
+    private const string JavaScriptHostingPackageName = "Aspire.Hosting.JavaScript";
+
     private readonly IAppHostServerProjectFactory _appHostServerProjectFactory;
     private readonly ILanguageDiscovery _languageDiscovery;
     private readonly IInteractionService _interactionService;
-    private readonly IPackagingService _packagingService;
-    private readonly IConfigurationService _configurationService;
     private readonly ILogger<ScaffoldingService> _logger;
 
     public ScaffoldingService(
         IAppHostServerProjectFactory appHostServerProjectFactory,
         ILanguageDiscovery languageDiscovery,
         IInteractionService interactionService,
-        IPackagingService packagingService,
-        IConfigurationService configurationService,
         ILogger<ScaffoldingService> logger)
     {
         _appHostServerProjectFactory = appHostServerProjectFactory;
         _languageDiscovery = languageDiscovery;
         _interactionService = interactionService;
-        _packagingService = packagingService;
-        _configurationService = configurationService;
         _logger = logger;
     }
 
     /// <inheritdoc />
-    public async Task ScaffoldAsync(ScaffoldContext context, CancellationToken cancellationToken)
+    public async Task<bool> ScaffoldAsync(ScaffoldContext context, CancellationToken cancellationToken)
     {
         if (context.Language.LanguageId.Value.Equals(KnownLanguageId.CSharp, StringComparison.OrdinalIgnoreCase))
         {
             throw new NotSupportedException("C# projects should be created using the template system via NewCommand.");
         }
 
-        await ScaffoldGuestLanguageAsync(context, cancellationToken);
+        return await ScaffoldGuestLanguageAsync(context, cancellationToken);
     }
 
-    private async Task ScaffoldGuestLanguageAsync(ScaffoldContext context, CancellationToken cancellationToken)
+    private async Task<bool> ScaffoldGuestLanguageAsync(ScaffoldContext context, CancellationToken cancellationToken)
     {
         var directory = context.TargetDirectory;
         var language = context.Language;
 
         // Step 1: Resolve SDK and package strategy
-        var sdkVersion = await ResolveSdkVersionAsync(cancellationToken);
-        var config = AspireJsonConfiguration.LoadOrCreate(directory.FullName, sdkVersion);
+        var sdkVersion = VersionHelper.GetDefaultSdkVersion();
+        var config = AspireConfigFile.LoadOrCreate(directory.FullName, sdkVersion);
+        PreAddJavaScriptHostingForBrownfieldTypeScript(config, directory, language, sdkVersion);
 
         // Include the code generation package for scaffolding and code gen
         var codeGenPackage = await _languageDiscovery.GetPackageForLanguageAsync(language.LanguageId, cancellationToken);
-        var packages = config.GetAllPackages(sdkVersion).ToList();
+        var integrations = config.GetIntegrationReferences(sdkVersion, directory.FullName).ToList();
         if (codeGenPackage is not null)
         {
             var codeGenVersion = config.GetEffectiveSdkVersion(sdkVersion);
-            packages.Add((codeGenPackage, codeGenVersion));
+            integrations.Add(IntegrationReference.FromPackage(codeGenPackage, codeGenVersion));
         }
 
         var appHostServerProject = await _appHostServerProjectFactory.CreateAsync(directory.FullName, cancellationToken);
         var prepareSdkVersion = config.GetEffectiveSdkVersion(sdkVersion);
 
         var prepareResult = await _interactionService.ShowStatusAsync(
-            ":gear:  Preparing Aspire server...",
-            () => appHostServerProject.PrepareAsync(prepareSdkVersion, packages, cancellationToken));
+            "Preparing Aspire server...",
+            () => appHostServerProject.PrepareAsync(prepareSdkVersion, integrations, cancellationToken),
+            emoji: KnownEmojis.Gear);
         if (!prepareResult.Success)
         {
             if (prepareResult.Output is not null)
@@ -81,78 +80,93 @@ internal sealed class ScaffoldingService : IScaffoldingService
                 _interactionService.DisplayLines(prepareResult.Output.GetLines());
             }
             _interactionService.DisplayError("Failed to build AppHost server.");
-            return;
+            return false;
         }
 
         // Step 2: Start the server temporarily for scaffolding and code generation
-        var currentPid = Environment.ProcessId;
-        var (socketPath, serverProcess, _) = appHostServerProject.Run(currentPid, new Dictionary<string, string>());
+        await using var serverSession = AppHostServerSession.Start(
+            appHostServerProject,
+            environmentVariables: null,
+            debug: false,
+            _logger);
 
-        try
+        // Step 3: Connect to server and get scaffold templates via RPC
+        var rpcClient = await serverSession.GetRpcClientAsync(cancellationToken);
+
+        var scaffoldFiles = await rpcClient.ScaffoldAppHostAsync(
+            language.LanguageId,
+            directory.FullName,
+            context.ProjectName,
+            cancellationToken);
+
+        // Step 4: Write scaffold files to disk, merging package.json with existing content
+        foreach (var (fileName, content) in scaffoldFiles)
         {
-            // Step 3: Connect to server and get scaffold templates via RPC
-            await using var rpcClient = await AppHostRpcClient.ConnectAsync(socketPath, cancellationToken);
-
-            var scaffoldFiles = await rpcClient.ScaffoldAppHostAsync(
-                language.LanguageId,
-                directory.FullName,
-                context.ProjectName,
-                cancellationToken);
-
-            // Step 4: Write scaffold files to disk
-            foreach (var (fileName, content) in scaffoldFiles)
+            var filePath = Path.Combine(directory.FullName, fileName);
+            var fileDirectory = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(fileDirectory))
             {
-                var filePath = Path.Combine(directory.FullName, fileName);
-                var fileDirectory = Path.GetDirectoryName(filePath);
-                if (!string.IsNullOrEmpty(fileDirectory))
-                {
-                    Directory.CreateDirectory(fileDirectory);
-                }
-                await File.WriteAllTextAsync(filePath, content, cancellationToken);
+                Directory.CreateDirectory(fileDirectory);
             }
 
-            _logger.LogDebug("Wrote {Count} scaffold files", scaffoldFiles.Count);
-
-            // Step 5: Install dependencies using GuestRuntime
-            var installResult = await _interactionService.ShowStatusAsync(
-                $":package:  Installing {language.DisplayName} dependencies...",
-                () => InstallDependenciesAsync(directory, language, rpcClient, cancellationToken));
-            if (installResult != 0)
+            var contentToWrite = content;
+            if (fileName.Equals(PackageJsonFileName, StringComparison.OrdinalIgnoreCase) && File.Exists(filePath))
             {
-                return;
+                var existingContent = await File.ReadAllTextAsync(filePath, cancellationToken);
+                contentToWrite = PackageJsonMerger.Merge(existingContent, content, _logger);
             }
 
-            // Step 6: Generate SDK code via RPC
-            await GenerateCodeViaRpcAsync(
-                directory.FullName,
-                rpcClient,
-                language,
-                cancellationToken);
-
-            // Save channel and language to settings.json
-            if (prepareResult.ChannelName is not null)
-            {
-                config.Channel = prepareResult.ChannelName;
-            }
-
-            config.Language = language.LanguageId;
-            config.Save(directory.FullName);
+            await File.WriteAllTextAsync(filePath, contentToWrite, cancellationToken);
         }
-        finally
+
+        _logger.LogDebug("Wrote {Count} scaffold files", scaffoldFiles.Count);
+
+        // Step 5: Generate SDK code via RPC (must happen before dependency installation
+        // because pylock.toml/requirements.txt reference the generated code directory)
+        await GenerateCodeViaRpcAsync(
+            directory.FullName,
+            rpcClient,
+            language,
+            cancellationToken);
+
+        // Step 6: Install dependencies using GuestRuntime
+        var installResult = await _interactionService.ShowStatusAsync(
+            $"Installing {language.DisplayName} dependencies...",
+            () => InstallDependenciesAsync(directory, language, rpcClient, cancellationToken),
+            emoji: KnownEmojis.Package);
+        if (installResult != 0)
         {
-            // Step 7: Stop the server
-            if (!serverProcess.HasExited)
+            return false;
+        }
+
+        // Save channel and language to aspire.config.json (new format)
+        // Read profiles from apphost.run.json (created by codegen) and merge into aspire.config.json
+        var appHostRunPath = Path.Combine(directory.FullName, "apphost.run.json");
+        var profiles = AspireConfigFile.ReadApphostRunProfiles(appHostRunPath, _logger);
+
+        if (profiles is not null && File.Exists(appHostRunPath))
+        {
+            try
             {
-                try
-                {
-                    serverProcess.Kill(entireProcessTree: true);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogDebug(ex, "Error killing AppHost server process after scaffolding");
-                }
+                // Delete apphost.run.json since profiles are now in aspire.config.json
+                File.Delete(appHostRunPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to delete apphost.run.json after reading profiles");
             }
         }
+
+        config.Profiles = profiles;
+        if (prepareResult.ChannelName is not null)
+        {
+            config.Channel = prepareResult.ChannelName;
+        }
+        config.AppHost ??= new AspireConfigAppHost();
+        config.AppHost.Path ??= language.AppHostFileName;
+        config.AppHost.Language = language.LanguageId;
+        config.Save(directory.FullName);
+        return true;
     }
 
     private async Task<int> InstallDependenciesAsync(
@@ -164,16 +178,43 @@ internal sealed class ScaffoldingService : IScaffoldingService
         var runtimeSpec = await rpcClient.GetRuntimeSpecAsync(language.LanguageId.Value, cancellationToken);
         var runtime = new GuestRuntime(runtimeSpec, _logger);
 
-        var result = await runtime.InstallDependenciesAsync(directory, cancellationToken);
+        var (initResult, initOutput) = await runtime.InitializeAsync(directory, cancellationToken);
+        if (initResult != 0)
+        {
+            var lines = initOutput.GetLines().ToArray();
+            if (lines.Length > 0)
+            {
+                _interactionService.DisplayLines(lines);
+            }
+            else
+            {
+                _interactionService.DisplayError($"Failed to initialize {language.DisplayName} environment.");
+            }
+            return initResult;
+        }
+
+        var (result, output) = await runtime.InstallDependenciesAsync(directory, cancellationToken);
         if (result != 0)
         {
-            _interactionService.DisplayError($"Failed to install {language.DisplayName} dependencies.");
+            var lines = output.GetLines().ToArray();
+            if (AutomaticNpmInstallWarning.IsMatch(lines))
+            {
+                _interactionService.DisplayMessage(KnownEmojis.Warning, ErrorStrings.ProjectFilesCreatedButNodeToolsNotFound);
+                return 0;
+            }
+
+            if (lines.Length > 0)
+            {
+                _interactionService.DisplayLines(lines);
+            }
+            else
+            {
+                _interactionService.DisplayError($"Failed to install {language.DisplayName} dependencies.");
+            }
         }
 
         return result;
     }
-
-    private const string GeneratedFolderName = ".modules";
 
     private async Task GenerateCodeViaRpcAsync(
         string directoryPath,
@@ -184,7 +225,7 @@ internal sealed class ScaffoldingService : IScaffoldingService
         var generatedFiles = await rpcClient.GenerateCodeAsync(language.CodeGenerator, cancellationToken);
 
         // Write generated files to the output directory
-        var outputPath = Path.Combine(directoryPath, GeneratedFolderName);
+        var outputPath = Path.Combine(directoryPath, LanguageInfo.GeneratedFolderName);
         Directory.CreateDirectory(outputPath);
 
         foreach (var (fileName, content) in generatedFiles)
@@ -201,42 +242,26 @@ internal sealed class ScaffoldingService : IScaffoldingService
         _logger.LogDebug("Generated {Count} code files in {Path}", generatedFiles.Count, outputPath);
     }
 
-    /// <summary>
-    /// Resolves the SDK version to use for scaffolding.
-    /// If a channel is configured globally, queries that channel for available versions.
-    /// Otherwise, falls back to the default SDK version.
-    /// </summary>
-    private async Task<string> ResolveSdkVersionAsync(CancellationToken cancellationToken)
+    private static void PreAddJavaScriptHostingForBrownfieldTypeScript(
+        AspireConfigFile config,
+        DirectoryInfo directory,
+        LanguageInfo language,
+        string defaultSdkVersion)
     {
-        // Check for global channel setting
-        var channelName = await _configurationService.GetConfigurationAsync("channel", cancellationToken);
-        if (string.IsNullOrEmpty(channelName))
+        if (!IsTypeScriptLanguage(language) ||
+            !File.Exists(Path.Combine(directory.FullName, PackageJsonFileName)) ||
+            config.Packages?.ContainsKey(JavaScriptHostingPackageName) == true)
         {
-            return DotNetBasedAppHostServerProject.DefaultSdkVersion;
+            return;
         }
 
-        // Find the matching channel
-        var allChannels = await _packagingService.GetChannelsAsync(cancellationToken);
-        var channel = allChannels.FirstOrDefault(c => string.Equals(c.Name, channelName, StringComparison.OrdinalIgnoreCase));
-        if (channel is null)
-        {
-            _logger.LogWarning("Configured channel '{Channel}' not found, using default SDK version", channelName);
-            return DotNetBasedAppHostServerProject.DefaultSdkVersion;
-        }
-
-        // Get template packages from the channel to determine SDK version
-        var templatePackages = await channel.GetTemplatePackagesAsync(new DirectoryInfo(Environment.CurrentDirectory), cancellationToken);
-        var latestPackage = templatePackages
-            .OrderByDescending(p => SemVersion.Parse(p.Version), SemVersion.PrecedenceComparer)
-            .FirstOrDefault();
-
-        if (latestPackage is null)
-        {
-            _logger.LogWarning("No packages found in channel '{Channel}', using default SDK version", channelName);
-            return DotNetBasedAppHostServerProject.DefaultSdkVersion;
-        }
-
-        _logger.LogDebug("Resolved SDK version {Version} from channel {Channel}", latestPackage.Version, channelName);
-        return latestPackage.Version;
+        config.AddOrUpdatePackage(JavaScriptHostingPackageName, config.GetEffectiveSdkVersion(defaultSdkVersion));
     }
+
+    private static bool IsTypeScriptLanguage(LanguageInfo language)
+    {
+        return language.LanguageId.Value.Equals(KnownLanguageId.TypeScript, StringComparison.OrdinalIgnoreCase) ||
+            language.LanguageId.Value.Equals(KnownLanguageId.TypeScriptAlias, StringComparison.OrdinalIgnoreCase);
+    }
+
 }

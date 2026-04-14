@@ -2,10 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.AspNetCore.InternalTesting;
+using System.Security.Cryptography;
+using System.Text;
 using System.Xml.Linq;
+using Aspire.Cli.Configuration;
 using Aspire.Cli.NuGet;
 using Aspire.Cli.Packaging;
 using Aspire.Cli.Projects;
+using Aspire.Cli.Utils;
 using Aspire.Cli.Tests.Mcp;
 using Aspire.Cli.Tests.TestServices;
 using Aspire.Cli.Tests.Utils;
@@ -30,7 +34,7 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
         appPath ??= _workspace.WorkspaceRoot.FullName;
         var runner = new TestDotNetCliRunner();
         var packagingService = new MockPackagingService();
-        var configurationService = new TrackingConfigurationService();
+        var configurationService = new TestConfigurationService();
         var logger = NullLogger<DotNetBasedAppHostServerProject>.Instance;
 
         // Generate socket path same way as factory
@@ -47,12 +51,12 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
     {
         // Arrange
         var project = CreateProject();
-        var packages = new List<(string Name, string Version)>
+        var packages = new List<IntegrationReference>
         {
-            ("Aspire.Hosting", "13.1.0"),
-            ("Aspire.Hosting.Redis", "13.1.0"),
-            ("Aspire.Hosting.PostgreSQL", "13.1.0"),
-            ("Aspire.Hosting.CodeGeneration.TypeScript", "13.1.0")
+            IntegrationReference.FromPackage("Aspire.Hosting", "13.1.0"),
+            IntegrationReference.FromPackage("Aspire.Hosting.Redis", "13.1.0"),
+            IntegrationReference.FromPackage("Aspire.Hosting.PostgreSQL", "13.1.0"),
+            IntegrationReference.FromPackage("Aspire.Hosting.CodeGeneration.TypeScript", "13.1.0")
         };
 
         // Act
@@ -71,9 +75,9 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
     {
         // Arrange
         var project = CreateProject();
-        var packages = new List<(string Name, string Version)>
+        var packages = new List<IntegrationReference>
         {
-            ("Aspire.Hosting", "13.1.0")
+            IntegrationReference.FromPackage("Aspire.Hosting", "13.1.0")
         };
 
         // Act
@@ -93,9 +97,9 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
     {
         // Arrange
         var project = CreateProject();
-        var packages = new List<(string Name, string Version)>
+        var packages = new List<IntegrationReference>
         {
-            ("Aspire.Hosting", "13.1.0")
+            IntegrationReference.FromPackage("Aspire.Hosting", "13.1.0")
         };
 
         // Act
@@ -114,11 +118,11 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
     {
         // Arrange
         var project = CreateProject();
-        var packages = new List<(string Name, string Version)>
+        var packages = new List<IntegrationReference>
         {
-            ("Aspire.Hosting", "13.1.0"),
-            ("Aspire.Hosting.Redis", "13.1.0"),
-            ("Aspire.Hosting.CodeGeneration.TypeScript", "13.1.0")
+            IntegrationReference.FromPackage("Aspire.Hosting", "13.1.0"),
+            IntegrationReference.FromPackage("Aspire.Hosting.Redis", "13.1.0"),
+            IntegrationReference.FromPackage("Aspire.Hosting.CodeGeneration.TypeScript", "13.1.0")
         };
 
         // Act
@@ -140,9 +144,9 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
     {
         // Arrange
         var project = CreateProject();
-        var packages = new List<(string Name, string Version)>
+        var packages = new List<IntegrationReference>
         {
-            ("Aspire.Hosting", "13.1.0")
+            IntegrationReference.FromPackage("Aspire.Hosting", "13.1.0")
         };
 
         // Act
@@ -186,6 +190,38 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
     }
 
     [Fact]
+    public void ProjectModelPath_UsesUserAspireDirectory()
+    {
+        // Arrange
+        var project = CreateProject();
+        var normalizedAppPath = Path.GetFullPath(project.AppDirectoryPath);
+        normalizedAppPath = new Uri(normalizedAppPath).LocalPath;
+        normalizedAppPath = OperatingSystem.IsWindows() ? normalizedAppPath.ToLowerInvariant() : normalizedAppPath;
+
+        var pathHash = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedAppPath));
+        var pathDir = Convert.ToHexString(pathHash)[..12].ToLowerInvariant();
+        var expectedRoot = Path.Combine(CliPathHelper.GetAspireHomeDirectory(), "hosts");
+        var expectedPath = Path.Combine(expectedRoot, pathDir);
+        var parentDirectory = Path.GetDirectoryName(project.ProjectModelPath);
+        var isSafeToDelete = string.Equals(project.ProjectModelPath, expectedPath, StringComparison.OrdinalIgnoreCase) &&
+            parentDirectory is not null &&
+            string.Equals(parentDirectory, expectedRoot, StringComparison.OrdinalIgnoreCase);
+
+        try
+        {
+            // Assert
+            Assert.Equal(expectedPath, project.ProjectModelPath);
+        }
+        finally
+        {
+            if (isSafeToDelete && Directory.Exists(project.ProjectModelPath))
+            {
+                Directory.Delete(project.ProjectModelPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void UserSecretsId_IsStableForSameAppPath()
     {
         // Arrange
@@ -201,12 +237,12 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
 
     /// <summary>
     /// Regression test for channel switching bug.
-    /// When a project has a channel configured in .aspire/settings.json (project-local),
+    /// When a project has a channel configured in aspire.config.json (project-local),
     /// the NuGet.config should use that channel's hive path, NOT the global config channel.
     /// 
     /// Bug scenario:
     /// 1. User runs `aspire update` and selects "pr-new" channel
-    /// 2. UpdatePackagesAsync saves channel="pr-new" to project-local .aspire/settings.json
+    /// 2. UpdatePackagesAsync saves channel="pr-new" to project-local aspire.config.json
     /// 3. BuildAndGenerateSdkAsync calls CreateProjectFilesAsync
     /// 4. BUG: CreateProjectFilesAsync reads channel from GLOBAL config (returns "pr-old")
     /// 5. NuGet.config is generated with pr-old hive path instead of pr-new
@@ -223,20 +259,21 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
         var prOldHive = hivesDir.CreateSubdirectory("pr-old");
         var prNewHive = hivesDir.CreateSubdirectory("pr-new");
 
-        // Create project-local .aspire/settings.json with channel="pr-new"
+        // Create project-local aspire.config.json with channel="pr-new"
         // This simulates what happens after `aspire update` saves the selected channel
-        var aspireDir = _workspace.WorkspaceRoot.CreateSubdirectory(".aspire");
-        var settingsJson = Path.Combine(aspireDir.FullName, "settings.json");
-        await File.WriteAllTextAsync(settingsJson, """
+        var aspireConfigPath = Path.Combine(_workspace.WorkspaceRoot.FullName, AspireConfigFile.FileName);
+        await File.WriteAllTextAsync(aspireConfigPath, """
             {
                 "channel": "pr-new",
-                "sdkVersion": "13.1.0"
+                "sdk": {
+                    "version": "13.1.0"
+                }
             }
             """);
 
         // Configure global config to return "pr-old" (the WRONG channel)
         // This simulates a stale global config that hasn't been updated
-        var configurationService = new TrackingConfigurationService
+        var configurationService = new TestConfigurationService
         {
             OnGetConfiguration = key => key == "channel" ? "pr-old" : null
         };
@@ -260,11 +297,11 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
         var projectModelPath = Path.Combine(appPath, ".aspire_server");
         var project = new DotNetBasedAppHostServerProject(appPath, "test.sock", appPath, runner, packagingService, configurationService, logger, projectModelPath);
 
-        var packages = new List<(string Name, string Version)>
+        var packages = new List<IntegrationReference>
         {
-            ("Aspire.Hosting", "13.1.0"),
-            ("Aspire.Hosting.AppHost", "13.1.0"),
-            ("Aspire.Hosting.Redis", "13.1.0")
+            IntegrationReference.FromPackage("Aspire.Hosting", "13.1.0"),
+            IntegrationReference.FromPackage("Aspire.Hosting.AppHost", "13.1.0"),
+            IntegrationReference.FromPackage("Aspire.Hosting.Redis", "13.1.0")
         };
 
         // Act
@@ -287,48 +324,19 @@ public class AppHostServerProjectTests(ITestOutputHelper outputHelper) : IDispos
         }
         outputHelper.WriteLine("================================");
 
-        // Assert - verify nuget.config uses the correct channel
-        // Note: NuGetConfigMerger creates the file as "nuget.config" (lowercase)
-        var nugetConfigPath = Path.Combine(project.ProjectModelPath, "nuget.config");
-        
-        // Build diagnostic info for assertion failure
-        var diagnosticInfo = new System.Text.StringBuilder();
-        diagnosticInfo.AppendLine($"appPath: {appPath}");
-        diagnosticInfo.AppendLine($"settingsJson path: {settingsJson}");
-        diagnosticInfo.AppendLine($"settingsJson exists: {File.Exists(settingsJson)}");
-        if (File.Exists(settingsJson))
-        {
-            diagnosticInfo.AppendLine($"settingsJson content: {File.ReadAllText(settingsJson)}");
-        }
-        diagnosticInfo.AppendLine($"project.ProjectModelPath: {project.ProjectModelPath}");
-        diagnosticInfo.AppendLine($"nugetConfigPath: {nugetConfigPath}");
-        diagnosticInfo.AppendLine($"nugetConfigPath exists: {File.Exists(nugetConfigPath)}");
-        
-        // List all files for debugging case sensitivity issues
-        if (Directory.Exists(project.ProjectModelPath))
-        {
-            diagnosticInfo.AppendLine("Files in ProjectModelPath:");
-            foreach (var file in Directory.GetFiles(project.ProjectModelPath))
-            {
-                diagnosticInfo.AppendLine($"  - {Path.GetFileName(file)}");
-            }
-        }
-        
-        // The nuget.config should exist
-        Assert.True(File.Exists(nugetConfigPath), $"nuget.config should be created\n\nDiagnostics:\n{diagnosticInfo}");
-        
-        var nugetConfigContent = await File.ReadAllTextAsync(nugetConfigPath);
+        // Assert - verify the csproj uses RestoreAdditionalProjectSources with the correct channel sources
+        var projectFilePath = Path.Combine(project.ProjectModelPath, DotNetBasedAppHostServerProject.ProjectFileName);
 
-        // Normalize paths for snapshot (replace machine-specific paths)
-        var normalizedContent = nugetConfigContent
-            .Replace(prNewHive.FullName, "{PR_NEW_HIVE}")
-            .Replace(prOldHive.FullName, "{PR_OLD_HIVE}");
+        Assert.True(File.Exists(projectFilePath), $"Project file should be created at {projectFilePath}");
 
-        // Snapshot verification - this will fail if the bug exists
-        // Expected: Contains {PR_NEW_HIVE} (project-local channel)
-        // Bug behavior: Contains {PR_OLD_HIVE} (global config channel)
-        await Verify(normalizedContent, extension: "xml")
-            .UseFileName("AppHostServerProject_NuGetConfig_UsesProjectLocalChannel");
+        var projectContent = await File.ReadAllTextAsync(projectFilePath);
+        var projectDoc = XDocument.Parse(projectContent);
+        var restoreSources = projectDoc.Descendants("RestoreAdditionalProjectSources").FirstOrDefault()?.Value;
+
+        // Should contain the pr-new hive path (project-local channel), NOT pr-old (global config)
+        Assert.NotNull(restoreSources);
+        Assert.Contains(prNewHive.FullName, restoreSources);
+        Assert.DoesNotContain(prOldHive.FullName, restoreSources);
     }
 
     /// <summary>

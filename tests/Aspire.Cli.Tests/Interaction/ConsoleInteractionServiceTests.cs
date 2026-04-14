@@ -6,7 +6,10 @@ using Aspire.Cli.Backchannel;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.Resources;
 using Aspire.Cli.Utils;
+using Microsoft.Extensions.Logging.Abstractions;
 using Spectre.Console;
+using Spectre.Console.Rendering;
+
 using System.Text;
 
 namespace Aspire.Cli.Tests.Interaction;
@@ -16,7 +19,7 @@ public class ConsoleInteractionServiceTests
     private static ConsoleInteractionService CreateInteractionService(IAnsiConsole console, CliExecutionContext executionContext, ICliHostEnvironment? hostEnvironment = null)
     {
         var consoleEnvironment = new ConsoleEnvironment(console, console);
-        return new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment ?? TestHelpers.CreateInteractiveHostEnvironment());
+        return new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment ?? TestHelpers.CreateInteractiveHostEnvironment(), NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -42,7 +45,7 @@ public class ConsoleInteractionServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<EmptyChoicesException>(() =>
-            interactionService.PromptForSelectionsAsync("Select items:", choices, x => x, CancellationToken.None));
+            interactionService.PromptForSelectionsAsync("Select items:", choices, x => x, cancellationToken: CancellationToken.None));
     }
 
     [Fact]
@@ -111,8 +114,8 @@ public class ConsoleInteractionServiceTests
         var interactionService = CreateInteractionService(console, executionContext);
         var lines = new[]
         {
-            ("stdout", "Command output with <angle> brackets"),
-            ("stderr", "Error output with [square] brackets")
+            (OutputLineStream.StdOut, "Command output with <angle> brackets"),
+            (OutputLineStream.StdErr, "Error output with [square] brackets")
         };
 
         // Act - this should not throw an exception due to markup parsing
@@ -122,8 +125,8 @@ public class ConsoleInteractionServiceTests
         Assert.Null(exception);
         var outputString = output.ToString();
         Assert.Contains("Command output with <angle> brackets", outputString);
-        // Square brackets get escaped to [[square]] when using EscapeMarkup()
-        Assert.Contains("Error output with [[square]] brackets", outputString);
+        // EscapeMarkup() escapes [ to [[ for Spectre's parser, but Spectre renders [[ back to literal [
+        Assert.Contains("Error output with [square] brackets", outputString);
     }
 
     [Fact]
@@ -272,7 +275,7 @@ public class ConsoleInteractionServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            interactionService.PromptForSelectionsAsync("Select items:", choices, x => x, CancellationToken.None));
+            interactionService.PromptForSelectionsAsync("Select items:", choices, x => x, cancellationToken: CancellationToken.None));
         Assert.Contains(InteractionServiceStrings.InteractiveInputNotSupported, exception.Message);
     }
 
@@ -384,7 +387,7 @@ public class ConsoleInteractionServiceTests
     }
 
     [Fact]
-    public void DisplayMessage_WithMarkupCharactersInMessage_DoesNotThrow()
+    public void DisplayMessage_WithMarkupCharactersInMessage_AutoEscapesByDefault()
     {
         // Arrange
         var output = new StringBuilder();
@@ -398,12 +401,11 @@ public class ConsoleInteractionServiceTests
         var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log");
         var interactionService = CreateInteractionService(console, executionContext);
 
-        // DisplayMessage passes its message directly to MarkupLine.
-        // Callers that embed external data must escape it first.
+        // DisplayMessage now auto-escapes by default, so callers don't need to escape.
         var message = "See logs at C:\\Users\\test [Dev]\\logs\\aspire.log";
 
-        // Act - should not throw due to unescaped markup characters
-        var exception = Record.Exception(() => interactionService.DisplayMessage("page_facing_up", message.EscapeMarkup()));
+        // Act - should not throw since DisplayMessage escapes by default
+        var exception = Record.Exception(() => interactionService.DisplayMessage(KnownEmojis.PageFacingUp, message));
 
         // Assert
         Assert.Null(exception);
@@ -436,6 +438,7 @@ public class ConsoleInteractionServiceTests
         // Assert
         Assert.Null(exception);
         var outputString = output.ToString();
+        Assert.Contains("A new version of Aspire is available:", outputString);
         Assert.Contains("13.2.0-preview [beta]", outputString);
         Assert.Contains("aspire update --channel [stable]", outputString);
     }
@@ -470,9 +473,9 @@ public class ConsoleInteractionServiceTests
     }
 
     [Fact]
-    public void DisplayMessage_WithUnescapedLogFilePath_Throws()
+    public void DisplayMessage_WithUnescapedMarkup_AutoEscapesAndDoesNotThrow()
     {
-        // Arrange - verifies that DisplayMessage requires callers to escape external data
+        // Arrange - verifies that DisplayMessage auto-escapes by default
         var output = new StringBuilder();
         var console = AnsiConsole.Create(new AnsiConsoleSettings
         {
@@ -484,41 +487,264 @@ public class ConsoleInteractionServiceTests
         var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log");
         var interactionService = CreateInteractionService(console, executionContext);
 
-        // Path with brackets that looks like Spectre markup if not escaped
+        // Path with brackets that would be interpreted as Spectre markup if not escaped
         var path = @"C:\Users\[Dev Team]\logs\aspire.log";
 
-        // Act - unescaped path should cause a Spectre markup error
-        var exception = Record.Exception(() => interactionService.DisplayMessage("page_facing_up", $"See logs at {path}"));
-
-        // Assert - this should throw because [Dev Team] is interpreted as markup
-        Assert.NotNull(exception);
-    }
-
-    [Fact]
-    public void DisplayMessage_WithEscapedLogFilePath_DoesNotThrow()
-    {
-        // Arrange - verifies that properly escaped paths work in DisplayMessage
-        var output = new StringBuilder();
-        var console = AnsiConsole.Create(new AnsiConsoleSettings
-        {
-            Ansi = AnsiSupport.No,
-            ColorSystem = ColorSystemSupport.NoColors,
-            Out = new AnsiConsoleOutput(new StringWriter(output))
-        });
-
-        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log");
-        var interactionService = CreateInteractionService(console, executionContext);
-
-        // Path with brackets - properly escaped
-        var path = @"C:\Users\[Dev Team]\logs\aspire.log".EscapeMarkup();
-
-        // Act
-        var exception = Record.Exception(() => interactionService.DisplayMessage("page_facing_up", $"See logs at {path}"));
+        // Act - should not throw because DisplayMessage auto-escapes
+        var exception = Record.Exception(() => interactionService.DisplayMessage(KnownEmojis.PageFacingUp, $"See logs at {path}"));
 
         // Assert
         Assert.Null(exception);
         var outputString = output.ToString();
         Assert.Contains(@"C:\Users\[Dev Team]\logs\aspire.log", outputString);
+    }
+
+    [Fact]
+    public void DisplayMessage_WithAllowMarkupTrue_PassesThroughMarkup()
+    {
+        // Arrange - verifies that allowMarkup: true allows intentional Spectre markup
+        var output = new StringBuilder();
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(new StringWriter(output))
+        });
+
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log");
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Message with intentional Spectre markup tags
+        var message = "[bold cyan]MyProject.csproj[/]:";
+
+        // Act - should not throw because markup is intentional
+        var exception = Record.Exception(() => interactionService.DisplayMessage(KnownEmojis.FileFolder, message, allowMarkup: true));
+
+        // Assert
+        Assert.Null(exception);
+        var outputString = output.ToString();
+        Assert.Contains("MyProject.csproj", outputString);
+    }
+
+    [Fact]
+    public void DisplayMessage_WithAllowMarkupTrue_UnescapedDynamicContent_Throws()
+    {
+        // Arrange - verifies that allowMarkup: true still requires callers to escape dynamic values
+        var output = new StringBuilder();
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(new StringWriter(output))
+        });
+
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log");
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Dynamic content with brackets embedded in markup - NOT escaped
+        var projectName = "MyProject [Beta]";
+        var message = $"[bold cyan]{projectName}[/]:";
+
+        // Act - should throw because [Beta] is invalid markup when allowMarkup: true
+        var exception = Record.Exception(() => interactionService.DisplayMessage(KnownEmojis.FileFolder, message, allowMarkup: true));
+
+        // Assert
+        Assert.NotNull(exception);
+    }
+
+    [Fact]
+    public void DisplaySuccess_WithMarkupCharacters_AutoEscapesByDefault()
+    {
+        // Arrange
+        var output = new StringBuilder();
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(new StringWriter(output))
+        });
+
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log");
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Success message with bracket characters that would break markup if not escaped
+        var message = "Package Aspire.Hosting.Azure [1.0.0-preview] added successfully";
+
+        // Act - should not throw because DisplaySuccess auto-escapes
+        var exception = Record.Exception(() => interactionService.DisplaySuccess(message));
+
+        // Assert
+        Assert.Null(exception);
+        var outputString = output.ToString();
+        Assert.Contains("Aspire.Hosting.Azure [1.0.0-preview]", outputString);
+    }
+
+    [Fact]
+    public async Task ShowStatusAsync_WithMarkupCharacters_AutoEscapesByDefault()
+    {
+        // Arrange - verifies that ShowStatusAsync auto-escapes by default
+        var output = new StringBuilder();
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(new StringWriter(output))
+        });
+
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log", debugMode: true);
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Status text with brackets that would be interpreted as Spectre markup if not escaped
+        var statusText = "Downloading CLI from https://example.com/[latest]/aspire.zip";
+
+        // Act - should not throw because ShowStatusAsync auto-escapes
+        var exception = await Record.ExceptionAsync(() =>
+            interactionService.ShowStatusAsync(statusText, () => Task.FromResult(0)));
+
+        // Assert
+        Assert.Null(exception);
+        var outputString = output.ToString();
+        Assert.Contains("[latest]", outputString);
+    }
+
+    [Fact]
+    public void ShowStatus_WithMarkupCharacters_AutoEscapesByDefault()
+    {
+        // Arrange - verifies that ShowStatus auto-escapes by default
+        var output = new StringBuilder();
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(new StringWriter(output))
+        });
+
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log", debugMode: true);
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Status text with brackets that would be interpreted as Spectre markup if not escaped
+        var statusText = "Installing .NET SDK [10.0.0-preview.1]...";
+
+        // Act - should not throw because ShowStatus auto-escapes
+        var exception = Record.Exception(() => interactionService.ShowStatus(statusText, () => { }));
+
+        // Assert
+        Assert.Null(exception);
+        var outputString = output.ToString();
+        Assert.Contains("[10.0.0-preview.1]", outputString);
+    }
+
+    [Fact]
+    public async Task ShowStatusAsync_WithAllowMarkupTrue_PassesThroughMarkup()
+    {
+        // Arrange - verifies that allowMarkup: true allows emoji and other Spectre markup
+        var output = new StringBuilder();
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(new StringWriter(output))
+        });
+
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log", debugMode: true);
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Status text with intentional Spectre emoji markup
+        var statusText = ":rocket:  Creating new project";
+
+        // Act - should not throw because markup is intentional
+        var exception = await Record.ExceptionAsync(() =>
+            interactionService.ShowStatusAsync(statusText, () => Task.FromResult(0), allowMarkup: true));
+
+        // Assert
+        Assert.Null(exception);
+        var outputString = output.ToString();
+        Assert.Contains("Creating new project", outputString);
+    }
+
+    [Fact]
+    public async Task ShowStatusAsync_WithAllowMarkupTrue_UnescapedDynamicContent_Throws()
+    {
+        // Arrange - verifies that allowMarkup: true still requires callers to escape dynamic values
+        var output = new StringBuilder();
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(new StringWriter(output))
+        });
+
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log", debugMode: true);
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Dynamic content with invalid brackets when interpreted as markup
+        var projectName = "MyProject [Beta]";
+        var statusText = $":rocket:  Building {projectName}";
+
+        // Act - should throw because [Beta] is invalid markup when allowMarkup: true
+        var exception = await Record.ExceptionAsync(() =>
+            interactionService.ShowStatusAsync(statusText, () => Task.FromResult(0), allowMarkup: true));
+
+        // Assert
+        Assert.NotNull(exception);
+    }
+
+    [Fact]
+    public async Task ShowStatusAsync_WithEmojiName_PrependsEmojiAndAutoEscapes()
+    {
+        // Arrange - verifies that emojiName handles emoji separately and auto-escapes the status text
+        var output = new StringBuilder();
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(new StringWriter(output))
+        });
+
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log", debugMode: true);
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Status text with brackets that would be invalid markup if not escaped
+        var statusText = "Building MyProject [Beta]";
+
+        // Act - should not throw because emojiName handles emoji separately and text is auto-escaped
+        var exception = await Record.ExceptionAsync(() =>
+            interactionService.ShowStatusAsync(statusText, () => Task.FromResult(0), emoji: KnownEmojis.Rocket));
+
+        // Assert
+        Assert.Null(exception);
+        var outputString = output.ToString();
+        Assert.Contains("Building MyProject [Beta]", outputString);
+        Assert.Contains("🚀", outputString);
+    }
+
+    [Fact]
+    public void ShowStatus_WithEmojiName_PrependsEmojiAndAutoEscapes()
+    {
+        // Arrange - verifies that emojiName handles emoji separately and auto-escapes the status text
+        var output = new StringBuilder();
+        var console = AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Out = new AnsiConsoleOutput(new StringWriter(output))
+        });
+
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log", debugMode: true);
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Status text with brackets that would be invalid markup if not escaped
+        var statusText = "Installing .NET SDK [10.0.0-preview.1]...";
+
+        // Act - should not throw because emojiName handles emoji separately and text is auto-escaped
+        var exception = Record.Exception(() =>
+            interactionService.ShowStatus(statusText, () => { }, emoji: KnownEmojis.Package));
+
+        // Assert
+        Assert.Null(exception);
+        var outputString = output.ToString();
+        Assert.Contains("Installing .NET SDK [10.0.0-preview.1]", outputString);
+        Assert.Contains("📦", outputString);
     }
 
     [Fact]
@@ -553,7 +779,7 @@ public class ConsoleInteractionServiceTests
     {
         // Arrange - verifies that PromptForSelectionAsync does NOT escape the formatter output,
         // allowing callers to include intentional Spectre markup (e.g., [bold]...[/]).
-        // This is a regression test for https://github.com/dotnet/aspire/pull/14422 where
+        // This is a regression test for https://github.com/microsoft/aspire/pull/14422 where
         // blanket EscapeMarkup() in the converter broke [bold] rendering in 'aspire add'.
         var output = new StringBuilder();
         var console = AnsiConsole.Create(new AnsiConsoleSettings
@@ -612,5 +838,114 @@ public class ConsoleInteractionServiceTests
         var outputString = output.ToString();
         Assert.Contains("Azure Storage [Preview]", outputString);
         Assert.Contains("Aspire.Hosting.Azure.Storage", outputString);
+    }
+
+    [Theory]
+    [InlineData(true, "[Y/n]")]
+    [InlineData(false, "[y/N]")]
+    public async Task ConfirmAsync_DisplaysCapitalizedDefaultChoice(bool defaultValue, string expectedChoiceSuffix)
+    {
+        // Arrange - simulate pressing Enter (accepts default)
+        var output = new StringBuilder();
+        var console = CreateInteractiveConsoleWithInput(output, "\n");
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log");
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Act
+        await interactionService.ConfirmAsync("Proceed?", defaultValue, CancellationToken.None);
+
+        // Assert - the output should contain the [Y/n] or [y/N] suffix
+        var outputString = output.ToString();
+        Assert.Contains(expectedChoiceSuffix, outputString);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ConfirmAsync_WhenUserPressesEnter_ReturnsDefaultValue(bool defaultValue)
+    {
+        // Arrange - simulate pressing Enter (empty input selects default)
+        var output = new StringBuilder();
+        var console = CreateInteractiveConsoleWithInput(output, "\n");
+        var executionContext = new CliExecutionContext(new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo("."), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-runtimes")), new DirectoryInfo(Path.Combine(Path.GetTempPath(), "aspire-test-logs")), "test.log");
+        var interactionService = CreateInteractionService(console, executionContext);
+
+        // Act
+        var result = await interactionService.ConfirmAsync("Proceed?", defaultValue, CancellationToken.None);
+
+        // Assert - pressing Enter should accept the default value
+        Assert.Equal(defaultValue, result);
+    }
+
+    private static IAnsiConsole CreateInteractiveConsoleWithInput(StringBuilder output, string input)
+    {
+        var settings = new AnsiConsoleSettings
+        {
+            Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
+            Interactive = InteractionSupport.Yes,
+            Out = new AnsiConsoleOutput(new StringWriter(output)),
+        };
+        var console = AnsiConsole.Create(settings);
+        console.Profile.Width = int.MaxValue;
+        return new TestAnsiConsoleWithInput(console, new StringReader(input));
+    }
+}
+
+/// <summary>
+/// A test <see cref="IAnsiConsole"/> wrapper that redirects input reads to a <see cref="TextReader"/>,
+/// allowing prompts to be answered in unit tests without blocking on real console input.
+/// </summary>
+file sealed class TestAnsiConsoleWithInput : IAnsiConsole
+{
+    private readonly IAnsiConsole _inner;
+    private readonly IAnsiConsoleInput _testInput;
+
+    public TestAnsiConsoleWithInput(IAnsiConsole inner, TextReader inputReader)
+    {
+        _inner = inner;
+        _testInput = new TextReaderInput(inputReader);
+    }
+
+    public Profile Profile => _inner.Profile;
+    public IAnsiConsoleCursor Cursor => _inner.Cursor;
+    public IAnsiConsoleInput Input => _testInput;
+    public IExclusivityMode ExclusivityMode => _inner.ExclusivityMode;
+    public RenderPipeline Pipeline => _inner.Pipeline;
+
+    public void Clear(bool home) => _inner.Clear(home);
+    public void Write(IRenderable renderable) => _inner.Write(renderable);
+    public void WriteAnsi(Action<AnsiWriter> action) => _inner.WriteAnsi(action);
+
+    private sealed class TextReaderInput : IAnsiConsoleInput
+    {
+        private readonly TextReader _reader;
+
+        public TextReaderInput(TextReader reader) => _reader = reader;
+
+        public bool IsKeyAvailable() => true;
+
+        public ConsoleKeyInfo? ReadKey(bool intercept)
+        {
+            var read = _reader.Read();
+            if (read == -1)
+            {
+                // End of stream - return Enter as a safe fallback
+                return new ConsoleKeyInfo('\r', ConsoleKey.Enter, shift: false, alt: false, control: false);
+            }
+
+            var ch = (char)read;
+            var key = ch switch
+            {
+                '\n' or '\r' => ConsoleKey.Enter,
+                'y' or 'Y'   => ConsoleKey.Y,
+                'n' or 'N'   => ConsoleKey.N,
+                _            => ConsoleKey.Enter,
+            };
+            return new ConsoleKeyInfo(ch, key, shift: char.IsUpper(ch), alt: false, control: false);
+        }
+
+        public Task<ConsoleKeyInfo?> ReadKeyAsync(bool intercept, CancellationToken cancellationToken)
+            => Task.FromResult(ReadKey(intercept));
     }
 }
