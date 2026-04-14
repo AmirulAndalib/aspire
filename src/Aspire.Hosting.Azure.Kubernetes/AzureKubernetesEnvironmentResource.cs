@@ -157,6 +157,18 @@ public class AzureKubernetesEnvironmentResource(
             sb.AppendLine();
         }
 
+        // Subnet parameter for VNet integration
+        var hasDelegatedSubnet = this.TryGetLastAnnotation<DelegatedSubnetAnnotation>(out var subnetAnnotation);
+        if (hasDelegatedSubnet)
+        {
+            // Wire the subnet ID as a parameter so the publishing context resolves it in main.bicep
+            Parameters["subnetId"] = subnetAnnotation!.SubnetId;
+
+            sb.AppendLine("@description('The subnet ID for AKS node pool VNet integration.')");
+            sb.AppendLine("param subnetId string");
+            sb.AppendLine();
+        }
+
         // AKS cluster resource
         sb.Append("resource ").Append(id).AppendLine(" 'Microsoft.ContainerService/managedClusters@2024-06-02-preview' = {");
         sb.Append("  name: '").Append(Name).AppendLine("'");
@@ -199,6 +211,10 @@ public class AzureKubernetesEnvironmentResource(
             sb.AppendLine("        enableAutoScaling: true");
             sb.Append("        mode: '").Append(mode).AppendLine("'");
             sb.AppendLine("        osType: 'Linux'");
+            if (hasDelegatedSubnet)
+            {
+                sb.AppendLine("        vnetSubnetID: subnetId");
+            }
             sb.AppendLine("      }");
         }
         sb.AppendLine("    ]");
@@ -240,6 +256,15 @@ public class AzureKubernetesEnvironmentResource(
             }
             sb.Append("      serviceCidr: '").Append(NetworkProfile.ServiceCidr).AppendLine("'");
             sb.Append("      dnsServiceIP: '").Append(NetworkProfile.DnsServiceIP).AppendLine("'");
+            sb.AppendLine("    }");
+        }
+        else if (hasDelegatedSubnet)
+        {
+            // Default Azure CNI network profile when a subnet is delegated
+            sb.AppendLine("    networkProfile: {");
+            sb.AppendLine("      networkPlugin: 'azure'");
+            sb.AppendLine("      serviceCidr: '10.0.0.0/16'");
+            sb.AppendLine("      dnsServiceIP: '10.0.0.10'");
             sb.AppendLine("    }");
         }
 
