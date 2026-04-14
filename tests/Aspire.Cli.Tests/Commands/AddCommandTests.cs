@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.IO.Compression;
 using Aspire.Cli.Commands;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.Packaging;
@@ -897,7 +898,7 @@ public class AddCommandTests(ITestOutputHelper outputHelper)
         var hivesDir = new DirectoryInfo(Path.Combine(workspace.WorkspaceRoot.FullName, ".aspire", "hives"));
         hivesDir.Create();
         var prHiveDir = hivesDir.CreateSubdirectory("pr-12345");
-        prHiveDir.CreateSubdirectory("packages");
+        var packagesDir = prHiveDir.CreateSubdirectory("packages");
 
         var cliVersion = VersionHelper.GetDefaultSdkVersion();
         var expectedSource = Path.Combine(prHiveDir.FullName, "packages").Replace('\\', '/');
@@ -905,6 +906,8 @@ public class AddCommandTests(ITestOutputHelper outputHelper)
         var appHostDirectory = Directory.CreateDirectory(Path.Combine(workspace.WorkspaceRoot.FullName, "AppHost"));
         var appHostFile = new FileInfo(Path.Combine(appHostDirectory.FullName, "AppHost.csproj"));
         File.WriteAllText(appHostFile.FullName, "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>");
+        CreatePackage(packagesDir.FullName, "Aspire.Hosting.Redis", cliVersion);
+        CreatePackage(packagesDir.FullName, "Aspire.Hosting", cliVersion);
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
@@ -961,7 +964,25 @@ public class AddCommandTests(ITestOutputHelper outputHelper)
         var nuGetConfigContents = File.ReadAllText(nuGetConfigPath);
         Assert.Contains(expectedSource, nuGetConfigContents, StringComparison.Ordinal);
         Assert.Contains("""<package pattern="Aspire.Hosting.Redis" />""", nuGetConfigContents, StringComparison.Ordinal);
+        Assert.Contains("""<package pattern="Aspire.Hosting" />""", nuGetConfigContents, StringComparison.Ordinal);
         Assert.DoesNotContain("""<package pattern="Aspire*" />""", nuGetConfigContents, StringComparison.Ordinal);
+    }
+
+    private static void CreatePackage(string directory, string packageId, string version)
+    {
+        var packagePath = Path.Combine(directory, $"{packageId}.{version}.nupkg");
+        using var archive = ZipFile.Open(packagePath, ZipArchiveMode.Create);
+        var nuspecEntry = archive.CreateEntry($"{packageId}.nuspec");
+        using var writer = new StreamWriter(nuspecEntry.Open());
+        writer.Write($$"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <package>
+              <metadata>
+                <id>{{packageId}}</id>
+                <version>{{version}}</version>
+              </metadata>
+            </package>
+            """);
     }
 }
 
