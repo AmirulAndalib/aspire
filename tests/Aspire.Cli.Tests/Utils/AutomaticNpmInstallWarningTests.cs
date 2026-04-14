@@ -7,23 +7,17 @@ namespace Aspire.Cli.Tests.Utils;
 
 public class AutomaticNpmInstallWarningTests
 {
-    [Fact]
-    public void IsMatch_WhenNpmIsMissing_ReturnsTrue()
+    [Theory]
+    [InlineData("npm is not installed or not found in PATH. Please install Node.js and try again.")]
+    [InlineData("npx is not installed or not found in PATH. Please install Node.js and try again.")]
+    [InlineData("bun is not installed or not found in PATH. Please install Bun and try again.")]
+    [InlineData("yarn is not installed or not found in PATH. Please install Yarn and try again.")]
+    [InlineData("pnpm is not installed or not found in PATH. Please install pnpm and try again.")]
+    public void IsMatch_WhenJavaScriptToolIsMissing_ReturnsTrue(string message)
     {
         var lines = new[]
         {
-            (OutputLineStream.StdErr, "npm is not installed or not found in PATH. Please install Node.js and try again.")
-        };
-
-        Assert.True(AutomaticNpmInstallWarning.IsMatch(lines));
-    }
-
-    [Fact]
-    public void IsMatch_WhenNpxIsMissing_ReturnsTrue()
-    {
-        var lines = new[]
-        {
-            (OutputLineStream.StdErr, "npx is not installed or not found in PATH. Please install Node.js and try again.")
+            (OutputLineStream.StdErr, message)
         };
 
         Assert.True(AutomaticNpmInstallWarning.IsMatch(lines));

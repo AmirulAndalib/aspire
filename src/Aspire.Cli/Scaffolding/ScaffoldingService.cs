@@ -176,6 +176,12 @@ internal sealed class ScaffoldingService : IScaffoldingService
         CancellationToken cancellationToken)
     {
         var runtimeSpec = await rpcClient.GetRuntimeSpecAsync(language.LanguageId.Value, cancellationToken);
+        if (TypeScriptAppHostToolchainResolver.IsTypeScriptLanguage(language))
+        {
+            var toolchain = TypeScriptAppHostToolchainResolver.Resolve(directory);
+            runtimeSpec = TypeScriptAppHostToolchainResolver.ApplyToRuntimeSpec(runtimeSpec, toolchain);
+        }
+
         var runtime = new GuestRuntime(runtimeSpec, _logger);
 
         var (initResult, initOutput) = await runtime.InitializeAsync(directory, cancellationToken);

@@ -57,7 +57,24 @@ internal static class CommandPathResolver
         return normalizedCommand.ToLowerInvariant() switch
         {
             "npm" or "npx" => $"{normalizedCommand} is not installed or not found in PATH. Please install Node.js and try again.",
+            "bun" => "bun is not installed or not found in PATH. Please install Bun and try again.",
+            "yarn" => "yarn is not installed or not found in PATH. Please install Yarn and try again.",
+            "pnpm" => "pnpm is not installed or not found in PATH. Please install pnpm and try again.",
             _ => $"Command '{command}' not found. Please ensure it is installed and in your PATH."
+        };
+    }
+
+    internal static string? GetInstallationLink(string command)
+    {
+        var normalizedCommand = Path.GetFileNameWithoutExtension(command);
+
+        return normalizedCommand.ToLowerInvariant() switch
+        {
+            "npm" or "npx" => "https://nodejs.org/en/download",
+            "bun" => "https://bun.sh/docs/installation",
+            "yarn" => "https://yarnpkg.com/getting-started/install",
+            "pnpm" => "https://pnpm.io/installation",
+            _ => null
         };
     }
 }

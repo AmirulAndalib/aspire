@@ -1375,16 +1375,23 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
     /// Ensures the GuestRuntime is created.
     /// </summary>
     private async Task EnsureRuntimeCreatedAsync(
+        DirectoryInfo directory,
         IAppHostRpcClient rpcClient,
         CancellationToken cancellationToken)
     {
         if (_guestRuntime is null)
         {
             var runtimeSpec = await rpcClient.GetRuntimeSpecAsync(_resolvedLanguage.LanguageId, cancellationToken);
+            if (TypeScriptAppHostToolchainResolver.IsTypeScriptLanguage(_resolvedLanguage))
+            {
+                var toolchain = TypeScriptAppHostToolchainResolver.Resolve(directory);
+                runtimeSpec = TypeScriptAppHostToolchainResolver.ApplyToRuntimeSpec(runtimeSpec, toolchain);
+            }
+
             _guestRuntime = new GuestRuntime(runtimeSpec, _logger, _fileLoggerProvider);
 
             _logger.LogDebug("Created GuestRuntime for {Language}: Execute={Command} {Args}",
-                _resolvedLanguage.LanguageId,
+                runtimeSpec.DisplayName,
                 runtimeSpec.Execute.Command,
                 string.Join(" ", runtimeSpec.Execute.Args));
         }
@@ -1403,7 +1410,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         bool treatMissingNodeToolAsWarning,
         CancellationToken cancellationToken)
     {
-        await EnsureRuntimeCreatedAsync(rpcClient, cancellationToken);
+        await EnsureRuntimeCreatedAsync(directory, rpcClient, cancellationToken);
 
         if (_guestRuntime is null)
         {
@@ -1461,7 +1468,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         IGuestProcessLauncher launcher,
         CancellationToken cancellationToken)
     {
-        await EnsureRuntimeCreatedAsync(rpcClient, cancellationToken);
+        await EnsureRuntimeCreatedAsync(directory, rpcClient, cancellationToken);
 
         if (_guestRuntime is null)
         {
@@ -1483,7 +1490,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         IAppHostRpcClient rpcClient,
         CancellationToken cancellationToken)
     {
-        await EnsureRuntimeCreatedAsync(rpcClient, cancellationToken);
+        await EnsureRuntimeCreatedAsync(directory, rpcClient, cancellationToken);
 
         if (_guestRuntime is null)
         {
