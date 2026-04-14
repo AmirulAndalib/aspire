@@ -283,7 +283,8 @@ internal static partial class HelmDeploymentEngine
     {
         if (environment.CapturedHelmValues.Count == 0
             && environment.CapturedHelmCrossReferences.Count == 0
-            && environment.CapturedHelmImageReferences.Count == 0)
+            && environment.CapturedHelmImageReferences.Count == 0
+            && environment.CapturedHelmValueProviders.Count == 0)
         {
             return;
         }
@@ -326,6 +327,20 @@ internal static partial class HelmDeploymentEngine
             if (resolvedImage is not null)
             {
                 SetOverrideValue(overrideValues, imageRef.Section, imageRef.ResourceKey, imageRef.ValueKey, resolvedImage);
+            }
+        }
+
+        // Phase 4: Resolve generic IValueProvider references.
+        // During publish, values backed by IValueProvider (e.g., Bicep output references,
+        // connection strings) are written as empty placeholders. At deploy time, we call
+        // GetValueAsync() to resolve the actual values from external sources.
+        // This is cloud-provider agnostic — any IValueProvider implementation works.
+        foreach (var valueProviderRef in environment.CapturedHelmValueProviders)
+        {
+            var resolvedValue = await valueProviderRef.ValueProvider.GetValueAsync(cancellationToken).ConfigureAwait(false);
+            if (resolvedValue is not null)
+            {
+                SetOverrideValue(overrideValues, valueProviderRef.Section, valueProviderRef.ResourceKey, valueProviderRef.ValueKey, resolvedValue);
             }
         }
 

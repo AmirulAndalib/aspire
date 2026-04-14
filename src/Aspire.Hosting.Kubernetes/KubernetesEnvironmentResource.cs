@@ -155,6 +155,19 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
     internal sealed record CapturedHelmImageReference(string Section, string ResourceKey, string ValueKey, IResource Resource);
 
     /// <summary>
+    /// Represents a captured value provider reference that needs deploy-time resolution.
+    /// This handles any <see cref="IValueProvider"/> implementation (e.g., Bicep output references,
+    /// connection strings) that can't be resolved at publish time.
+    /// </summary>
+    internal sealed record CapturedHelmValueProvider(string Section, string ResourceKey, string ValueKey, IValueProvider ValueProvider);
+
+    /// <summary>
+    /// Captured value provider references populated during publish, consumed during deploy
+    /// to resolve values from external sources (e.g., Azure Bicep outputs).
+    /// </summary>
+    internal List<CapturedHelmValueProvider> CapturedHelmValueProviders { get; } = [];
+
+    /// <summary>
     /// Gets or sets the delegate that creates deployment pipeline steps for the configured engine.
     /// </summary>
     internal Func<KubernetesEnvironmentResource, PipelineStepFactoryContext, Task<IReadOnlyList<PipelineStep>>>? DeploymentEngineStepsFactory { get; set; }

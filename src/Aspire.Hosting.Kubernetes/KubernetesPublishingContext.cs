@@ -190,6 +190,21 @@ internal sealed class KubernetesPublishingContext(
             else
             {
                 value = helmExpressionWithValue.Value;
+
+                // If the value has an IValueProvider source, capture it for deploy-time
+                // resolution. Write an empty placeholder now and resolve at deploy time.
+                // This handles Bicep output references, connection strings, and any other
+                // deferred value source without requiring Azure-specific knowledge.
+                if (helmExpressionWithValue.ValueProviderSource is { } valueProvider)
+                {
+                    value = string.Empty;
+                    environment?.CapturedHelmValueProviders.Add(
+                        new KubernetesEnvironmentResource.CapturedHelmValueProvider(
+                            helmKey,
+                            resource.Name.ToHelmValuesSectionName(),
+                            valuesKey,
+                            valueProvider));
+                }
             }
 
             paramValues[valuesKey] = value ?? string.Empty;

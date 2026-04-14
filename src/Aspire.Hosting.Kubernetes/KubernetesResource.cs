@@ -669,7 +669,20 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
             formattedName.ToHelmSecretExpression(resource.Name) :
             formattedName.ToHelmConfigExpression(resource.Name);
 
-        return new(helmExpression, parameter.ValueExpression);
+        var helmValue = new HelmValue(helmExpression, parameter.ValueExpression);
+
+        // If the expression provider also implements IValueProvider, attach it
+        // for deploy-time resolution. This handles Bicep output references,
+        // connection strings, and any other deferred value source.
+        if (parameter is IValueProvider valueProvider)
+        {
+            helmValue = new HelmValue(helmExpression, parameter.ValueExpression)
+            {
+                ValueProviderSource = valueProvider
+            };
+        }
+
+        return helmValue;
     }
 
     private static string GetKubernetesProtocolName(ProtocolType type)
@@ -744,6 +757,14 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
         /// to include the container registry prefix.
         /// </summary>
         public IResource? ImageResource { get; init; }
+
+        /// <summary>
+        /// Gets the value provider for deferred resolution at deploy time.
+        /// When set, the value is resolved via <see cref="IValueProvider"/>
+        /// during the prepare step, replacing the placeholder in values.yaml.
+        /// This handles any value provider (e.g., Bicep output references, connection strings).
+        /// </summary>
+        public IValueProvider? ValueProviderSource { get; init; }
 
         /// <summary>
         /// Gets the key to use when writing this value to the Helm values.yaml file.
