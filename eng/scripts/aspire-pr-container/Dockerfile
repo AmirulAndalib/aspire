@@ -1,10 +1,8 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0
+FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-ENV DOTNET_NOLOGO=1 \
-    NUGET_XMLDOC_MODE=skip \
-    PATH=/workspace/.aspire/bin:$PATH
+ENV PATH=/workspace/.aspire/bin:$PATH
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
