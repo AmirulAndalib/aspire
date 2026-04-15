@@ -81,19 +81,9 @@ curl -fsSL https://raw.githubusercontent.com/microsoft/aspire/main/eng/scripts/g
 cliPath="$installPrefix/bin/aspire"
 hivePath="$installPrefix/hives/pr-$prNumber/packages"
 cliVersion="$("$cliPath" --version)"
-
-# Fresh PR installs can require an explicit bundle extraction before template-based commands.
-for i in 1 2 3; do
-  if "$cliPath" setup --force; then
-    break
-  fi
-  if [[ "$i" -eq 3 ]]; then
-    echo "aspire setup --force kept failing" >&2
-    exit 1
-  fi
-  sleep 2
-done
 ```
+
+If later template-based commands fail with bundle extraction or layout validation errors, use the troubleshooting guidance below.
 
 #### Container mode (preferred)
 
@@ -107,19 +97,9 @@ runner() {
 }
 
 runner "$prNumber"
-
-# Fresh PR installs can require an explicit bundle extraction before template-based commands.
-for i in 1 2 3; do
-  if runner bash -lc '/workspace/.aspire/bin/aspire setup --force'; then
-    break
-  fi
-  if [[ "$i" -eq 3 ]]; then
-    echo "aspire setup --force kept failing" >&2
-    exit 1
-  fi
-  sleep 2
-done
 ```
+
+If later template-based commands fail with bundle extraction or layout validation errors, use the troubleshooting guidance below.
 
 On Windows PowerShell hosts, use the PowerShell runner instead:
 
@@ -136,20 +116,9 @@ $env:INSTALL_PREFIX = "/workspace/.aspire"
 $env:ASPIRE_CONTAINER_USER = "0:0"
 
 runner $prNumber
-
-for ($i = 1; $i -le 3; $i++) {
-  runner bash -lc '/workspace/.aspire/bin/aspire setup --force'
-  if ($LASTEXITCODE -eq 0) {
-    break
-  }
-
-  if ($i -eq 3) {
-    throw "aspire setup --force kept failing"
-  }
-
-  Start-Sleep -Seconds 2
-}
 ```
+
+If later template-based commands fail with bundle extraction or layout validation errors, use the troubleshooting guidance below.
 
 For follow-up commands in the same mounted workspace, run:
 
@@ -638,7 +607,7 @@ Dashboard correctly displays the new Redis resource type.
 - **Fresh projects** - Always use `aspire new` for each scenario, don't reuse projects
 - **Container mode** - Prefer the repo-local `./eng/scripts/aspire-pr-container` scripts and a fresh temp workspace when Docker is available
 - **Ask before container cleanup** - At the end of a container-mode run, ask whether to keep the mounted workspace around for inspection
-- **Bundle setup** - After a fresh PR install, run the installed CLI's `setup --force` before template-based scenarios; retry briefly if layout validation fails
+- **Bundle troubleshooting** - If template-based commands fail with bundle extraction or layout validation errors after install, run the installed CLI's `setup --force` and retry briefly
 - **Non-interactive project creation** - Pass both `--name` and `--output`; for `aspire-starter`, also pass `--test-framework None --use-redis-cache false` unless intentionally testing those prompts
 - **TTY project creation** - In TTY-attached runs, `aspire new` may ask about configuring AI agent environments; answer explicitly or keep stdin non-interactive
 - **Explicit AppHost path** - Prefer `--apphost <path>` for scripted `wait`, `describe`, `resource`, and `stop` commands
