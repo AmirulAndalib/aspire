@@ -15,14 +15,25 @@ namespace Aspire.Cli.EndToEnd.Tests;
 /// </summary>
 public sealed class TypeScriptCodegenValidationTests(ITestOutputHelper output)
 {
-    [Fact]
-    public async Task RestoreGeneratesSdkFiles()
+    public static TheoryData<string> AlternativeToolchains => new()
+    {
+        "bun",
+        "yarn",
+        "pnpm"
+    };
+
+    [Theory]
+    [MemberData(nameof(AlternativeToolchains))]
+    [CaptureWorkspaceOnFailure]
+    public async Task RestoreGeneratesSdkFiles_WithConfiguredToolchain(string toolchain)
     {
         var repoRoot = CliE2ETestHelpers.GetRepoRoot();
-        var installMode = CliE2ETestHelpers.DetectDockerInstallMode(repoRoot);
+        var strategy = CliInstallStrategy.Detect();
         var workspace = TemporaryWorkspace.Create(output);
+        var localChannel = CliE2ETestHelpers.PrepareLocalChannel(repoRoot, workspace, strategy,
+            ["Aspire.Hosting.CodeGeneration.TypeScript.", "Aspire.Hosting.Redis.", "Aspire.Hosting.SqlServer."]);
 
-        using var terminal = CliE2ETestHelpers.CreateDockerTestTerminal(repoRoot, installMode, output, variant: CliE2ETestHelpers.DockerfileVariant.Polyglot, workspace: workspace);
+        using var terminal = CliE2ETestHelpers.CreateDockerTestTerminal(repoRoot, strategy, output, variant: CliE2ETestHelpers.DockerfileVariant.DotNet, workspace: workspace);
 
         var pendingRun = terminal.RunAsync(TestContext.Current.CancellationToken);
 
@@ -31,7 +42,10 @@ public sealed class TypeScriptCodegenValidationTests(ITestOutputHelper output)
 
         await auto.PrepareDockerEnvironmentAsync(counter, workspace);
 
-        await auto.InstallAspireCliInDockerAsync(installMode, counter);
+        await auto.InstallAspireCliAsync(strategy, counter);
+        await auto.MountLocalChannelPackagesAsync(localChannel, workspace, counter);
+
+        output.WriteLine($"Testing TypeScript AppHost toolchain: {toolchain}");
 
         // Step 1: Create a TypeScript AppHost
         await auto.TypeAsync("aspire init --language typescript --non-interactive");
@@ -39,16 +53,20 @@ public sealed class TypeScriptCodegenValidationTests(ITestOutputHelper output)
         await auto.WaitUntilTextAsync("Created apphost.ts", timeout: TimeSpan.FromMinutes(2));
         await auto.WaitForSuccessPromptAsync(counter);
 
+        TypeScriptAppHostToolchainTestHelpers.SetPackageManager(workspace.WorkspaceRoot.FullName, toolchain);
+        if (localChannel is not null)
+        {
+            CliE2ETestHelpers.WriteLocalChannelSettings(workspace.WorkspaceRoot.FullName, localChannel.SdkVersion);
+        }
+
         // Step 2: Add two integrations
         await auto.TypeAsync("aspire add Aspire.Hosting.Redis");
         await auto.EnterAsync();
-        await auto.WaitUntilTextAsync("The package Aspire.Hosting.", timeout: TimeSpan.FromMinutes(2));
-        await auto.WaitForSuccessPromptAsync(counter);
+        await auto.WaitForAspireAddSuccessAsync(counter, TimeSpan.FromMinutes(2));
 
         await auto.TypeAsync("aspire add Aspire.Hosting.SqlServer");
         await auto.EnterAsync();
-        await auto.WaitUntilTextAsync("The package Aspire.Hosting.", timeout: TimeSpan.FromMinutes(2));
-        await auto.WaitForSuccessPromptAsync(counter);
+        await auto.WaitForAspireAddSuccessAsync(counter, TimeSpan.FromMinutes(2));
 
         // Step 3: Run aspire restore and verify success
         await auto.TypeAsync("aspire restore");

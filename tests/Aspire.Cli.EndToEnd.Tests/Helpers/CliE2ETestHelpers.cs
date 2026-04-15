@@ -526,14 +526,59 @@ internal static class CliE2ETestHelpers
             return null;
         }
 
-        var shippingPackagesDirectory = Path.Combine(repoRoot, "artifacts", "packages", "Debug", "Shipping");
-        if (!Directory.Exists(shippingPackagesDirectory))
+        return PrepareLocalChannelCore(repoRoot, workspace, requiredPackagePrefixes);
+    }
+
+    internal static LocalChannelInfo? PrepareLocalChannel(
+        string repoRoot,
+        TemporaryWorkspace workspace,
+        CliInstallStrategy strategy,
+        string[]? requiredPackagePrefixes = null)
+    {
+        if (strategy.Mode != CliInstallMode.LocalHive)
+        {
+            return null;
+        }
+
+        return PrepareLocalChannelCore(repoRoot, workspace, requiredPackagePrefixes);
+    }
+
+    private static LocalChannelInfo PrepareLocalChannelCore(
+        string repoRoot,
+        TemporaryWorkspace workspace,
+        string[]? requiredPackagePrefixes)
+    {
+        var shippingPackagesDirectory = new[]
+        {
+            Path.Combine(repoRoot, "artifacts", "packages", "Debug", "Shipping"),
+            Path.Combine(repoRoot, "artifacts", "packages", "Release", "Shipping")
+        }
+        .FirstOrDefault(directory => Directory.Exists(directory) &&
+            Directory.EnumerateFiles(directory, "Aspire*.nupkg", SearchOption.TopDirectoryOnly).Any());
+
+        if (shippingPackagesDirectory is null)
         {
             throw new InvalidOperationException("Local source-built E2E tests require packed Aspire packages. Run './build.sh --bundle --pack' first.");
         }
 
-        var packageFiles = Directory.EnumerateFiles(shippingPackagesDirectory, "Aspire*.nupkg", SearchOption.TopDirectoryOnly)
+        var allPackageFiles = Directory.EnumerateFiles(shippingPackagesDirectory, "Aspire*.nupkg", SearchOption.TopDirectoryOnly)
             .Where(file => !file.EndsWith(".symbols.nupkg", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        var sdkVersion = allPackageFiles
+            .Select(Path.GetFileName)
+            .Where(static fileName => fileName is not null && Regex.IsMatch(fileName, @"^Aspire\.Hosting\.\d+\.\d+\.\d+.*\.nupkg$", RegexOptions.IgnoreCase))
+            .Select(static fileName => fileName!["Aspire.Hosting.".Length..^".nupkg".Length])
+            .OrderDescending(StringComparer.Ordinal)
+            .FirstOrDefault();
+
+        if (string.IsNullOrEmpty(sdkVersion))
+        {
+            throw new InvalidOperationException("Local source-built E2E tests could not determine the Aspire SDK version from packed packages.");
+        }
+
+        var packageFiles = allPackageFiles
+            .Where(file => file.EndsWith($"{sdkVersion}.nupkg", StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
         if (!packageFiles.Any(file => Path.GetFileName(file).StartsWith("Aspire.Hosting.", StringComparison.OrdinalIgnoreCase)))
@@ -558,17 +603,6 @@ internal static class CliE2ETestHelpers
         foreach (var packageFile in packageFiles)
         {
             File.Copy(packageFile, Path.Combine(localChannelPackagesPath, Path.GetFileName(packageFile)), overwrite: true);
-        }
-
-        var sdkVersion = packageFiles
-            .Select(Path.GetFileName)
-            .FirstOrDefault(fileName => fileName is not null && Regex.IsMatch(fileName, @"^Aspire\.Hosting\.\d+\.\d+\.\d+.*\.nupkg$", RegexOptions.IgnoreCase))
-            ?.Replace("Aspire.Hosting.", string.Empty, StringComparison.OrdinalIgnoreCase)
-            ?.Replace(".nupkg", string.Empty, StringComparison.OrdinalIgnoreCase);
-
-        if (string.IsNullOrEmpty(sdkVersion))
-        {
-            throw new InvalidOperationException("Local source-built E2E tests could not determine the Aspire SDK version from packed packages.");
         }
 
         return new LocalChannelInfo(localChannelPackagesPath, sdkVersion);
