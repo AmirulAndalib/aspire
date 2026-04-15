@@ -167,16 +167,7 @@ public class AzureKubernetesEnvironmentResource(
         // Subnet parameters for VNet integration
         // Environment-level subnet (default for all pools)
         var hasDefaultSubnet = this.TryGetLastAnnotation<AksSubnetAnnotation>(out var subnetAnnotation);
-        if (!hasDefaultSubnet)
-        {
-            // Fallback: check for DelegatedSubnetAnnotation (legacy WithDelegatedSubnet usage)
-            hasDefaultSubnet = this.TryGetLastAnnotation<DelegatedSubnetAnnotation>(out var delegatedAnnotation);
-            if (hasDefaultSubnet)
-            {
-                Parameters["subnetId"] = delegatedAnnotation!.SubnetId;
-            }
-        }
-        else
+        if (hasDefaultSubnet)
         {
             Parameters["subnetId"] = subnetAnnotation!.SubnetId;
         }
