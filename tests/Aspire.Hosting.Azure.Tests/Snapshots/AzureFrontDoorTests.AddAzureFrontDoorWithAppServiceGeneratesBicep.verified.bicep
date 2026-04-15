@@ -22,6 +22,13 @@ resource apiEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2025-06-01' = {
 
 resource apiOriginGroup 'Microsoft.Cdn/profiles/originGroups@2025-06-01' = {
   name: take('api-og-${uniqueString(resourceGroup().id)}', 90)
+  properties: {
+    loadBalancingSettings: {
+      sampleSize: 4
+      successfulSamplesRequired: 3
+      additionalLatencyInMilliseconds: 50
+    }
+  }
   parent: frontdoor
 }
 

@@ -97,11 +97,17 @@ public static class AzureFrontDoorExtensions
                 };
                 infrastructure.Add(endpoint);
 
-                // Origin group
+                // Origin group — LoadBalancingSettings is required by ARM even with a single origin.
                 var originGroup = new FrontDoorOriginGroup($"{originName}OriginGroup")
                 {
                     Parent = profile,
-                    Name = BicepFunction.Take(BicepFunction.Interpolate($"{originName}-og-{BicepFunction.GetUniqueString(BicepFunction.GetResourceGroup().Id)}"), 90)
+                    Name = BicepFunction.Take(BicepFunction.Interpolate($"{originName}-og-{BicepFunction.GetUniqueString(BicepFunction.GetResourceGroup().Id)}"), 90),
+                    LoadBalancingSettings = new LoadBalancingSettings()
+                    {
+                        SampleSize = 4,
+                        SuccessfulSamplesRequired = 3,
+                        AdditionalLatencyInMilliseconds = 50
+                    }
                 };
                 infrastructure.Add(originGroup);
 
