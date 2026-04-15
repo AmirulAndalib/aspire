@@ -66,7 +66,7 @@ internal sealed partial class CliTemplateFactory
                     var config = AspireConfigFile.LoadOrCreate(outputPath, aspireVersion);
                     if (!string.IsNullOrEmpty(inputs.Channel))
                     {
-                        config.Channel = inputs.Channel;
+                        config.SetChannel(inputs.Channel);
                     }
                     config.Save(outputPath);
 

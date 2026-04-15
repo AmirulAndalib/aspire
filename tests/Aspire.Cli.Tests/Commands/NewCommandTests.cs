@@ -1425,7 +1425,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         {
             buildAndGenerateCalled = true;
             var config = AspireConfigFile.Load(directory.FullName);
-            channelSeenByProject = config?.Channel;
+            channelSeenByProject = config?.GetChannel();
             sdkVersionSeenByProject = config?.SdkVersion;
 
             var modulesDir = Directory.CreateDirectory(Path.Combine(directory.FullName, ".modules"));

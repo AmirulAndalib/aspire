@@ -337,7 +337,7 @@ internal sealed class PrebuiltAppHostServer : IAppHostServerProject
     private async Task<string?> ResolveChannelNameAsync(CancellationToken cancellationToken)
     {
         // Check aspire.config.json first, then fall back to legacy .aspire/settings.json.
-        var channelName = AspireConfigFile.Load(_appDirectoryPath)?.Channel
+        var channelName = AspireConfigFile.Load(_appDirectoryPath)?.GetChannel()
             ?? AspireJsonConfiguration.Load(_appDirectoryPath)?.Channel;
 
         // Fall back to global config, then embedded channel

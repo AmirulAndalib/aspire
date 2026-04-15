@@ -118,10 +118,45 @@ internal sealed class AspireConfigFile
     /// <summary>
     /// Captures any additional JSON properties not mapped to a typed member.
     /// Ensures forward/backward compatibility when the file contains properties
-    /// from older or newer CLI versions (e.g., the former <c>"channel"</c> property).
+    /// from older or newer CLI versions (e.g., the <c>"channel"</c> property).
     /// </summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
+    /// <summary>
+    /// Gets the channel from <see cref="ExtensionData"/>.
+    /// The channel is no longer a first-class serialized property — it is embedded
+    /// in the CLI binary at build time. This method provides convenient read access
+    /// to the <c>"channel"</c> key in extension data for backward compatibility.
+    /// </summary>
+    /// <remarks>
+    /// This is intentionally a method rather than a <c>[JsonIgnore]</c> property so that
+    /// the source-generated serializer does not claim the <c>"channel"</c> JSON key and
+    /// discard it during deserialization. The key must flow into <see cref="ExtensionData"/>
+    /// for correct round-tripping.
+    /// </remarks>
+    public string? GetChannel()
+        => ExtensionData?.TryGetValue("channel", out var element) == true
+            ? element.GetString()
+            : null;
+
+    /// <summary>
+    /// Sets the channel in <see cref="ExtensionData"/>.
+    /// </summary>
+    /// <param name="channel">The channel name, or <c>null</c> to remove it.</param>
+    public void SetChannel(string? channel)
+    {
+        if (string.IsNullOrEmpty(channel))
+        {
+            ExtensionData?.Remove("channel");
+        }
+        else
+        {
+            ExtensionData ??= new Dictionary<string, JsonElement>();
+            using var doc = JsonDocument.Parse($"\"{channel}\"");
+            ExtensionData["channel"] = doc.RootElement.Clone();
+        }
+    }
 
     /// <summary>
     /// Loads aspire.config.json from the specified directory.
@@ -414,15 +449,7 @@ internal sealed class AspireConfigFile
                 config.Sdk = new AspireConfigSdk { Version = settings.SdkVersion };
             }
 
-            // Preserve channel in extension data for backward compatibility.
-            // The typed Channel property was removed (channel is now embedded in the binary),
-            // but users who previously set a channel should keep it in their config file.
-            if (!string.IsNullOrEmpty(settings.Channel))
-            {
-                config.ExtensionData ??= new Dictionary<string, JsonElement>();
-                using var doc = JsonDocument.Parse($"\"{settings.Channel}\"");
-                config.ExtensionData["channel"] = doc.RootElement.Clone();
-            }
+            config.SetChannel(settings.Channel);
 
             config.Features = settings.Features;
             config.Packages = settings.Packages;

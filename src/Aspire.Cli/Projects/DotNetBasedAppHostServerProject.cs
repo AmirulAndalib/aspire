@@ -324,7 +324,7 @@ internal sealed class DotNetBasedAppHostServerProject : IAppHostServerProject
         }
 
         var channels = await _packagingService.GetChannelsAsync(cancellationToken);
-        var configuredChannelName = AspireConfigFile.Load(_appPath)?.Channel
+        var configuredChannelName = AspireConfigFile.Load(_appPath)?.GetChannel()
             ?? AspireJsonConfiguration.Load(_appPath)?.Channel;
 
         if (string.IsNullOrEmpty(configuredChannelName))
