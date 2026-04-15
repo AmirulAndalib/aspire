@@ -681,18 +681,13 @@ public partial class KubernetesResource(string name, IResource resource, Kuberne
             formattedName.ToHelmSecretExpression(resource.Name) :
             formattedName.ToHelmConfigExpression(resource.Name);
 
-        var helmValue = new HelmValue(helmExpression, parameter.ValueExpression);
-
-        // If the expression provider also implements IValueProvider, attach it
-        // for deploy-time resolution. This handles Bicep output references,
-        // connection strings, and any other deferred value source.
-        if (parameter is IValueProvider valueProvider)
+        var helmValue = new HelmValue(helmExpression, parameter.ValueExpression)
         {
-            helmValue = new HelmValue(helmExpression, parameter.ValueExpression)
-            {
-                ValueProviderSource = valueProvider
-            };
-        }
+            // If the expression provider also implements IValueProvider, attach it
+            // for deploy-time resolution. This handles Bicep output references,
+            // connection strings, and any other deferred value source.
+            ValueProviderSource = parameter as IValueProvider
+        };
 
         return helmValue;
     }
