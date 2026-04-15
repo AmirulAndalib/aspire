@@ -46,7 +46,7 @@ Set-StrictMode -Version Latest
 # Load CI test property definitions from the single source of truth
 $script:CITestsPropertiesPath = Join-Path $PSScriptRoot '../testing/CITestsProperties.props'
 [xml]$ciTestsPropsXml = Get-Content $script:CITestsPropertiesPath
-$script:ciTestsPropertyDefs = @{}
+$script:ciTestsPropertyDefs = [ordered]@{}
 foreach ($item in $ciTestsPropsXml.Project.ItemGroup.CITestsProperty) {
   $script:ciTestsPropertyDefs[$item.Include] = @{
     Default = ($item.Default -eq 'true')
