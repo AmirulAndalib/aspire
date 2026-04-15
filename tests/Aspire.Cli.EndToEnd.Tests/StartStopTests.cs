@@ -67,7 +67,7 @@ public sealed class StartStopTests(ITestOutputHelper output)
             // Docker network cleanup can lag behind aspire stop on contended CI runners.
             await auto.ExecuteCommandUntilOutputAsync(counter, $"docker network ls --format json | grep -i -- '{projectName}' | wc -l", "0", timeout: TimeSpan.FromMinutes(5));
         }
-        catch (Exception)
+        catch
         {
             testBodyFailed = true;
             throw;
@@ -78,10 +78,7 @@ public sealed class StartStopTests(ITestOutputHelper output)
             {
                 await auto.CaptureAspireDiagnosticsAsync(counter, workspace);
             }
-            catch (Exception ex)
-            {
-                output.WriteLine($"Failed to capture Aspire diagnostics: {ex}");
-            }
+            catch { } // Best effort
 
             try
             {
@@ -89,14 +86,12 @@ public sealed class StartStopTests(ITestOutputHelper output)
                 await auto.EnterAsync();
                 await pendingRun;
             }
-            catch (Exception ex)
+            catch
             {
                 if (!testBodyFailed)
                 {
                     throw;
                 }
-
-                output.WriteLine($"Failed to exit Docker test terminal cleanly after test failure: {ex}");
             }
         }
     }
