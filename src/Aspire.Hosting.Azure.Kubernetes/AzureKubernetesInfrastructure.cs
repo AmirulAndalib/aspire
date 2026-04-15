@@ -3,6 +3,7 @@
 
 #pragma warning disable ASPIREPIPELINES001 // Pipeline step types used for push/deploy dependency wiring
 #pragma warning disable ASPIREAZURE001 // AzureEnvironmentResource.ProvisionInfrastructureStepName for pipeline ordering
+#pragma warning disable ASPIREFILESYSTEM001 // IFileSystemService/TempDirectory are experimental
 
 using System.Text;
 using Aspire.Hosting.ApplicationModel;
@@ -228,9 +229,13 @@ internal sealed class AzureKubernetesInfrastructure(
                 var resourceGroup = await GetResourceGroupAsync(azPath, clusterName, context)
                     .ConfigureAwait(false);
 
-                // Write credentials to an isolated kubeconfig file
-                var kubeConfigDir = Directory.CreateTempSubdirectory("aspire-aks");
-                var kubeConfigPath = Path.Combine(kubeConfigDir.FullName, "kubeconfig");
+                // Write credentials to an isolated kubeconfig file managed by the
+                // IFileSystemService. The temp directory is tracked and cleaned up
+                // automatically when the DI container disposes, ensuring credentials
+                // don't persist on disk after the pipeline completes.
+                var fileSystemService = context.Services.GetRequiredService<IFileSystemService>();
+                var kubeConfigDir = fileSystemService.TempDirectory.CreateTempSubdirectory("aspire-aks");
+                var kubeConfigPath = Path.Combine(kubeConfigDir.Path, "kubeconfig");
 
                 context.Logger.LogInformation(
                     "Fetching AKS credentials: cluster={ClusterName}, resourceGroup={ResourceGroup}",
