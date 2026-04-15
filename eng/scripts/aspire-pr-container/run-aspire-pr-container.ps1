@@ -10,24 +10,24 @@ $ErrorActionPreference = 'Stop'
 function Show-Usage {
     @'
 Usage:
-  run-aspire-pr-container.ps1 PR_NUMBER [get-aspire-cli-pr.ps1 options...]
-  run-aspire-pr-container.ps1 bash [args...]
-  run-aspire-pr-container.ps1 sh [args...]
+  run-aspire-pr-container.ps1 [command [args...]]
 
 Environment:
   ASPIRE_PR_IMAGE          Docker image name to build/run (default: aspire-pr-runner)
   ASPIRE_PR_WORKSPACE      Host directory to mount as /workspace (default: current directory)
-  INSTALL_PREFIX           In-container install prefix (default: /workspace/.aspire)
   ASPIRE_DOCKER_SOCKET     Host Docker socket path to mount into /var/run/docker.sock
-                           (default: /var/run/docker.sock)
+                            (default: /var/run/docker.sock)
   ASPIRE_CONTAINER_USER    Container user for docker run
                            Default: 0:0 on Windows, current uid:gid elsewhere when available
   ASPIRE_PR_RECORD         Set to 1/true to record the full host-side session with asciinema
   ASPIRE_PR_RECORDING_PATH Output path for the .cast file
                            (default: <workspace>/recordings/<timestamp>-<command>.cast)
   ASPIRE_PR_RECORDING_TITLE
-                           Optional title stored in the recording metadata
+                            Optional title stored in the recording metadata
   GH_TOKEN/GITHUB_TOKEN    GitHub token passed into the container
+
+Default command:
+  bash
 '@ | Write-Host
 }
 
@@ -91,8 +91,7 @@ function Get-CurrentUidGid {
 }
 
 if (-not $RemainingArgs -or $RemainingArgs.Count -lt 1) {
-    Show-Usage
-    exit 1
+    $RemainingArgs = @('bash')
 }
 
 if ($RemainingArgs[0] -in @('-h', '--help')) {
@@ -103,7 +102,6 @@ if ($RemainingArgs[0] -in @('-h', '--help')) {
 $scriptDir = Split-Path -Parent $PSCommandPath
 $imageName = if ($env:ASPIRE_PR_IMAGE) { $env:ASPIRE_PR_IMAGE } else { 'aspire-pr-runner' }
 $workspace = if ($env:ASPIRE_PR_WORKSPACE) { $env:ASPIRE_PR_WORKSPACE } else { (Get-Location).Path }
-$installPrefix = if ($env:INSTALL_PREFIX) { $env:INSTALL_PREFIX } else { '/workspace/.aspire' }
 $dockerSocketPath = if ($env:ASPIRE_DOCKER_SOCKET) { $env:ASPIRE_DOCKER_SOCKET } else { '/var/run/docker.sock' }
 $isWindows = $env:OS -eq 'Windows_NT'
 
@@ -197,8 +195,6 @@ $runArgs = @(
     'GH_TOKEN'
     '-e'
     'ASPIRE_REPO'
-    '-e'
-    "INSTALL_PREFIX=$installPrefix"
     '-e'
     'HOME=/workspace'
 )

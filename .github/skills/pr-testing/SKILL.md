@@ -57,7 +57,9 @@ iex "& { $(irm https://raw.githubusercontent.com/microsoft/aspire/main/eng/scrip
 
 ### 3. Choose Execution Mode and Install the CLI
 
-Before installing the CLI, decide whether the testing should run **locally** or in the repo-local **container runner**. Bias toward the container runner when Docker is available because it keeps the CLI install, PR hive, and NuGet source wiring isolated and reproducible.
+Before installing the CLI, decide whether the testing should run **locally** or in the repo-local **container runner**. Bias toward the container runner when Docker is available because it keeps the CLI install isolated and reproducible.
+
+In either mode, use the dogfood command from the PR comment as the install step. Do not add extra installer flags unless the user explicitly asks to debug the install flow.
 
 The container runner lives at:
 
@@ -72,29 +74,32 @@ Use the shell that matches the host:
 
 #### Local mode
 
-Create a temporary working directory and install the CLI directly on the host:
+Create a temporary working directory, point `HOME` at it, and run the bash dogfood command unchanged:
 
 ```bash
 testDir="$(mktemp -d -t aspire-pr-test-XXXXXX)"
-installPrefix="$testDir/.aspire"
-curl -fsSL https://raw.githubusercontent.com/microsoft/aspire/main/eng/scripts/get-aspire-cli-pr.sh | bash -s -- "$prNumber" --install-path "$installPrefix" --skip-extension --skip-path
-cliPath="$installPrefix/bin/aspire"
-hivePath="$installPrefix/hives/pr-$prNumber/packages"
+homeDir="$testDir/home"
+mkdir -p "$homeDir"
+
+HOME="$homeDir" bash -lc 'curl -fsSL https://raw.githubusercontent.com/microsoft/aspire/main/eng/scripts/get-aspire-cli-pr.sh | bash -s -- '"$prNumber"
+
+cliPath="$homeDir/.aspire/bin/aspire"
+hivePath="$homeDir/.aspire/hives/pr-$prNumber/packages"
 cliVersion="$("$cliPath" --version)"
 ```
 
 #### Container mode (preferred)
 
-Run from the repository root so the repo-local scripts are available. Use a fresh host temp directory as the mounted workspace:
+Run from the repository root so the repo-local scripts are available. Use a fresh host temp directory as the mounted workspace. The runner only opens the isolated container; the PR install still happens by running the dogfood command inside it:
 
 ```bash
 testDir="$(mktemp -d -t aspire-pr-test-XXXXXX)"
 runner() {
-  ASPIRE_PR_WORKSPACE="$testDir" INSTALL_PREFIX=/workspace/.aspire ASPIRE_CONTAINER_USER=0:0 \
+  ASPIRE_PR_WORKSPACE="$testDir" ASPIRE_CONTAINER_USER=0:0 \
     ./eng/scripts/aspire-pr-container/run-aspire-pr-container.sh "$@"
 }
 
-runner "$prNumber"
+runner bash -lc 'curl -fsSL https://raw.githubusercontent.com/microsoft/aspire/main/eng/scripts/get-aspire-cli-pr.sh | bash -s -- '"$prNumber"
 ```
 
 On Windows PowerShell hosts, use the PowerShell runner instead:
@@ -108,10 +113,9 @@ function runner {
 }
 
 $env:ASPIRE_PR_WORKSPACE = $testDir
-$env:INSTALL_PREFIX = "/workspace/.aspire"
 $env:ASPIRE_CONTAINER_USER = "0:0"
 
-runner $prNumber
+runner bash -lc "curl -fsSL https://raw.githubusercontent.com/microsoft/aspire/main/eng/scripts/get-aspire-cli-pr.sh | bash -s -- $prNumber"
 ```
 
 For follow-up commands in the same mounted workspace, run:
@@ -120,6 +124,8 @@ For follow-up commands in the same mounted workspace, run:
 runner bash -lc '/workspace/.aspire/bin/aspire --version'
 ```
 
+Because the container `HOME` is `/workspace`, the standard dogfood install lands under `/workspace/.aspire`, so follow-up commands can keep using `/workspace/.aspire/bin/aspire` and `/workspace/.aspire/hives/pr-<PR_NUMBER>/packages`.
+
 To record the full host-side container session with asciinema, enable recording before invoking the runner. Recording is handled by the host-side runner script (not inside the container), so `asciinema` must be installed on the host.
 
 macOS/Linux/WSL example:
@@ -127,7 +133,7 @@ macOS/Linux/WSL example:
 ```bash
 export ASPIRE_PR_RECORD=1
 export ASPIRE_PR_RECORDING_PATH="$testDir/pr-test.cast"   # optional
-runner "$prNumber"
+runner bash -lc 'curl -fsSL https://raw.githubusercontent.com/microsoft/aspire/main/eng/scripts/get-aspire-cli-pr.sh | bash -s -- '"$prNumber"
 ```
 
 Windows PowerShell example:
@@ -135,13 +141,7 @@ Windows PowerShell example:
 ```powershell
 $env:ASPIRE_PR_RECORD = "1"
 $env:ASPIRE_PR_RECORDING_PATH = Join-Path $testDir "pr-test.cast"   # optional
-runner $prNumber
-```
-
-The container entrypoint also configures a container-local NuGet source pointing at:
-
-```text
-/workspace/.aspire/hives/pr-<PR_NUMBER>/packages
+runner bash -lc "curl -fsSL https://raw.githubusercontent.com/microsoft/aspire/main/eng/scripts/get-aspire-cli-pr.sh | bash -s -- $prNumber"
 ```
 
 #### Important template note
@@ -310,10 +310,10 @@ mkdir -p "$scenarioDir"
 
 #### Container execution
 
-Install the PR CLI once with:
+Install the PR CLI once by running the bash dogfood command inside the container:
 
 ```bash
-runner "$prNumber"
+runner bash -lc 'curl -fsSL https://raw.githubusercontent.com/microsoft/aspire/main/eng/scripts/get-aspire-cli-pr.sh | bash -s -- '"$prNumber"
 ```
 
 The repo-local runner uses ephemeral `docker run --rm` containers. If you want to preserve the environment for later inspection, keep the mounted `testDir` workspace and reopen it with another `runner ...` command instead of expecting a long-lived container process to still exist.
@@ -525,7 +525,7 @@ runner bash
 or, if you are no longer in the same shell context:
 
 ```bash
-ASPIRE_PR_WORKSPACE="$testDir" INSTALL_PREFIX=/workspace/.aspire ASPIRE_CONTAINER_USER=0:0 \
+ASPIRE_PR_WORKSPACE="$testDir" ASPIRE_CONTAINER_USER=0:0 \
   ./eng/scripts/aspire-pr-container/run-aspire-pr-container.sh bash
 ```
 
@@ -533,7 +533,6 @@ On Windows PowerShell hosts, the reopen command is:
 
 ```powershell
 $env:ASPIRE_PR_WORKSPACE = $testDir
-$env:INSTALL_PREFIX = "/workspace/.aspire"
 $env:ASPIRE_CONTAINER_USER = "0:0"
 ./eng/scripts/aspire-pr-container/run-aspire-pr-container.ps1 bash
 ```

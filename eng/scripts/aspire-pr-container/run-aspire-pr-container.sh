@@ -5,14 +5,11 @@ set -euo pipefail
 usage() {
     cat <<'EOF'
 Usage:
-  run-aspire-pr-container.sh PR_NUMBER [get-aspire-cli-pr.sh options...]
-  run-aspire-pr-container.sh bash [args...]
-  run-aspire-pr-container.sh sh [args...]
+  run-aspire-pr-container.sh [command [args...]]
 
 Environment:
   ASPIRE_PR_IMAGE        Docker image name to build/run (default: aspire-pr-runner)
   ASPIRE_PR_WORKSPACE    Host directory to mount as /workspace (default: current directory)
-  INSTALL_PREFIX         In-container install prefix (default: /workspace/.aspire)
   ASPIRE_DOCKER_SOCKET   Docker socket path on the host (default: /var/run/docker.sock)
   ASPIRE_CONTAINER_USER  Container user for docker run (default: current uid:gid)
                          Set to 0:0 when the container needs direct Docker socket access.
@@ -21,8 +18,11 @@ Environment:
                          Output path for the .cast file
                          (default: <workspace>/recordings/<timestamp>-<command>.cast)
   ASPIRE_PR_RECORDING_TITLE
-                         Optional title stored in the recording metadata
+                          Optional title stored in the recording metadata
   GH_TOKEN/GITHUB_TOKEN  GitHub token passed into the container
+
+Default command:
+  bash
 EOF
 }
 
@@ -60,13 +60,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_PATH="$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
 IMAGE_NAME="${ASPIRE_PR_IMAGE:-aspire-pr-runner}"
 WORKSPACE="${ASPIRE_PR_WORKSPACE:-$PWD}"
-INSTALL_PREFIX="${INSTALL_PREFIX:-/workspace/.aspire}"
 DOCKER_SOCKET_PATH="${ASPIRE_DOCKER_SOCKET:-/var/run/docker.sock}"
 CONTAINER_USER="${ASPIRE_CONTAINER_USER:-$(id -u):$(id -g)}"
 
-if [[ $# -lt 1 ]]; then
-    usage
-    exit 1
+if [[ $# -eq 0 ]]; then
+    set -- bash
 fi
 
 case "$1" in
@@ -130,7 +128,6 @@ run_args=(
     --rm
     -e GH_TOKEN
     -e ASPIRE_REPO
-    -e INSTALL_PREFIX="$INSTALL_PREFIX"
     -e HOME=/workspace
     -u "$CONTAINER_USER"
     -v "$WORKSPACE:/workspace"
