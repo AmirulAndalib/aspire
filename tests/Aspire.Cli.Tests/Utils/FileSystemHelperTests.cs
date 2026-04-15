@@ -432,4 +432,21 @@ public class FileSystemHelperTests(ITestOutputHelper outputHelper)
         Assert.Equal(@"C:\folder\Project.csproj", result[paths[0]]);
         Assert.Equal(@"D:\folder\Project.csproj", result[paths[1]]);
     }
+
+    [Fact]
+    public void ShortenPaths_PathsDifferingOnlyByCase_TreatedAsDistinctOnCaseSensitiveOS()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Case-sensitive filesystem test only runs on Linux.");
+
+        var paths = new List<string>
+        {
+            "/repo/Folder/Project.csproj",
+            "/repo/folder/Project.csproj"
+        };
+
+        var result = FileSystemHelper.ShortenPaths(paths);
+
+        Assert.Equal(Path.Combine("Folder", "Project.csproj"), result[paths[0]]);
+        Assert.Equal(Path.Combine("folder", "Project.csproj"), result[paths[1]]);
+    }
 }

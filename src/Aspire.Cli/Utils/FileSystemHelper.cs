@@ -154,7 +154,7 @@ internal static class FileSystemHelper
         while (true)
         {
             var duplicateGroups = result
-                .GroupBy(kvp => kvp.Value, StringComparer.OrdinalIgnoreCase)
+                .GroupBy(kvp => kvp.Value, comparer)
                 .Where(g => g.Count() > 1)
                 .ToList();
 
