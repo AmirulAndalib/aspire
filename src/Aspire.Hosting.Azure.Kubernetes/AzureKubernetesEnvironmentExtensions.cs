@@ -37,7 +37,7 @@ public static class AzureKubernetesEnvironmentExtensions
     ///     .WithVersion("1.30");
     /// </code>
     /// </example>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport(Description = "Adds an Azure Kubernetes Service environment resource")]
     public static IResourceBuilder<AzureKubernetesEnvironmentResource> AddAzureKubernetesEnvironment(
         this IDistributedApplicationBuilder builder,
         [ResourceName] string name)
@@ -132,7 +132,7 @@ public static class AzureKubernetesEnvironmentExtensions
     /// <param name="builder">The resource builder.</param>
     /// <param name="version">The Kubernetes version (e.g., "1.30").</param>
     /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport(Description = "Sets the Kubernetes version for the AKS cluster")]
     public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithVersion(
         this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
         string version)
@@ -150,7 +150,7 @@ public static class AzureKubernetesEnvironmentExtensions
     /// <param name="builder">The resource builder.</param>
     /// <param name="tier">The SKU tier.</param>
     /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport(Description = "Sets the SKU tier for the AKS cluster")]
     public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithSkuTier(
         this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
         AksSkuTier tier)
@@ -183,7 +183,7 @@ public static class AzureKubernetesEnvironmentExtensions
     ///     .WithNodePool(gpuPool);
     /// </code>
     /// </example>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport(Description = "Adds a node pool to the AKS cluster")]
     public static IResourceBuilder<AksNodePoolResource> AddNodePool(
         this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
         [ResourceName] string name,
@@ -214,7 +214,7 @@ public static class AzureKubernetesEnvironmentExtensions
     /// </summary>
     /// <param name="builder">The resource builder.</param>
     /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport(Description = "Configures the AKS cluster as a private cluster")]
     public static IResourceBuilder<AzureKubernetesEnvironmentResource> AsPrivateCluster(
         this IResourceBuilder<AzureKubernetesEnvironmentResource> builder)
     {
@@ -240,7 +240,7 @@ public static class AzureKubernetesEnvironmentExtensions
     ///     .WithSubnet(subnet);
     /// </code>
     /// </example>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport(Description = "Configures the AKS cluster to use a VNet subnet")]
     public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithSubnet(
         this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
         IResourceBuilder<AzureSubnetResource> subnet)
@@ -273,7 +273,7 @@ public static class AzureKubernetesEnvironmentExtensions
     ///     .WithSubnet(gpuSubnet);
     /// </code>
     /// </example>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport("withAksNodePoolSubnet", Description = "Configures an AKS node pool to use a specific VNet subnet")]
     public static IResourceBuilder<AksNodePoolResource> WithSubnet(
         this IResourceBuilder<AksNodePoolResource> builder,
         IResourceBuilder<AzureSubnetResource> subnet)
@@ -303,7 +303,7 @@ public static class AzureKubernetesEnvironmentExtensions
     /// The registry endpoint is flowed to the inner Kubernetes environment so that
     /// Helm deployments can push and pull images.
     /// </remarks>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport(Description = "Configures the AKS environment to use a specific container registry")]
     public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithContainerRegistry(
         this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
         IResourceBuilder<AzureContainerRegistryResource> registry)
@@ -337,7 +337,7 @@ public static class AzureKubernetesEnvironmentExtensions
     /// <param name="builder">The resource builder.</param>
     /// <param name="logAnalytics">Optional Log Analytics workspace. If not provided, one will be auto-created.</param>
     /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport(Description = "Enables Container Insights monitoring on the AKS cluster")]
     public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithContainerInsights(
         this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
         IResourceBuilder<AzureLogAnalyticsWorkspaceResource>? logAnalytics = null)
@@ -360,7 +360,7 @@ public static class AzureKubernetesEnvironmentExtensions
     /// <param name="builder">The resource builder.</param>
     /// <param name="workspaceBuilder">The Log Analytics workspace resource builder.</param>
     /// <returns>A reference to the <see cref="IResourceBuilder{AzureKubernetesEnvironmentResource}"/> for chaining.</returns>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport(Description = "Configures the AKS environment to use a Log Analytics workspace")]
     public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithAzureLogAnalyticsWorkspace(
         this IResourceBuilder<AzureKubernetesEnvironmentResource> builder,
         IResourceBuilder<AzureLogAnalyticsWorkspaceResource> workspaceBuilder)
@@ -383,7 +383,7 @@ public static class AzureKubernetesEnvironmentExtensions
     /// Workload identity is automatically wired when compute resources have an <see cref="AppIdentityAnnotation"/>,
     /// which is added by <c>WithAzureUserAssignedIdentity</c> or auto-created by <c>AzureResourcePreparer</c>.
     /// </remarks>
-    [AspireExportIgnore(Reason = "AKS hosting is not yet supported in ATS")]
+    [AspireExport(Description = "Enables workload identity on the AKS cluster")]
     public static IResourceBuilder<AzureKubernetesEnvironmentResource> WithWorkloadIdentity(
         this IResourceBuilder<AzureKubernetesEnvironmentResource> builder)
     {
