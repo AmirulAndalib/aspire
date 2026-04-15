@@ -27,6 +27,49 @@ public class AzureAppServiceWebSiteResource : AzureProvisioningResource
     {
         TargetResource = targetResource;
 
+        // Add pipeline step to allocate endpoint values after provisioning
+        // This is needed for cross-environment references: when another resource (e.g., on ACA)
+        // references an endpoint on this App Service resource, its SetParametersAsync needs to resolve
+        // the endpoint URL. Without allocated endpoints, GetValueAsync() blocks forever.
+        Annotations.Add(new PipelineStepAnnotation((factoryContext) =>
+        {
+            var dta = targetResource.GetDeploymentTargetAnnotation();
+            if (dta is null)
+            {
+                return [];
+            }
+
+            var allocateEndpointsStep = new PipelineStep
+            {
+                Name = $"allocate-endpoints-{targetResource.Name}",
+                Description = $"Allocates endpoint values for {targetResource.Name} after provisioning.",
+                Action = async ctx =>
+                {
+                    var hostName = await GetAppServiceWebsiteNameAsync(ctx).ConfigureAwait(false);
+                    var fqdn = $"{hostName}.azurewebsites.net";
+
+                    if (targetResource.TryGetEndpoints(out var endpoints))
+                    {
+                        foreach (var endpoint in endpoints)
+                        {
+                            var port = string.Equals(endpoint.UriScheme, "https", StringComparison.OrdinalIgnoreCase) ? 443 : 80;
+
+                            var allocatedEndpoint = new AllocatedEndpoint(
+                                endpoint, fqdn, port);
+
+                            endpoint.AllAllocatedEndpoints.AddOrUpdateAllocatedEndpoint(
+                                KnownNetworkIdentifiers.LocalhostNetwork, allocatedEndpoint);
+                        }
+                    }
+                },
+                Tags = [WellKnownPipelineTags.ProvisionInfrastructure]
+            };
+            allocateEndpointsStep.DependsOn($"provision-{name}");
+            allocateEndpointsStep.RequiredBy(AzureEnvironmentResource.ProvisionInfrastructureStepName);
+
+            return [allocateEndpointsStep];
+        }));
+
         // Add pipeline step annotation for deploy
         Annotations.Add(new PipelineStepAnnotation((factoryContext) =>
         {

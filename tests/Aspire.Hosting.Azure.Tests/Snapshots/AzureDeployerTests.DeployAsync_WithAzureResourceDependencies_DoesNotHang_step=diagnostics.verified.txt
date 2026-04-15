@@ -5,7 +5,7 @@ PIPELINE DEPENDENCY GRAPH DIAGNOSTICS
 This diagnostic output shows the complete pipeline dependency graph structure.
 Use this to understand step relationships and troubleshoot execution issues.
 
-Total steps defined: 31
+Total steps defined: 32
 
 Analysis for full pipeline execution (showing all steps and their relationships)
 
@@ -15,41 +15,48 @@ This shows the order in which steps would execute, respecting all dependencies.
 Steps with no dependencies run first, followed by steps that depend on them.
 
   1. process-parameters
-  2. build-prereq
-  3. deploy-prereq
-  4. build-api
-  5. build
-  6. validate-azure-login
-  7. create-provisioning-context
-  8. provision-api-identity
-  9. provision-kv
- 10. provision-api-roles-kv
- 11. provision-env-acr
- 12. provision-env
- 13. login-to-acr-env-acr
- 14. push-prereq
- 15. push-api
- 16. provision-api-website
- 17. print-api-summary
- 18. provision-azure-bicep-resources
- 19. print-dashboard-url-env
- 20. deploy
- 21. deploy-api
- 22. destroy-prereq
- 23. destroy-azure-azure634f9
- 24. destroy
- 25. diagnostics
- 26. publish-prereq
- 27. publish-azure634f9
- 28. validate-appservice-config-env
- 29. publish
- 30. publish-manifest
- 31. push
+  2. deploy-prereq
+  3. validate-azure-login
+  4. create-provisioning-context
+  5. provision-api-identity
+  6. provision-kv
+  7. provision-api-roles-kv
+  8. provision-env-acr
+  9. provision-env
+ 10. build-prereq
+ 11. build-api
+ 12. login-to-acr-env-acr
+ 13. push-prereq
+ 14. push-api
+ 15. provision-api-website
+ 16. allocate-endpoints-api
+ 17. build
+ 18. print-api-summary
+ 19. provision-azure-bicep-resources
+ 20. print-dashboard-url-env
+ 21. deploy
+ 22. deploy-api
+ 23. destroy-prereq
+ 24. destroy-azure-azure634f9
+ 25. destroy
+ 26. diagnostics
+ 27. publish-prereq
+ 28. publish-azure634f9
+ 29. validate-appservice-config-env
+ 30. publish
+ 31. publish-manifest
+ 32. push
 
 DETAILED STEP ANALYSIS
 ======================
 Shows each step's dependencies, associated resources, tags, and descriptions.
 ✓ = dependency exists, ? = dependency missing
+
+Step: allocate-endpoints-api
+    Description: Allocates endpoint values for api after provisioning.
+    Dependencies: ✓ provision-api-identity, ✓ provision-api-roles-kv, ✓ provision-api-website, ✓ provision-env, ✓ provision-kv, ✓ push-api
+    Resource: api-website (AzureAppServiceWebSiteResource)
+    Tags: provision-infra
 
 Step: build
     Description: Aggregation step for all build operations. All build steps should be required by this step.
@@ -108,7 +115,7 @@ Step: login-to-acr-env-acr
 
 Step: print-api-summary
     Description: Prints the deployment summary and URL for api.
-    Dependencies: ✓ provision-api-website
+    Dependencies: ✓ allocate-endpoints-api, ✓ provision-api-website
     Resource: api-website (AzureAppServiceWebSiteResource)
     Tags: print-summary
 
@@ -142,7 +149,7 @@ Step: provision-api-website
 
 Step: provision-azure-bicep-resources
     Description: Aggregation step for all Azure infrastructure provisioning operations.
-    Dependencies: ✓ create-provisioning-context, ✓ deploy-prereq, ✓ provision-api-identity, ✓ provision-api-roles-kv, ✓ provision-api-website, ✓ provision-env, ✓ provision-env-acr, ✓ provision-kv
+    Dependencies: ✓ allocate-endpoints-api, ✓ create-provisioning-context, ✓ deploy-prereq, ✓ provision-api-identity, ✓ provision-api-roles-kv, ✓ provision-api-website, ✓ provision-env, ✓ provision-env-acr, ✓ provision-kv
     Resource: azure634f9 (AzureEnvironmentResource)
     Tags: provision-infra
 
@@ -215,6 +222,21 @@ EXECUTION SIMULATION ("What If" Analysis):
 Shows what steps would run for each possible target step and in what order.
 Steps at the same level can run concurrently.
 ─────────────────────────────────────────────────────────────────────────────
+If targeting 'allocate-endpoints-api':
+  Direct dependencies: provision-api-identity, provision-api-roles-kv, provision-api-website, provision-env, provision-kv, push-api
+  Total steps: 16
+  Execution order:
+    [0] process-parameters
+    [1] build-prereq | deploy-prereq (parallel)
+    [2] build-api | validate-azure-login (parallel)
+    [3] create-provisioning-context
+    [4] provision-api-identity | provision-env-acr | provision-kv (parallel)
+    [5] login-to-acr-env-acr | provision-api-roles-kv | provision-env (parallel)
+    [6] push-prereq
+    [7] push-api
+    [8] provision-api-website
+    [9] allocate-endpoints-api
+
 If targeting 'build':
   Direct dependencies: build-api
   Total steps: 5
@@ -250,7 +272,7 @@ If targeting 'create-provisioning-context':
 
 If targeting 'deploy':
   Direct dependencies: build-api, create-provisioning-context, print-api-summary, print-dashboard-url-env, provision-azure-bicep-resources, validate-azure-login
-  Total steps: 19
+  Total steps: 20
   Execution order:
     [0] process-parameters
     [1] build-prereq | deploy-prereq (parallel)
@@ -261,13 +283,14 @@ If targeting 'deploy':
     [6] push-prereq
     [7] push-api
     [8] provision-api-website
-    [9] print-api-summary | provision-azure-bicep-resources (parallel)
-    [10] print-dashboard-url-env
-    [11] deploy
+    [9] allocate-endpoints-api
+    [10] print-api-summary | provision-azure-bicep-resources (parallel)
+    [11] print-dashboard-url-env
+    [12] deploy
 
 If targeting 'deploy-api':
   Direct dependencies: print-api-summary
-  Total steps: 17
+  Total steps: 18
   Execution order:
     [0] process-parameters
     [1] build-prereq | deploy-prereq (parallel)
@@ -278,8 +301,9 @@ If targeting 'deploy-api':
     [6] push-prereq
     [7] push-api
     [8] provision-api-website
-    [9] print-api-summary
-    [10] deploy-api
+    [9] allocate-endpoints-api
+    [10] print-api-summary
+    [11] deploy-api
 
 If targeting 'deploy-prereq':
   Direct dependencies: process-parameters
@@ -327,22 +351,7 @@ If targeting 'login-to-acr-env-acr':
     [5] login-to-acr-env-acr
 
 If targeting 'print-api-summary':
-  Direct dependencies: provision-api-website
-  Total steps: 16
-  Execution order:
-    [0] process-parameters
-    [1] build-prereq | deploy-prereq (parallel)
-    [2] build-api | validate-azure-login (parallel)
-    [3] create-provisioning-context
-    [4] provision-api-identity | provision-env-acr | provision-kv (parallel)
-    [5] login-to-acr-env-acr | provision-api-roles-kv | provision-env (parallel)
-    [6] push-prereq
-    [7] push-api
-    [8] provision-api-website
-    [9] print-api-summary
-
-If targeting 'print-dashboard-url-env':
-  Direct dependencies: provision-azure-bicep-resources, provision-env
+  Direct dependencies: allocate-endpoints-api, provision-api-website
   Total steps: 17
   Execution order:
     [0] process-parameters
@@ -354,8 +363,25 @@ If targeting 'print-dashboard-url-env':
     [6] push-prereq
     [7] push-api
     [8] provision-api-website
-    [9] provision-azure-bicep-resources
-    [10] print-dashboard-url-env
+    [9] allocate-endpoints-api
+    [10] print-api-summary
+
+If targeting 'print-dashboard-url-env':
+  Direct dependencies: provision-azure-bicep-resources, provision-env
+  Total steps: 18
+  Execution order:
+    [0] process-parameters
+    [1] build-prereq | deploy-prereq (parallel)
+    [2] build-api | validate-azure-login (parallel)
+    [3] create-provisioning-context
+    [4] provision-api-identity | provision-env-acr | provision-kv (parallel)
+    [5] login-to-acr-env-acr | provision-api-roles-kv | provision-env (parallel)
+    [6] push-prereq
+    [7] push-api
+    [8] provision-api-website
+    [9] allocate-endpoints-api
+    [10] provision-azure-bicep-resources
+    [11] print-dashboard-url-env
 
 If targeting 'process-parameters':
   Direct dependencies: none
@@ -399,8 +425,8 @@ If targeting 'provision-api-website':
     [8] provision-api-website
 
 If targeting 'provision-azure-bicep-resources':
-  Direct dependencies: create-provisioning-context, deploy-prereq, provision-api-identity, provision-api-roles-kv, provision-api-website, provision-env, provision-env-acr, provision-kv
-  Total steps: 16
+  Direct dependencies: allocate-endpoints-api, create-provisioning-context, deploy-prereq, provision-api-identity, provision-api-roles-kv, provision-api-website, provision-env, provision-env-acr, provision-kv
+  Total steps: 17
   Execution order:
     [0] process-parameters
     [1] build-prereq | deploy-prereq (parallel)
@@ -411,7 +437,8 @@ If targeting 'provision-azure-bicep-resources':
     [6] push-prereq
     [7] push-api
     [8] provision-api-website
-    [9] provision-azure-bicep-resources
+    [9] allocate-endpoints-api
+    [10] provision-azure-bicep-resources
 
 If targeting 'provision-env':
   Direct dependencies: create-provisioning-context, provision-env-acr

@@ -27,6 +27,53 @@ public class AzureContainerAppResource : AzureProvisioningResource
     {
         TargetResource = targetResource;
 
+        // Add pipeline step to allocate endpoint values after provisioning
+        // This is needed for cross-environment references: when another resource (e.g., on App Service)
+        // references an endpoint on this container app, its SetParametersAsync needs to resolve the
+        // endpoint URL. Without allocated endpoints, GetValueAsync() blocks forever.
+        Annotations.Add(new PipelineStepAnnotation((factoryContext) =>
+        {
+            var dta = targetResource.GetDeploymentTargetAnnotation();
+            if (dta is null)
+            {
+                return [];
+            }
+
+            var allocateEndpointsStep = new PipelineStep
+            {
+                Name = $"allocate-endpoints-{targetResource.Name}",
+                Description = $"Allocates endpoint values for {targetResource.Name} after provisioning.",
+                Action = async ctx =>
+                {
+                    var containerAppEnv = (AzureContainerAppEnvironmentResource)dta.ComputeEnvironment!;
+                    var domainValue = await containerAppEnv.ContainerAppDomain.GetValueAsync(ctx.CancellationToken).ConfigureAwait(false);
+
+                    if (targetResource.TryGetEndpoints(out var endpoints))
+                    {
+                        foreach (var endpoint in endpoints)
+                        {
+                            var fqdn = endpoint.IsExternal
+                                ? $"{targetResource.Name.ToLowerInvariant()}.{domainValue}"
+                                : $"{targetResource.Name.ToLowerInvariant()}.internal.{domainValue}";
+
+                            var port = string.Equals(endpoint.UriScheme, "https", StringComparison.OrdinalIgnoreCase) ? 443 : 80;
+
+                            var allocatedEndpoint = new AllocatedEndpoint(
+                                endpoint, fqdn, port);
+
+                            endpoint.AllAllocatedEndpoints.AddOrUpdateAllocatedEndpoint(
+                                KnownNetworkIdentifiers.LocalhostNetwork, allocatedEndpoint);
+                        }
+                    }
+                },
+                Tags = [WellKnownPipelineTags.ProvisionInfrastructure]
+            };
+            allocateEndpointsStep.DependsOn($"provision-{name}");
+            allocateEndpointsStep.RequiredBy(AzureEnvironmentResource.ProvisionInfrastructureStepName);
+
+            return [allocateEndpointsStep];
+        }));
+
         // Add pipeline step annotation for deploy
         Annotations.Add(new PipelineStepAnnotation((factoryContext) =>
         {

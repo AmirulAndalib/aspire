@@ -83,6 +83,14 @@ public class AzureBicepResource : Resource, IAzureResource, IResourceWithParamet
             // Make this resource's provision steps depend on the provision steps of referenced Azure resources
             foreach (var azureReference in azureReferences)
             {
+                // Skip self-references to avoid circular dependencies. This can happen when a resource's
+                // parameters reference its own target resource (e.g., ProjectResource) which has a
+                // DeploymentTargetAnnotation pointing back to this Azure resource.
+                if (ReferenceEquals(azureReference, this))
+                {
+                    continue;
+                }
+
                 var dependencySteps = context.GetSteps(azureReference, WellKnownPipelineTags.ProvisionInfrastructure);
                 provisionSteps.DependsOn(dependencySteps);
             }
@@ -530,6 +538,24 @@ public class AzureBicepResource : Resource, IAzureResource, IResourceWithParamet
         if (value is IAzureResource azureResource)
         {
             azureReferences.Add(azureResource);
+        }
+
+        // For non-Azure resources (e.g., ProjectResource), check if they have a deployment target
+        // that is an Azure resource. This handles cross-environment references where an endpoint
+        // reference points to a ProjectResource whose actual Azure deployment target (e.g.,
+        // AzureContainerAppResource) needs to be provisioned first.
+        if (value is IResource resource && resource is not IAzureResource)
+        {
+            if (resource.TryGetAnnotationsOfType<DeploymentTargetAnnotation>(out var deploymentTargets))
+            {
+                foreach (var dt in deploymentTargets)
+                {
+                    if (dt.DeploymentTarget is IAzureResource azureTarget)
+                    {
+                        azureReferences.Add(azureTarget);
+                    }
+                }
+            }
         }
 
         // Recursively process references if the value implements IValueWithReferences
