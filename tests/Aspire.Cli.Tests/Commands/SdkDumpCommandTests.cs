@@ -213,7 +213,7 @@ public class SdkDumpCommandTests(ITestOutputHelper outputHelper)
                 Environment.SetEnvironmentVariable("DOTNET_GENERATE_ASPNET_CERTIFICATE", "false");
 
                 // ExtraLongTimeout because this spawns a real dotnet build of Aspire.Hosting.csproj
-                // in a child process, which can exceed 60s under concurrent test load.
+                // in a child process, which can exceed the default timeout under concurrent test load.
                 var exitCode = await Program.Main(["sdk", "dump", "--format", "ci", "--output", outputPath, projectPath]).DefaultTimeout(TestConstants.ExtraLongTimeoutTimeSpan);
                 Assert.Equal(ExitCodeConstants.Success, exitCode);
 
