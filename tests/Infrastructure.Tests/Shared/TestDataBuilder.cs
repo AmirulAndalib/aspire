@@ -79,6 +79,8 @@ public static class TestDataBuilder
         string? uncollectedTestsHangTimeout = null,
         bool requiresNugets = false,
         bool requiresTestSdk = false,
+        bool requiresCliArchive = false,
+        bool enablePlaywrightInstall = false,
         string[]? supportedOSes = null,
         Dictionary<string, string>? runners = null)
     {
@@ -96,6 +98,8 @@ public static class TestDataBuilder
             {
                 ["requiresNugets"] = requiresNugets,
                 ["requiresTestSdk"] = requiresTestSdk,
+                ["requiresCliArchive"] = requiresCliArchive,
+                ["enablePlaywrightInstall"] = enablePlaywrightInstall
             },
             SupportedOSes = supportedOSes ?? ["windows", "linux", "macos"],
             Runners = runners
