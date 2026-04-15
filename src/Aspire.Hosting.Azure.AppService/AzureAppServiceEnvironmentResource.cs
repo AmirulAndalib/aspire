@@ -143,6 +143,15 @@ public class AzureAppServiceEnvironmentResource :
 
     private async Task PrintDashboardUrlAsync(PipelineStepContext context)
     {
+        if (!EnableDashboard)
+        {
+            await context.ReportingStep.CompleteAsync(
+                "Dashboard is disabled for this environment.",
+                CompletionState.Completed,
+                context.CancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         var dashboardUri = await DashboardUriReference.GetValueAsync(context.CancellationToken).ConfigureAwait(false);
 
         if (!string.IsNullOrEmpty(dashboardUri))
