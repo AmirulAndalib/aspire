@@ -22,7 +22,7 @@ internal sealed class TestInteractionService : IInteractionService
     public Action<string>? DisplayConsoleWriteLineMessage { get; set; }
     public Func<string, bool, bool>? ConfirmCallback { get; set; }
     public Action<string>? ShowStatusCallback { get; set; }
-    public Action<string>? DisplayVersionUpdateNotificationCallback { get; set; }
+    public Action<string, string?>? DisplayVersionUpdateNotificationCallback { get; set; }
 
     /// <summary>
     /// Callback for capturing selection prompts in tests. Uses non-generic IEnumerable and object
@@ -41,6 +41,7 @@ internal sealed class TestInteractionService : IInteractionService
     public List<BooleanPromptCall> BooleanPromptCalls { get; } = [];
     public List<string> DisplayedErrors { get; } = [];
     public List<(KnownEmoji Emoji, string Message)> DisplayedMessages { get; } = [];
+    public List<string> DisplayedPlainTexts { get; } = [];
 
     // Response queue setup methods
     public void SetupStringPromptResponse(string response) => _responses.Enqueue((response, ResponseType.String));
@@ -208,6 +209,7 @@ internal sealed class TestInteractionService : IInteractionService
 
     public void DisplayPlainText(string text)
     {
+        DisplayedPlainTexts.Add(text);
     }
 
     public Action<string>? DisplayRawTextCallback { get; set; }
@@ -233,7 +235,7 @@ internal sealed class TestInteractionService : IInteractionService
 
     public void DisplayVersionUpdateNotification(string newerVersion, string? updateCommand = null)
     {
-        DisplayVersionUpdateNotificationCallback?.Invoke(newerVersion);
+        DisplayVersionUpdateNotificationCallback?.Invoke(newerVersion, updateCommand);
     }
 
     public void DisplayRenderable(IRenderable renderable)

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(brew list *)",
+      "Bash(git config *)",
+      "Read(//Users/ankj/**)",
+      "Read(//Users/ankj/.local/share/chezmoi/**)",
+      "Bash(brew install *)",
+      "Bash(chezmoi diff *)",
+      "Bash(chezmoi apply *)",
+      "Bash(delta --version)",
+      "Bash(difft --version)",
+      "Bash(lazygit --version)"
+    ]
+  }
+}

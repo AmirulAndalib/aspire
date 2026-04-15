@@ -410,4 +410,61 @@ public class InstallationDetectorTests
             tempDir.Delete(recursive: true);
         }
     }
+
+    [Fact]
+    public void GetInstallationInfo_FollowsSymlink_ToFindConfigFile()
+    {
+        // This tests the symlink resolution path critical for Homebrew on macOS,
+        // where the binary in /usr/local/bin/aspire is a symlink to the Cellar.
+        var targetDir = Directory.CreateTempSubdirectory("aspire-detector-target");
+        var linkDir = Directory.CreateTempSubdirectory("aspire-detector-link");
+        try
+        {
+            // Create a fake binary and config in the target directory
+            var targetBinaryPath = Path.Combine(targetDir.FullName, "aspire");
+            File.WriteAllText(targetBinaryPath, "");
+
+            var configPath = Path.Combine(targetDir.FullName, InstallationDetector.UpdateConfigFileName);
+            File.WriteAllText(configPath, """
+                {
+                    "selfUpdateDisabled": true,
+                    "updateInstructions": "brew upgrade aspire"
+                }
+                """);
+
+            // Create a symlink in a different directory pointing to the target binary
+            var symlinkPath = Path.Combine(linkDir.FullName, "aspire");
+            try
+            {
+                File.CreateSymbolicLink(symlinkPath, targetBinaryPath);
+            }
+            catch (IOException)
+            {
+                // Symlink creation may fail on some CI environments or due to permissions
+                return;
+            }
+
+            // Verify the symlink was actually created
+            var linkTarget = new FileInfo(symlinkPath).LinkTarget;
+            if (linkTarget is null)
+            {
+                // Not a real symlink (platform doesn't support it), skip
+                return;
+            }
+
+            // The detector should follow the symlink and find the config next to the real binary
+            var detector = new InstallationDetector(_logger, symlinkPath);
+
+            var info = detector.GetInstallationInfo();
+
+            Assert.False(info.IsDotNetTool);
+            Assert.True(info.SelfUpdateDisabled);
+            Assert.Equal("brew upgrade aspire", info.UpdateInstructions);
+        }
+        finally
+        {
+            linkDir.Delete(recursive: true);
+            targetDir.Delete(recursive: true);
+        }
+    }
 }

@@ -1248,3 +1248,173 @@ public class UpdateCommandSelfUpdateDisabledTests(ITestOutputHelper outputHelper
         Assert.False(confirmCallbackInvoked, "Confirm prompt should NOT be shown when self-update is disabled");
     }
 }
+
+public class UpdateCommandDotNetToolTests(ITestOutputHelper outputHelper)
+{
+    [Fact]
+    public async Task UpdateCommand_SelfFlag_WhenDotNetTool_ShowsDotNetToolMessage()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.InstallationDetectorFactory = _ => new TestInstallationDetector
+            {
+                InstallationInfo = new InstallationInfo(
+                    IsDotNetTool: true,
+                    SelfUpdateDisabled: false,
+                    UpdateInstructions: null)
+            };
+
+            var interactionService = new TestInteractionService();
+            options.InteractionServiceFactory = _ => interactionService;
+        });
+
+        var provider = services.BuildServiceProvider();
+        var interactionService = provider.GetRequiredService<IInteractionService>() as TestInteractionService;
+
+        var command = provider.GetRequiredService<RootCommand>();
+        var result = command.Parse("update --self");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains(interactionService!.DisplayedMessages,
+            m => m.Message.Contains("installed as a .NET tool"));
+        Assert.Contains(interactionService.DisplayedPlainTexts,
+            t => t.Contains("dotnet tool update -g Aspire.Cli"));
+    }
+
+    [Fact]
+    public async Task UpdateCommand_PostProjectUpdate_WhenDotNetTool_ShowsDotNetToolMessageInsteadOfPrompt()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var confirmCallbackInvoked = false;
+        TestInteractionService? interactionService = null;
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.InstallationDetectorFactory = _ => new TestInstallationDetector
+            {
+                InstallationInfo = new InstallationInfo(
+                    IsDotNetTool: true,
+                    SelfUpdateDisabled: false,
+                    UpdateInstructions: null)
+            };
+
+            options.ProjectLocatorFactory = _ => new TestProjectLocator()
+            {
+                UseOrFindAppHostProjectFileAsyncCallback = (projectFile, _, _) =>
+                {
+                    return Task.FromResult<FileInfo?>(new FileInfo(Path.Combine(workspace.WorkspaceRoot.FullName, "AppHost.csproj")));
+                }
+            };
+
+            interactionService = new TestInteractionService()
+            {
+                ConfirmCallback = (prompt, defaultValue) =>
+                {
+                    confirmCallbackInvoked = true;
+                    return false;
+                }
+            };
+            options.InteractionServiceFactory = _ => interactionService;
+
+            options.DotNetCliRunnerFactory = _ => new TestDotNetCliRunner();
+
+            options.ProjectUpdaterFactory = _ => new TestProjectUpdater()
+            {
+                UpdateProjectAsyncCallback = (projectFile, channel, cancellationToken) =>
+                {
+                    return Task.FromResult(new ProjectUpdateResult { UpdatedApplied = true });
+                }
+            };
+
+            options.PackagingServiceFactory = _ => new TestPackagingService()
+            {
+                GetChannelsAsyncCallback = (cancellationToken) =>
+                {
+                    var stableChannel = PackageChannel.CreateExplicitChannel(
+                        "stable",
+                        PackageChannelQuality.Stable,
+                        new[] { new PackageMapping("Aspire*", "https://api.nuget.org/v3/index.json") },
+                        null!,
+                        configureGlobalPackagesFolder: false,
+                        cliDownloadBaseUrl: "https://aka.ms/dotnet/aspire/cli");
+                    return Task.FromResult<IEnumerable<PackageChannel>>(new[] { stableChannel });
+                }
+            };
+
+            options.CliUpdateNotifierFactory = _ => new TestCliUpdateNotifier()
+            {
+                IsUpdateAvailableCallback = () => true
+            };
+        });
+
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<RootCommand>();
+        var result = command.Parse("update --apphost AppHost.csproj");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.False(confirmCallbackInvoked, "Confirm prompt should NOT be shown when running as dotnet tool");
+        Assert.Contains(interactionService!.DisplayedMessages,
+            m => m.Message.Contains("installed as a .NET tool"));
+        Assert.Contains(interactionService.DisplayedPlainTexts,
+            t => t.Contains("dotnet tool update -g Aspire.Cli"));
+        Assert.Equal(0, exitCode);
+    }
+
+    [Fact]
+    public async Task UpdateCommand_NoProjectFound_WhenDotNetTool_ShowsDotNetToolMessageInsteadOfPrompt()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var confirmCallbackInvoked = false;
+        TestInteractionService? interactionService = null;
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.InstallationDetectorFactory = _ => new TestInstallationDetector
+            {
+                InstallationInfo = new InstallationInfo(
+                    IsDotNetTool: true,
+                    SelfUpdateDisabled: false,
+                    UpdateInstructions: null)
+            };
+
+            options.ProjectLocatorFactory = _ => new TestProjectLocator()
+            {
+                UseOrFindAppHostProjectFileAsyncCallback = (projectFile, _, _) =>
+                {
+                    throw new ProjectLocatorException(ErrorStrings.NoProjectFileFound, ProjectLocatorFailureReason.NoProjectFileFound);
+                }
+            };
+
+            interactionService = new TestInteractionService()
+            {
+                ConfirmCallback = (prompt, defaultValue) =>
+                {
+                    confirmCallbackInvoked = true;
+                    return false;
+                }
+            };
+            options.InteractionServiceFactory = _ => interactionService;
+
+            options.DotNetCliRunnerFactory = _ => new TestDotNetCliRunner();
+        });
+
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<RootCommand>();
+        var result = command.Parse("update");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.False(confirmCallbackInvoked, "Confirm prompt should NOT be shown when running as dotnet tool");
+        Assert.Contains(interactionService!.DisplayedMessages,
+            m => m.Message.Contains("installed as a .NET tool"));
+        Assert.Contains(interactionService.DisplayedPlainTexts,
+            t => t.Contains("dotnet tool update -g Aspire.Cli"));
+    }
+}

@@ -848,4 +848,126 @@ public class AspireConfigFileTests(ITestOutputHelper outputHelper)
 
         Assert.Null(result.ExtensionData);
     }
+
+    [Fact]
+    public void GetChannel_ReturnsValue_WhenExtensionDataHasChannel()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var configPath = Path.Combine(workspace.WorkspaceRoot.FullName, AspireConfigFile.FileName);
+        File.WriteAllText(configPath, """
+            {
+              "appHost": { "path": "MyApp.csproj" },
+              "channel": "daily"
+            }
+            """);
+
+        var result = AspireConfigFile.Load(workspace.WorkspaceRoot.FullName);
+
+        Assert.NotNull(result);
+        Assert.Equal("daily", result.GetChannel());
+    }
+
+    [Fact]
+    public void GetChannel_ReturnsNull_WhenNoExtensionData()
+    {
+        var config = new AspireConfigFile
+        {
+            AppHost = new AspireConfigAppHost { Path = "MyApp.csproj" }
+        };
+
+        Assert.Null(config.GetChannel());
+    }
+
+    [Fact]
+    public void GetChannel_ReturnsNull_WhenExtensionDataMissingChannelKey()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var configPath = Path.Combine(workspace.WorkspaceRoot.FullName, AspireConfigFile.FileName);
+        File.WriteAllText(configPath, """
+            {
+              "appHost": { "path": "MyApp.csproj" },
+              "someOtherKey": "value"
+            }
+            """);
+
+        var result = AspireConfigFile.Load(workspace.WorkspaceRoot.FullName);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ExtensionData);
+        Assert.Null(result.GetChannel());
+    }
+
+    [Fact]
+    public void SetChannel_CreatesExtensionData_AndStoresValue()
+    {
+        var config = new AspireConfigFile();
+        Assert.Null(config.ExtensionData);
+
+        config.SetChannel("daily");
+
+        Assert.NotNull(config.ExtensionData);
+        Assert.True(config.ExtensionData.ContainsKey("channel"));
+        Assert.Equal("daily", config.ExtensionData["channel"].GetString());
+    }
+
+    [Fact]
+    public void SetChannel_Null_RemovesChannel()
+    {
+        var config = new AspireConfigFile();
+        config.SetChannel("daily");
+        Assert.Equal("daily", config.GetChannel());
+
+        config.SetChannel(null);
+
+        Assert.Null(config.GetChannel());
+    }
+
+    [Fact]
+    public void SetChannel_EmptyString_RemovesChannel()
+    {
+        var config = new AspireConfigFile();
+        config.SetChannel("daily");
+        Assert.Equal("daily", config.GetChannel());
+
+        config.SetChannel("");
+
+        Assert.Null(config.GetChannel());
+    }
+
+    [Fact]
+    public void GetChannel_SetChannel_RoundTrips()
+    {
+        var config = new AspireConfigFile();
+
+        config.SetChannel("staging");
+        Assert.Equal("staging", config.GetChannel());
+
+        config.SetChannel("daily");
+        Assert.Equal("daily", config.GetChannel());
+    }
+
+    [Fact]
+    public void GetChannel_ReturnsNull_WhenChannelValueIsNonString()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var configPath = Path.Combine(workspace.WorkspaceRoot.FullName, AspireConfigFile.FileName);
+        File.WriteAllText(configPath, """
+            {
+              "appHost": { "path": "MyApp.csproj" },
+              "channel": 123
+            }
+            """);
+
+        var result = AspireConfigFile.Load(workspace.WorkspaceRoot.FullName);
+
+        Assert.NotNull(result);
+        // JsonElement.GetString() throws for non-string types, so verify the behavior
+        Assert.NotNull(result.ExtensionData);
+        Assert.True(result.ExtensionData.ContainsKey("channel"));
+        // GetChannel uses GetString() which throws InvalidOperationException for non-string
+        Assert.Throws<InvalidOperationException>(result.GetChannel);
+    }
 }

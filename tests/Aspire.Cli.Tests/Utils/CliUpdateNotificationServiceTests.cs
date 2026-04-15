@@ -44,7 +44,7 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
             configure.InteractionServiceFactory = (sp) =>
             {
                 var interactionService = new TestInteractionService();
-                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion) =>
+                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion, _) =>
                 {
                     suggestedVersionTcs.SetResult(newerVersion);
                 };
@@ -100,7 +100,7 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
             configure.InteractionServiceFactory = (sp) =>
             {
                 var interactionService = new TestInteractionService();
-                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion) =>
+                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion, _) =>
                 {
                     suggestedVersionTcs.SetResult(newerVersion);
                 };
@@ -156,7 +156,7 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
             configure.InteractionServiceFactory = (sp) =>
             {
                 var interactionService = new TestInteractionService();
-                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion) =>
+                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion, _) =>
                 {
                     suggestedVersionTcs.SetResult(newerVersion);
                 };
@@ -208,7 +208,7 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
             configure.InteractionServiceFactory = (sp) =>
             {
                 var interactionService = new TestInteractionService();
-                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion) =>
+                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion, _) =>
                 {
                     Assert.Fail("Should not suggest a preview version when current version is stable.");
                 };
@@ -301,7 +301,7 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
             configure.InteractionServiceFactory = (sp) =>
             {
                 var interactionService = new TestInteractionService();
-                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion) =>
+                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion, _) =>
                 {
                     notificationWasDisplayed = true;
                 };
@@ -335,6 +335,122 @@ public class CliUpdateNotificationServiceTests(ITestOutputHelper outputHelper)
         notifier.NotifyIfUpdateAvailable();
 
         Assert.False(notificationWasDisplayed, "Update notification should be suppressed when self-update is disabled");
+    }
+
+    [Fact]
+    public async Task NotifyIfUpdateAvailable_WhenDotNetTool_ShowsDotNetToolUpdateCommand()
+    {
+        string? capturedUpdateCommand = null;
+
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, configure =>
+        {
+            configure.NuGetPackageCacheFactory = (sp) =>
+            {
+                var cache = new TestNuGetPackageCache();
+                cache.SetMockCliPackages([
+                    new NuGetPackage { Id = "Aspire.Cli", Version = "9.5.0", Source = "nuget.org" },
+                ]);
+
+                return cache;
+            };
+
+            configure.InteractionServiceFactory = (sp) =>
+            {
+                var interactionService = new TestInteractionService();
+                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion, updateCommand) =>
+                {
+                    capturedUpdateCommand = updateCommand;
+                };
+
+                return interactionService;
+            };
+
+            configure.InstallationDetectorFactory = _ => new TestInstallationDetector
+            {
+                InstallationInfo = new InstallationInfo(
+                    IsDotNetTool: true,
+                    SelfUpdateDisabled: false,
+                    UpdateInstructions: null)
+            };
+
+            configure.CliUpdateNotifierFactory = (sp) =>
+            {
+                var logger = sp.GetRequiredService<ILogger<CliUpdateNotifier>>();
+                var nuGetPackageCache = sp.GetRequiredService<INuGetPackageCache>();
+                var interactionService = sp.GetRequiredService<IInteractionService>();
+                var installationDetector = sp.GetRequiredService<IInstallationDetector>();
+
+                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0", logger, nuGetPackageCache, interactionService, installationDetector);
+            };
+        });
+
+        var provider = services.BuildServiceProvider();
+        var notifier = provider.GetRequiredService<ICliUpdateNotifier>();
+
+        await notifier.CheckForCliUpdatesAsync(workspace.WorkspaceRoot, CancellationToken.None).DefaultTimeout();
+        notifier.NotifyIfUpdateAvailable();
+
+        Assert.NotNull(capturedUpdateCommand);
+        Assert.Contains("dotnet tool update", capturedUpdateCommand);
+    }
+
+    [Fact]
+    public async Task NotifyIfUpdateAvailable_WhenNativeInstall_ShowsAspireUpdateCommand()
+    {
+        string? capturedUpdateCommand = null;
+
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, configure =>
+        {
+            configure.NuGetPackageCacheFactory = (sp) =>
+            {
+                var cache = new TestNuGetPackageCache();
+                cache.SetMockCliPackages([
+                    new NuGetPackage { Id = "Aspire.Cli", Version = "9.5.0", Source = "nuget.org" },
+                ]);
+
+                return cache;
+            };
+
+            configure.InteractionServiceFactory = (sp) =>
+            {
+                var interactionService = new TestInteractionService();
+                interactionService.DisplayVersionUpdateNotificationCallback = (newerVersion, updateCommand) =>
+                {
+                    capturedUpdateCommand = updateCommand;
+                };
+
+                return interactionService;
+            };
+
+            configure.InstallationDetectorFactory = _ => new TestInstallationDetector
+            {
+                InstallationInfo = new InstallationInfo(
+                    IsDotNetTool: false,
+                    SelfUpdateDisabled: false,
+                    UpdateInstructions: null)
+            };
+
+            configure.CliUpdateNotifierFactory = (sp) =>
+            {
+                var logger = sp.GetRequiredService<ILogger<CliUpdateNotifier>>();
+                var nuGetPackageCache = sp.GetRequiredService<INuGetPackageCache>();
+                var interactionService = sp.GetRequiredService<IInteractionService>();
+                var installationDetector = sp.GetRequiredService<IInstallationDetector>();
+
+                return new CliUpdateNotifierWithPackageVersionOverride("9.4.0", logger, nuGetPackageCache, interactionService, installationDetector);
+            };
+        });
+
+        var provider = services.BuildServiceProvider();
+        var notifier = provider.GetRequiredService<ICliUpdateNotifier>();
+
+        await notifier.CheckForCliUpdatesAsync(workspace.WorkspaceRoot, CancellationToken.None).DefaultTimeout();
+        notifier.NotifyIfUpdateAvailable();
+
+        Assert.NotNull(capturedUpdateCommand);
+        Assert.Contains("aspire update", capturedUpdateCommand);
     }
 }
 
