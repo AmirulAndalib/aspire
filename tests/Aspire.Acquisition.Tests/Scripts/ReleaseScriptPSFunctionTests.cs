@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Aspire.TestUtilities;
 using Xunit;
 
 namespace Aspire.Acquisition.Tests.Scripts;
@@ -9,7 +10,8 @@ namespace Aspire.Acquisition.Tests.Scripts;
 /// Tier-1 unit tests for individual functions in the release PowerShell script (get-aspire-cli.ps1).
 /// Tests URL construction, quality mapping, checksum validation, and archive extraction.
 /// </summary>
-public class s_releaseScriptPSFunctionTests(ITestOutputHelper testOutput)
+[RequiresTools(["pwsh"])]
+public class ReleaseScriptPSFunctionTests(ITestOutputHelper testOutput)
 {
     private static readonly string s_releaseScript = ScriptPaths.ReleasePowerShell;
 

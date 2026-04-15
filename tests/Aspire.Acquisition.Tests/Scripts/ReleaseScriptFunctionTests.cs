@@ -11,7 +11,7 @@ namespace Aspire.Acquisition.Tests.Scripts;
 /// Tests URL construction, quality mapping, checksum validation, and archive extraction.
 /// </summary>
 [SkipOnPlatform(TestPlatforms.Windows, "Bash script tests require bash shell")]
-public class s_releaseScriptFunctionTests(ITestOutputHelper testOutput)
+public class ReleaseScriptFunctionTests(ITestOutputHelper testOutput)
 {
     private static readonly string s_releaseScript = ScriptPaths.ReleaseShell;
 

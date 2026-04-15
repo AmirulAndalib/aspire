@@ -40,6 +40,9 @@ public class ScriptToolCommand : ToolCommand
 
         // Disable any real PATH modifications during tests
         WithEnvironmentVariable("ASPIRE_TEST_MODE", "true");
+
+        // Default timeout to prevent hanging tests — individual tests can override via WithTimeout()
+        WithTimeout(TimeSpan.FromSeconds(60));
     }
 
     /// <summary>

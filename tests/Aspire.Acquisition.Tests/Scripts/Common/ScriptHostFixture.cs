@@ -41,20 +41,38 @@ public sealed class ScriptHostFixture : IAsyncLifetime
             throw new DirectoryNotFoundException($"Scripts directory not found: {_scriptsDirectory}");
         }
 
-        // Find a free port by binding to port 0
-        using (var portFinder = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0))
+        // Retry binding to avoid TOCTOU port races: another process can claim the
+        // probed port between TcpListener.Stop() and HttpListener.Start().
+        const int maxRetries = 5;
+        for (var attempt = 0; attempt < maxRetries; attempt++)
         {
-            portFinder.Start();
-            Port = ((IPEndPoint)portFinder.LocalEndpoint).Port;
-            portFinder.Stop();
+            // Find a free port by binding to port 0
+            using (var portFinder = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0))
+            {
+                portFinder.Start();
+                Port = ((IPEndPoint)portFinder.LocalEndpoint).Port;
+                portFinder.Stop();
+            }
+
+            _cts = new CancellationTokenSource();
+            _listener = new HttpListener();
+            _listener.Prefixes.Add($"http://localhost:{Port}/");
+
+            try
+            {
+                _listener.Start();
+                break;
+            }
+            catch (HttpListenerException) when (attempt < maxRetries - 1)
+            {
+                _listener.Close();
+                _cts.Dispose();
+                _listener = null;
+                _cts = null;
+            }
         }
 
-        _cts = new CancellationTokenSource();
-        _listener = new HttpListener();
-        _listener.Prefixes.Add($"http://localhost:{Port}/");
-        _listener.Start();
-
-        _serverTask = Task.Run(() => ServeAsync(_cts.Token));
+        _serverTask = Task.Run(() => ServeAsync(_cts!.Token));
 
         // Verify the server is reachable
         using var client = new HttpClient();

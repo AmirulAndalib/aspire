@@ -333,9 +333,9 @@ jobs:
           TestsRunningOutsideOfRepo: true
           TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX: 'netaspireci.azurecr.io'
           # PR metadata and token for CLI E2E tests that download artifacts from a PR
-          GITHUB_PR_NUMBER: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.event.pull_request.number || '' }}
-          GITHUB_PR_HEAD_SHA: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.event.pull_request.head.sha || '' }}
-          GH_TOKEN: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.token || '' }}
+          GITHUB_PR_NUMBER: ${{ inputs.requiresCliArchive && github.event.pull_request.number || '' }}
+          GITHUB_PR_HEAD_SHA: ${{ inputs.requiresCliArchive && github.event.pull_request.head.sha || '' }}
+          GH_TOKEN: ${{ inputs.requiresCliArchive && github.token || '' }}
         run: |
           # Start heartbeat monitor in background (60s interval to reduce log noise)
           ${{ github.workspace }}/${{ env.DOTNET_SCRIPT }} ${{ github.workspace }}/tools/scripts/Heartbeat.cs 60 &
@@ -376,9 +376,9 @@ jobs:
           # Prevent VBCSCompiler from starting during tests. See #15832
           UseSharedCompilation: false
           # PR metadata and token for CLI E2E tests that download artifacts from a PR
-          GITHUB_PR_NUMBER: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.event.pull_request.number || '' }}
-          GITHUB_PR_HEAD_SHA: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.event.pull_request.head.sha || '' }}
-          GH_TOKEN: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.token || '' }}
+          GITHUB_PR_NUMBER: ${{ inputs.requiresCliArchive && github.event.pull_request.number || '' }}
+          GITHUB_PR_HEAD_SHA: ${{ inputs.requiresCliArchive && github.event.pull_request.head.sha || '' }}
+          GH_TOKEN: ${{ inputs.requiresCliArchive && github.token || '' }}
         run: |
           # Start heartbeat monitor in background (output goes to console directly)
           # Use 60s interval on Windows to reduce overhead on constrained 2-core runners
@@ -425,9 +425,9 @@ jobs:
           PLAYWRIGHT_INSTALLED: ${{ !inputs.enablePlaywrightInstall && 'false' || 'true' }}
           TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX: 'netaspireci.azurecr.io'
           # PR metadata and token for CLI E2E tests that download artifacts from a PR
-          GITHUB_PR_NUMBER: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.event.pull_request.number || '' }}
-          GITHUB_PR_HEAD_SHA: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.event.pull_request.head.sha || '' }}
-          GH_TOKEN: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.token || '' }}
+          GITHUB_PR_NUMBER: ${{ inputs.requiresCliArchive && github.event.pull_request.number || '' }}
+          GITHUB_PR_HEAD_SHA: ${{ inputs.requiresCliArchive && github.event.pull_request.head.sha || '' }}
+          GH_TOKEN: ${{ inputs.requiresCliArchive && github.token || '' }}
         run: |
           # Start heartbeat monitor in background (60s interval to reduce log noise)
           ${{ env.DOTNET_SCRIPT }} ${{ github.workspace }}/tools/scripts/Heartbeat.cs 60 &
@@ -475,9 +475,9 @@ jobs:
           # See https://github.com/microsoft/aspire/issues/15832
           UseSharedCompilation: false
           # PR metadata and token for CLI E2E tests that download artifacts from a PR
-          GITHUB_PR_NUMBER: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.event.pull_request.number || '' }}
-          GITHUB_PR_HEAD_SHA: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.event.pull_request.head.sha || '' }}
-          GH_TOKEN: ${{ (inputs.requiresCliArchive || inputs.testShortName == 'Acquisition') && github.token || '' }}
+          GITHUB_PR_NUMBER: ${{ inputs.requiresCliArchive && github.event.pull_request.number || '' }}
+          GITHUB_PR_HEAD_SHA: ${{ inputs.requiresCliArchive && github.event.pull_request.head.sha || '' }}
+          GH_TOKEN: ${{ inputs.requiresCliArchive && github.token || '' }}
         run: |
           # Start heartbeat monitor in background (output goes to console directly)
           # Use 60s interval on Windows to reduce overhead on constrained 2-core runners

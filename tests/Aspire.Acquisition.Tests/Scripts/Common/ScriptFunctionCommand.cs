@@ -45,6 +45,9 @@ public class ScriptFunctionCommand : ToolCommand
         // ${XDG_CONFIG_HOME:-$HOME/.config} from reading a real profile
         // outside the temp home when the developer has XDG_CONFIG_HOME set.
         WithEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(_testEnvironment.MockHome, ".config"));
+
+        // Default timeout to prevent hanging tests — individual tests can override via WithTimeout()
+        WithTimeout(TimeSpan.FromSeconds(60));
     }
 
     private static string GetExecutable(string scriptPath)
@@ -89,7 +92,12 @@ public class ScriptFunctionCommand : ToolCommand
             _saved_opts=$(set +o)
             _saved_shopt=$(shopt -p 2>/dev/null || true)
 
-            # Allow readonly redeclaration to be silently ignored
+            # Override the readonly builtin so that re-sourcing the script doesn't
+            # fail on 'readonly VAR=value' when VAR was already declared readonly
+            # in a previous source invocation. This suppresses ALL readonly errors —
+            # not just redeclaration — but in practice the only readonly failures
+            # in these scripts are redeclaration, and narrowing to that specific
+            # case would require fragile stderr parsing across bash versions.
             readonly() { builtin readonly "$@" 2>/dev/null || true; }
 
             source "{{fullScriptPath}}"

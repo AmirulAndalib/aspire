@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Aspire.TestUtilities;
 using Xunit;
 
 namespace Aspire.Acquisition.Tests.Scripts;
@@ -9,7 +10,8 @@ namespace Aspire.Acquisition.Tests.Scripts;
 /// Unit tests for individual functions in the PowerShell PR script (get-aspire-cli-pr.ps1).
 /// Tests RID computation and version suffix extraction.
 /// </summary>
-public class s_prScriptPSFunctionTests(ITestOutputHelper testOutput)
+[RequiresTools(["pwsh"])]
+public class PRScriptPSFunctionTests(ITestOutputHelper testOutput)
 {
     private static readonly string s_prScript = ScriptPaths.PRPowerShell;
 

@@ -55,7 +55,7 @@ public sealed class PowerShellCommand : IDisposable
 
     public async Task<CommandResult> ExecuteAsync(params string[] args)
     {
-        CancellationTokenSource cts = new();
+        using CancellationTokenSource cts = new();
         if (_timeout is not null)
         {
             cts.CancelAfter((int)_timeout.Value.TotalMilliseconds);

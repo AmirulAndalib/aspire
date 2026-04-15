@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Aspire.TestUtilities;
 using Xunit;
 
 namespace Aspire.Acquisition.Tests.Scripts;
@@ -9,6 +10,7 @@ namespace Aspire.Acquisition.Tests.Scripts;
 /// Tests that verify PowerShell scripts can have their functions loaded safely
 /// via AST extraction without executing main.
 /// </summary>
+[RequiresTools(["pwsh"])]
 public class PSSourceabilityTests(ITestOutputHelper testOutput)
 {
     private readonly ITestOutputHelper _testOutput = testOutput;

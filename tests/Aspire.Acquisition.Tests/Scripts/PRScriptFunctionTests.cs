@@ -11,7 +11,7 @@ namespace Aspire.Acquisition.Tests.Scripts;
 /// Tests RID computation and version suffix extraction.
 /// </summary>
 [SkipOnPlatform(TestPlatforms.Windows, "Bash script tests require bash shell")]
-public class s_prScriptFunctionTests(ITestOutputHelper testOutput)
+public class PRScriptFunctionTests(ITestOutputHelper testOutput)
 {
     private static readonly string s_prScript = ScriptPaths.PRShell;
 

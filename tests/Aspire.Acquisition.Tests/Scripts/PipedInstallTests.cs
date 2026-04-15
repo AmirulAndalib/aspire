@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Aspire.Templates.Tests;
+using Aspire.TestUtilities;
 using Microsoft.DotNet.XUnitExtensions;
 using Xunit;
 
@@ -166,6 +167,7 @@ public class PipedInstallTests : IClassFixture<ScriptHostFixture>
     // ──────────────────────────────────────────────────────────────────────
 
     [Fact]
+    [RequiresTools(["pwsh"])]
     public async Task IrmPipeToIex_ReleaseScript_HelpWorks()
     {
         // This is the documented install pattern from get-aspire-cli.ps1 line 174:
@@ -190,6 +192,7 @@ public class PipedInstallTests : IClassFixture<ScriptHostFixture>
     }
 
     [Fact]
+    [RequiresTools(["pwsh"])]
     public async Task IrmPipeToIex_PRScript_HelpWorks()
     {
         // Documented pattern from get-aspire-cli-pr.ps1 line 74:
@@ -210,6 +213,7 @@ public class PipedInstallTests : IClassFixture<ScriptHostFixture>
     }
 
     [Fact]
+    [RequiresTools(["pwsh"])]
     public async Task IrmPipeToIex_ReleaseScript_InvalidQualityFails()
     {
         using var env = new TestEnvironment();
@@ -229,6 +233,7 @@ public class PipedInstallTests : IClassFixture<ScriptHostFixture>
     }
 
     [Fact]
+    [RequiresTools(["pwsh"])]
     public async Task IrmPipeToIex_ReleaseScript_ArgsWithSpacesWork()
     {
         using var env = new TestEnvironment();
