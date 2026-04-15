@@ -245,7 +245,11 @@ internal sealed class AzureKubernetesInfrastructure(
         {
             try
             {
-                var clusterName = environment.Name;
+                // Get the actual provisioned cluster name from the Bicep output.
+                // The Azure.Provisioning SDK may add a unique suffix to the name
+                // (e.g., take('aks-${uniqueString(resourceGroup().id)}', 63)).
+                var clusterName = await environment.NameOutputReference.GetValueAsync(context.CancellationToken).ConfigureAwait(false)
+                    ?? environment.Name;
 
                 var azPath = FindAzCli();
                 var resourceGroup = await GetResourceGroupAsync(azPath, clusterName, context)
