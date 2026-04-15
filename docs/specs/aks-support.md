@@ -60,7 +60,7 @@ The goal is to create a first-class AKS experience in Aspire that supports:
 
 This package provides a unified `AddAzureKubernetesEnvironment()` entry point that internally invokes `AddKubernetesEnvironment()` (from the generic K8s package) and layers on AKS-specific Azure provisioning. This mirrors the established pattern of `AddAzureContainerAppEnvironment()` which internally sets up the Container Apps infrastructure.
 
-```
+```text
 Aspire.Hosting.Azure.Kubernetes
 ├── depends on: Aspire.Hosting.Kubernetes
 ├── depends on: Aspire.Hosting.Azure
@@ -80,7 +80,7 @@ Just as `AddAzureContainerAppEnvironment("aca")` creates a single resource that 
 
 ### Integration Points
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                     User's AppHost                          │
 │                                                             │
@@ -443,7 +443,7 @@ var sql = builder.AddAzureSqlServer("sql")
 
 Since `AzureKubernetesEnvironmentResource` unifies both Azure provisioning and K8s deployment, the pipeline is a superset of both:
 
-```
+```text
 [Azure Provisioning Phase]          [Kubernetes Deployment Phase]
 1. Generate Bicep (AKS + ACR +      4. Publish Helm chart
    identity + fedcreds)              5. Get kubeconfig from AKS (az aks get-credentials)
@@ -618,4 +618,3 @@ var aks = builder.AddAzureKubernetesService("aks")
 - 31 AKS unit tests passing (extensions + infrastructure)
 - 88 K8s base tests passing
 - Manual E2E validation against live Azure clusters
-
