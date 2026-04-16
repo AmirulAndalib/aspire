@@ -861,6 +861,11 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
+            options.InteractionServiceFactory = _ => new TestInteractionService
+            {
+                ConfirmCallback = (_, _) => false
+            };
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -952,6 +957,11 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
+            options.InteractionServiceFactory = _ => new TestInteractionService
+            {
+                ConfirmCallback = (_, _) => false
+            };
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
