@@ -468,6 +468,11 @@ internal class ConsoleInteractionService : IInteractionService
 
         if (!_hostEnvironment.SupportsInteractiveInput)
         {
+            if (binding is not null)
+            {
+                return binding.DefaultValue;
+            }
+
             throw new InvalidOperationException(InteractionServiceStrings.InteractiveInputNotSupported);
         }
 

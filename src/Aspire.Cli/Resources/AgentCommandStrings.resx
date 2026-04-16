@@ -177,4 +177,16 @@
   <data name="InitCommand_WorkspaceRootOptionDescription" xml:space="preserve">
     <value>Path to the workspace root directory</value>
   </data>
+  <data name="InitCommand_SkillLocationsOptionDescription" xml:space="preserve">
+    <value>Comma-separated list of skill locations to install (e.g. standard,claudecode,github,opencode), 'all', or 'none'</value>
+  </data>
+  <data name="InitCommand_SkillsOptionDescription" xml:space="preserve">
+    <value>Comma-separated list of skills to install (e.g. aspire,playwright-cli,dotnet-inspect), 'all', or 'none'</value>
+  </data>
+  <data name="InitCommand_ConfigureMcpOptionDescription" xml:space="preserve">
+    <value>Configure detected MCP servers</value>
+  </data>
+  <data name="InitCommand_ConfigureMcpPrompt" xml:space="preserve">
+    <value>Configure detected MCP servers?</value>
+  </data>
 </root>

@@ -60,11 +60,29 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
         _languageDiscovery = languageDiscovery;
 
         Options.Add(s_workspaceRootOption);
+        Options.Add(s_skillLocationsOption);
+        Options.Add(s_skillsOption);
+        Options.Add(s_configureMcpOption);
     }
 
     private static readonly Option<string?> s_workspaceRootOption = new("--workspace-root")
     {
         Description = AgentCommandStrings.InitCommand_WorkspaceRootOptionDescription
+    };
+
+    private static readonly Option<string?> s_skillLocationsOption = new("--skill-locations")
+    {
+        Description = AgentCommandStrings.InitCommand_SkillLocationsOptionDescription
+    };
+
+    private static readonly Option<string?> s_skillsOption = new("--skills")
+    {
+        Description = AgentCommandStrings.InitCommand_SkillsOptionDescription
+    };
+
+    private static readonly Option<bool> s_configureMcpOption = new("--configure-mcp")
+    {
+        Description = AgentCommandStrings.InitCommand_ConfigureMcpOptionDescription
     };
 
     protected override bool UpdateNotificationsEnabled => false;
@@ -83,10 +101,10 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
     /// Used by commands (e.g. <c>aspire init</c>, <c>aspire new</c>) to offer agent init as a follow-up step.
     /// </summary>
     internal async Task<int> PromptAndChainAsync(
-        ICliHostEnvironment hostEnvironment,
         IInteractionService interactionService,
         int previousResultExitCode,
         DirectoryInfo workspaceRoot,
+        PromptBinding<bool> agentInitBinding,
         CancellationToken cancellationToken)
     {
         if (previousResultExitCode != ExitCodeConstants.Success)
@@ -94,19 +112,14 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
             return previousResultExitCode;
         }
 
-        if (!hostEnvironment.SupportsInteractiveInput)
-        {
-            return ExitCodeConstants.Success;
-        }
-
         var runAgentInit = await interactionService.ConfirmAsync(
             SharedCommandStrings.PromptRunAgentInit,
-            binding: PromptBinding.CreateDefault(true),
+            binding: agentInitBinding,
             cancellationToken: cancellationToken);
 
         if (runAgentInit)
         {
-            return await ExecuteAgentInitAsync(workspaceRoot, cancellationToken);
+            return await ExecuteAgentInitAsync(workspaceRoot, parseResult: null, cancellationToken);
         }
 
         return ExitCodeConstants.Success;
@@ -115,7 +128,7 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
     protected override async Task<int> ExecuteAsync(ParseResult parseResult, CancellationToken cancellationToken)
     {
         var workspaceRoot = await PromptForWorkspaceRootAsync(parseResult, cancellationToken);
-        return await ExecuteAgentInitAsync(workspaceRoot, cancellationToken);
+        return await ExecuteAgentInitAsync(workspaceRoot, parseResult, cancellationToken);
     }
 
     private async Task<DirectoryInfo> PromptForWorkspaceRootAsync(ParseResult parseResult, CancellationToken cancellationToken)
@@ -148,7 +161,7 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
         return new DirectoryInfo(workspaceRootPath);
     }
 
-    private async Task<int> ExecuteAgentInitAsync(DirectoryInfo workspaceRoot, CancellationToken cancellationToken)
+    private async Task<int> ExecuteAgentInitAsync(DirectoryInfo workspaceRoot, ParseResult? parseResult, CancellationToken cancellationToken)
     {
         var context = new AgentEnvironmentScanContext
         {
@@ -187,64 +200,67 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
         }
 
         // --- Phase 1: Skill location selection ---
+        var defaultLocationIds = string.Join(",", SkillLocation.All.Where(l => l.IsDefault).Select(l => l.Id));
+        var skillLocationsBinding = parseResult is not null
+            ? PromptBinding.Create(parseResult, s_skillLocationsOption, defaultLocationIds)
+            : PromptBinding.CreateDefault<string?>(defaultLocationIds);
+
         var selectedLocations = await _interactionService.PromptForSelectionsAsync(
             AgentCommandStrings.InitCommand_SelectSkillLocations,
             SkillLocation.All,
-            loc => $"{loc.Name} — {loc.Description}",
+            loc => $"{loc.DisplayName} — {loc.Description}",
             preSelected: SkillLocation.All.Where(l => l.IsDefault),
             optional: true,
+            binding: skillLocationsBinding,
             cancellationToken: cancellationToken);
 
-        // --- Phase 2: Skill and MCP server selection (only if locations were selected) ---
+        // --- Phase 2: Skill selection (only if locations were selected) ---
         IReadOnlyList<SkillDefinition> selectedSkills = [];
         AgentEnvironmentApplicator? combinedMcpApplicator = null;
         var mcpApplicators = userChoices.Where(a => a.PromptGroup == McpInitPromptGroup.AgentEnvironments).ToList();
 
         if (selectedLocations.Count > 0)
         {
-            // Build prompt items: skills first, then MCP as a separate non-default item
-            var skillChoices = new List<object>();
-            skillChoices.AddRange(availableSkills);
+            var defaultSkillNames = string.Join(",", availableSkills.Where(s => s.IsDefault).Select(s => s.Name));
+            var skillsBinding = parseResult is not null
+                ? PromptBinding.Create(parseResult, s_skillsOption, defaultSkillNames)
+                : PromptBinding.CreateDefault<string?>(defaultSkillNames);
 
-            if (mcpApplicators.Count > 0)
-            {
-                combinedMcpApplicator = new AgentEnvironmentApplicator(
-                    AgentCommandStrings.InitCommand_ConfigureMcpServer,
-                    async ct =>
-                    {
-                        foreach (var mcp in mcpApplicators)
-                        {
-                            await mcp.ApplyAsync(ct);
-                            _interactionService.DisplayMessage(KnownEmojis.CheckMark, mcp.Description);
-                        }
-                    },
-                    promptGroup: McpInitPromptGroup.AdditionalOptions);
-                skillChoices.Add(combinedMcpApplicator);
-            }
-
-            var preSelectedItems = new List<object>();
-            preSelectedItems.AddRange(availableSkills.Where(s => s.IsDefault));
-            // MCP is intentionally NOT pre-selected
-
-            var selectedItems = await _interactionService.PromptForSelectionsAsync(
+            selectedSkills = await _interactionService.PromptForSelectionsAsync(
                 AgentCommandStrings.InitCommand_SelectSkills,
-                skillChoices,
-                item => item switch
-                {
-                    SkillDefinition skill => $"{skill.Name} — {skill.Description}",
-                    AgentEnvironmentApplicator app => $"[bold]{app.Description}[/] [dim]{AgentCommandStrings.InitCommand_ConfiguresDetectedAgentEnvironments}[/]",
-                    _ => item.ToString()!
-                },
-                preSelected: preSelectedItems,
+                availableSkills,
+                skill => $"{skill.Name} — {skill.Description}",
+                preSelected: availableSkills.Where(s => s.IsDefault),
                 optional: true,
+                binding: skillsBinding,
                 cancellationToken: cancellationToken);
 
-            selectedSkills = selectedItems.OfType<SkillDefinition>().ToList();
-
-            // Clear MCP applicator if it was not selected by the user.
-            if (combinedMcpApplicator is not null && !selectedItems.Contains(combinedMcpApplicator))
+            // --- Phase 2b: MCP server configuration (only if applicators detected) ---
+            if (mcpApplicators.Count > 0)
             {
-                combinedMcpApplicator = null;
+                var configureMcpBinding = parseResult is not null
+                    ? PromptBinding.Create(parseResult, s_configureMcpOption, false)
+                    : PromptBinding.CreateDefault(false);
+
+                var shouldConfigureMcp = await _interactionService.ConfirmAsync(
+                    AgentCommandStrings.InitCommand_ConfigureMcpPrompt,
+                    binding: configureMcpBinding,
+                    cancellationToken: cancellationToken);
+
+                if (shouldConfigureMcp)
+                {
+                    combinedMcpApplicator = new AgentEnvironmentApplicator(
+                        AgentCommandStrings.InitCommand_ConfigureMcpServer,
+                        async ct =>
+                        {
+                            foreach (var mcp in mcpApplicators)
+                            {
+                                await mcp.ApplyAsync(ct);
+                                _interactionService.DisplayMessage(KnownEmojis.CheckMark, mcp.Description);
+                            }
+                        },
+                        promptGroup: McpInitPromptGroup.AdditionalOptions);
+                }
             }
         }
 

@@ -410,5 +410,41 @@ namespace Aspire.Cli.Resources {
                 return ResourceManager.GetString("InitCommand_WorkspaceRootOptionDescription", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Comma-separated list of skill locations to install (e.g. standard,claudecode,github,opencode), 'all', or 'none'.
+        /// </summary>
+        internal static string InitCommand_SkillLocationsOptionDescription {
+            get {
+                return ResourceManager.GetString("InitCommand_SkillLocationsOptionDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Comma-separated list of skills to install (e.g. aspire,playwright-cli,dotnet-inspect), 'all', or 'none'.
+        /// </summary>
+        internal static string InitCommand_SkillsOptionDescription {
+            get {
+                return ResourceManager.GetString("InitCommand_SkillsOptionDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Configure detected MCP servers.
+        /// </summary>
+        internal static string InitCommand_ConfigureMcpOptionDescription {
+            get {
+                return ResourceManager.GetString("InitCommand_ConfigureMcpOptionDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Configure detected MCP servers?.
+        /// </summary>
+        internal static string InitCommand_ConfigureMcpPrompt {
+            get {
+                return ResourceManager.GetString("InitCommand_ConfigureMcpPrompt", resourceCulture);
+            }
+        }
     }
 }

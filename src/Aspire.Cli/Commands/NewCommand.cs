@@ -54,6 +54,12 @@ internal sealed class NewCommand : BaseCommand, IPackageMetaPrefetchingCommand
         Recursive = true
     };
 
+    internal static readonly Option<bool?> s_agentInitOption = new("--agent-init")
+    {
+        Description = SharedCommandStrings.AgentInitOptionDescription,
+        Recursive = true
+    };
+
     private readonly Option<string?> _channelOption;
     private readonly Option<string?> _languageOption;
 
@@ -94,6 +100,7 @@ internal sealed class NewCommand : BaseCommand, IPackageMetaPrefetchingCommand
         Options.Add(s_outputOption);
         Options.Add(s_sourceOption);
         Options.Add(s_versionOption);
+        Options.Add(s_agentInitOption);
 
         // Customize description based on whether staging channel is enabled
         var isStagingEnabled = KnownFeatures.IsStagingChannelEnabled(_features, configuration);
@@ -395,7 +402,8 @@ internal sealed class NewCommand : BaseCommand, IPackageMetaPrefetchingCommand
         var templateResult = await template.ApplyTemplateAsync(inputs, parseResult, cancellationToken);
 
         var workspaceRoot = new DirectoryInfo(templateResult.OutputPath ?? ExecutionContext.WorkingDirectory.FullName);
-        var exitCode = await _agentInitCommand.PromptAndChainAsync(_hostEnvironment, InteractionService, templateResult.ExitCode, workspaceRoot, cancellationToken);
+        var agentInitBinding = PromptBinding.CreateBoolConfirm(parseResult, s_agentInitOption, defaultValue: true);
+        var exitCode = await _agentInitCommand.PromptAndChainAsync(InteractionService, templateResult.ExitCode, workspaceRoot, agentInitBinding, cancellationToken);
 
         if (templateResult.OutputPath is not null && ExtensionHelper.IsExtensionHost(InteractionService, out var extensionInteractionService, out _))
         {

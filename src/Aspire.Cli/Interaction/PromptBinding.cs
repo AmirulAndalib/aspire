@@ -50,8 +50,7 @@ internal sealed class PromptBinding<T>
     public (bool WasProvided, T? Value) Resolve() => _resolver(ParseResult);
 
     /// <summary>
-    /// Creates a copy of this binding with a different default value.
-    /// Useful when the default is computed later than the binding is created.
+    /// Creates a new <see cref="PromptBinding{T}"/> with the same resolver but a different default value.
     /// </summary>
     public PromptBinding<T> WithDefault(T? newDefault) =>
         new(ParseResult, SymbolDisplayName, _resolver, newDefault);
@@ -91,6 +90,14 @@ internal static class PromptBinding
     /// </summary>
     public static PromptBinding<T> CreateDefault<T>(T defaultValue) =>
         new(null!, string.Empty, static _ => (false, default), defaultValue);
+
+    /// <summary>
+    /// Creates a <see cref="PromptBinding{T}"/> for a <c>bool?</c> option that resolves to a <c>bool</c>.
+    /// When the option is explicitly provided, resolves to its value.
+    /// When not provided in non-interactive mode, defaults to <paramref name="defaultValue"/>.
+    /// </summary>
+    public static PromptBinding<bool> CreateBoolConfirm(ParseResult parseResult, Option<bool?> option, bool defaultValue) =>
+        new(parseResult, FormatOptionName(option), BuildBoolConfirmResolver(option), defaultValue);
 
     /// <summary>
     /// Creates a <see cref="PromptBinding{T}"/> for a <c>bool?</c> option that maps to Yes/No selection choices.
@@ -136,6 +143,19 @@ internal static class PromptBinding
             {
                 var value = parseResult.GetValue(option);
                 return (true, value == true ? trueValue : falseValue);
+            }
+
+            return (false, default);
+        };
+
+    private static Func<ParseResult, (bool, bool)> BuildBoolConfirmResolver(Option<bool?> option) =>
+        parseResult =>
+        {
+            var result = parseResult.GetResult(option);
+            if (result is not null && !result.Implicit)
+            {
+                var value = parseResult.GetValue(option);
+                return (true, value == true);
             }
 
             return (false, default);
