@@ -127,6 +127,7 @@ public static class AzureFrontDoorExtensions
                     Parent = endpoint,
                     Name = BicepFunction.Take(BicepFunction.Interpolate($"{originName}-route-{BicepFunction.GetUniqueString(BicepFunction.GetResourceGroup().Id)}"), 90),
                     OriginGroupId = originGroup.Id,
+                    PatternsToMatch = ["/*"],
                     ForwardingProtocol = ForwardingProtocol.HttpsOnly,
                     LinkToDefaultDomain = LinkToDefaultDomain.Enabled,
                     HttpsRedirect = HttpsRedirect.Enabled

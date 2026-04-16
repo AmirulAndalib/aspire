@@ -52,6 +52,9 @@ resource apiRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2025-06-01' = {
     originGroup: {
       id: apiOriginGroup.id
     }
+    patternsToMatch: [
+      '/*'
+    ]
   }
   parent: apiEndpoint
   dependsOn: [
@@ -95,6 +98,9 @@ resource webRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2025-06-01' = {
     originGroup: {
       id: webOriginGroup.id
     }
+    patternsToMatch: [
+      '/*'
+    ]
   }
   parent: webEndpoint
   dependsOn: [
