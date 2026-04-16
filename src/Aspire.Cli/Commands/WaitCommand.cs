@@ -180,7 +180,7 @@ internal sealed class WaitCommand : BaseCommand
         string resourceName,
         CancellationToken cancellationToken)
     {
-        var snapshots = await connection.GetResourceSnapshotsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+        var snapshots = await connection.GetResourceSnapshotsAsync(includeHidden: false, cancellationToken).ConfigureAwait(false);
         var resolvedResources = ResourceSnapshotMapper.ResolveResources(resourceName, snapshots);
         if (resolvedResources.Count == 1)
         {
