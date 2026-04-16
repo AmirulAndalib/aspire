@@ -131,9 +131,9 @@ public sealed class FrontDoorAppServiceDeploymentTests(ITestOutputHelper output)
 // Add Azure Container App Environment for deployment
 builder.AddAzureContainerAppEnvironment("aca");
 
-// Add Azure Front Door in front of the web frontend
+// Add Azure Front Door in front of the server
 builder.AddAzureFrontDoor("frontdoor")
-    .WithOrigin(webfrontend);
+    .WithOrigin(server);
 
 builder.Build().Run();
 """;
