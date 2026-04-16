@@ -114,6 +114,9 @@ internal sealed class TestAppHostAuxiliaryBackchannel : IAppHostAuxiliaryBackcha
     /// Gets or sets the result to return from WaitForResourceAsync.
     /// </summary>
     public WaitForResourceResponse WaitForResourceResult { get; set; } = new WaitForResourceResponse { Success = true, State = "Running" };
+    public string? LastWaitResourceName { get; private set; }
+    public string? LastWaitStatus { get; private set; }
+    public int? LastWaitTimeoutSeconds { get; private set; }
 
     public Task<WaitForResourceResponse> WaitForResourceAsync(
         string resourceName,
@@ -121,6 +124,9 @@ internal sealed class TestAppHostAuxiliaryBackchannel : IAppHostAuxiliaryBackcha
         int timeoutSeconds,
         CancellationToken cancellationToken = default)
     {
+        LastWaitResourceName = resourceName;
+        LastWaitStatus = status;
+        LastWaitTimeoutSeconds = timeoutSeconds;
         return Task.FromResult(WaitForResourceResult);
     }
 

@@ -121,7 +121,7 @@
     <value>Wait for a resource to reach a target status</value>
   </data>
   <data name="ResourceArgumentDescription" xml:space="preserve">
-    <value>The name of the resource to wait for</value>
+    <value>The resource name or identifier to wait for</value>
   </data>
   <data name="StatusOptionDescription" xml:space="preserve">
     <value>The target status to wait for (healthy, up, down). Defaults to healthy.</value>

@@ -102,19 +102,34 @@ internal sealed class WaitCommand : BaseCommand
 
         var connection = result.Connection!;
 
-        return await WaitForResourceAsync(connection, resourceName, status, timeoutSeconds, cancellationToken);
+        var resolvedResourceName = await ResolveResourceNameAsync(connection, resourceName, cancellationToken).ConfigureAwait(false);
+        if (resolvedResourceName is null)
+        {
+            _interactionService.DisplayError(string.Format(CultureInfo.CurrentCulture, WaitCommandStrings.ResourceNotFound, resourceName));
+            return ExitCodeConstants.WaitResourceFailed;
+        }
+
+        return await WaitForResourceAsync(connection, resourceName, resolvedResourceName, status, timeoutSeconds, cancellationToken);
     }
 
     private async Task<int> WaitForResourceAsync(
         IAppHostAuxiliaryBackchannel connection,
         string resourceName,
+        string resolvedResourceName,
         string status,
         int timeoutSeconds,
         CancellationToken cancellationToken)
     {
         var statusLabel = GetStatusLabel(status);
 
-        _logger.LogDebug("Waiting for resource '{ResourceName}' to reach status '{Status}' with timeout {Timeout}s", resourceName, status, timeoutSeconds);
+        if (string.Equals(resourceName, resolvedResourceName, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogDebug("Waiting for resource '{ResourceName}' to reach status '{Status}' with timeout {Timeout}s", resourceName, status, timeoutSeconds);
+        }
+        else
+        {
+            _logger.LogDebug("Waiting for resource '{ResourceName}' resolved to '{ResolvedResourceName}' to reach status '{Status}' with timeout {Timeout}s", resourceName, resolvedResourceName, status, timeoutSeconds);
+        }
 
         var startTimestamp = _timeProvider.GetTimestamp();
 
@@ -122,7 +137,7 @@ internal sealed class WaitCommand : BaseCommand
             string.Format(CultureInfo.CurrentCulture, WaitCommandStrings.WaitingForResource, resourceName, statusLabel),
             async () =>
             {
-                var response = await connection.WaitForResourceAsync(resourceName, status, timeoutSeconds, cancellationToken).ConfigureAwait(false);
+                var response = await connection.WaitForResourceAsync(resolvedResourceName, status, timeoutSeconds, cancellationToken).ConfigureAwait(false);
 
                 if (response.Success)
                 {
@@ -156,6 +171,17 @@ internal sealed class WaitCommand : BaseCommand
         }
 
         return exitCode;
+    }
+
+    private static async Task<string?> ResolveResourceNameAsync(
+        IAppHostAuxiliaryBackchannel connection,
+        string resourceName,
+        CancellationToken cancellationToken)
+    {
+        var snapshots = await connection.GetResourceSnapshotsAsync(cancellationToken).ConfigureAwait(false);
+        var resolvedResources = ResourceSnapshotMapper.ResolveResources(resourceName, snapshots);
+
+        return resolvedResources.Count == 1 ? resolvedResources[0].Name : null;
     }
 
     private static bool IsValidStatus(string status)

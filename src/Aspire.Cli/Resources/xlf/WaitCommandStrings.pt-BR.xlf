@@ -13,8 +13,8 @@
         <note />
       </trans-unit>
       <trans-unit id="ResourceArgumentDescription">
-        <source>The name of the resource to wait for</source>
-        <target state="new">The name of the resource to wait for</target>
+        <source>The resource name or identifier to wait for</source>
+        <target state="new">The resource name or identifier to wait for</target>
         <note />
       </trans-unit>
       <trans-unit id="ResourceEnteredFailedState">
