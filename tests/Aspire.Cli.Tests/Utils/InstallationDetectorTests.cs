@@ -593,6 +593,68 @@ public class InstallationDetectorTests
     }
 
     [Fact]
+    public void GetInstallationInfo_CustomInstallLocation_SelfUpdateIsAvailable()
+    {
+        // When aspire is installed to an arbitrary custom location (e.g., /opt/custom/aspire)
+        // with no .aspire-update.json and not under a WinGet or dotnet tool path,
+        // self-update should remain available — this is the default/script-install case.
+        var tempDir = Directory.CreateTempSubdirectory("aspire-detector-test");
+        try
+        {
+            var customDir = Path.Combine(tempDir.FullName, "opt", "custom");
+            Directory.CreateDirectory(customDir);
+            var processPath = Path.Combine(customDir, "aspire");
+            File.WriteAllText(processPath, ""); // Create a fake binary
+
+            var detector = new InstallationDetector(_logger, processPath);
+
+            var info = detector.GetInstallationInfo();
+
+            Assert.False(info.IsDotNetTool);
+            Assert.False(info.SelfUpdateDisabled);
+            Assert.Null(info.UpdateInstructions);
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void IsWinGetInstall_CustomLocationFlag_NotDetected()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "WinGet detection only applies on Windows.");
+
+        // WinGet supports --location for custom install paths (and PortablePackageUserRoot).
+        // These are intentionally NOT detected by the heuristic — document this known limitation.
+        // Users in this scenario should use .aspire-update.json to disable self-update.
+        var customPath = Path.Combine("D:", "MyApps", "aspire", "aspire.exe");
+
+        var result = InstallationDetector.IsWinGetInstall(customPath);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsWinGetInstall_WindowsAppsAliasPath_NotDetected()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "WinGet detection only applies on Windows.");
+
+        // WinGet sometimes creates execution aliases under %LOCALAPPDATA%\Microsoft\WindowsApps\.
+        // These are reparse points/alias links, not the actual install location under WinGet\Packages.
+        // The heuristic checks the resolved path, so this should NOT match if the alias path
+        // is passed directly (i.e., without symlink resolution happening first).
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        Assert.SkipWhen(string.IsNullOrEmpty(localAppData), "LOCALAPPDATA not available.");
+
+        var aliasPath = Path.Combine(localAppData, "Microsoft", "WindowsApps", "aspire.exe");
+
+        var result = InstallationDetector.IsWinGetInstall(aliasPath);
+
+        Assert.False(result);
+    }
+
+    [Fact]
     public void GetInstallationInfo_UnreadableConfigFile_FailsClosed()
     {
         Assert.SkipUnless(!RuntimeInformation.IsOSPlatform(OSPlatform.Windows),

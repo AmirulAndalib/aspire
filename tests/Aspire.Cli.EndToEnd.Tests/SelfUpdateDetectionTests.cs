@@ -54,6 +54,18 @@ public sealed class SelfUpdateDetectionTests(ITestOutputHelper output)
             description: "waiting for self-update disabled message");
         await auto.WaitForSuccessPromptAsync(counter);
 
+        // Verify the CLI still works and the version is correct after the update attempt
+        await auto.ClearScreenAsync(counter);
+        await auto.TypeAsync("aspire --version");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
+
+        // Verify the channel is still correctly resolved
+        await auto.ClearScreenAsync(counter);
+        await auto.TypeAsync("aspire config get channel");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
+
         // Exit the shell
         await auto.TypeAsync("exit");
         await auto.EnterAsync();
@@ -99,6 +111,12 @@ public sealed class SelfUpdateDetectionTests(ITestOutputHelper output)
             s => s.ContainsText(UpdateCommandStrings.SelfUpdateDisabledMessage) && s.ContainsText(customInstructions),
             timeout: TimeSpan.FromSeconds(30),
             description: "waiting for self-update disabled message with custom instructions");
+        await auto.WaitForSuccessPromptAsync(counter);
+
+        // Verify the CLI still works after showing custom instructions
+        await auto.ClearScreenAsync(counter);
+        await auto.TypeAsync("aspire --version");
+        await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
         // Exit the shell
@@ -158,6 +176,18 @@ public sealed class SelfUpdateDetectionTests(ITestOutputHelper output)
             // Wait for the prompt to return (success or error).
             return s.ContainsText("OK]") || s.ContainsText("ERR:");
         }, timeout: TimeSpan.FromSeconds(60), description: "waiting for update --self to complete without disabled message");
+
+        // Verify the CLI still works and reports its version after the update attempt
+        await auto.ClearScreenAsync(counter);
+        await auto.TypeAsync("aspire --version");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
+
+        // Verify the channel is still correctly resolved
+        await auto.ClearScreenAsync(counter);
+        await auto.TypeAsync("aspire config get channel");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
 
         // Exit the shell
         await auto.TypeAsync("exit");
