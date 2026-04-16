@@ -215,16 +215,12 @@ public class WaitCommandTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public async Task WaitCommand_DisplayName_ResolvesToCanonicalResourceName()
+    public async Task WaitCommand_DisplayName_PassesThroughUnchanged()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
 
         var backchannel = new TestAppHostAuxiliaryBackchannel
         {
-            ResourceSnapshots =
-            [
-                new ResourceSnapshot { Name = "apiservice-tzykkput", DisplayName = "apiservice", ResourceType = "Project", State = "Running" }
-            ],
             WaitForResourceResult = new WaitForResourceResponse { Success = true, State = "Running", HealthStatus = "Healthy" }
         };
         var monitor = new TestAuxiliaryBackchannelMonitor();
@@ -242,29 +238,18 @@ public class WaitCommandTests(ITestOutputHelper outputHelper)
         var exitCode = await result.InvokeAsync().DefaultTimeout();
 
         Assert.Equal(ExitCodeConstants.Success, exitCode);
-        Assert.Equal("apiservice-tzykkput", backchannel.LastWaitResourceName);
+        Assert.Equal("apiservice", backchannel.LastWaitResourceName);
         Assert.Equal("healthy", backchannel.LastWaitStatus);
         Assert.Equal(5, backchannel.LastWaitTimeoutSeconds);
     }
 
     [Fact]
-    public async Task WaitCommand_HiddenDisplayName_ResolvesToCanonicalResourceName()
+    public async Task WaitCommand_HiddenDisplayName_PassesThroughUnchanged()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
 
         var backchannel = new TestAppHostAuxiliaryBackchannel
         {
-            ResourceSnapshots =
-            [
-                new ResourceSnapshot
-                {
-                    Name = "apiservice-tzykkput",
-                    DisplayName = "apiservice",
-                    ResourceType = "Project",
-                    State = "Running",
-                    IsHidden = true
-                }
-            ],
             WaitForResourceResult = new WaitForResourceResponse { Success = true, State = "Running", HealthStatus = "Healthy" }
         };
         var monitor = new TestAuxiliaryBackchannelMonitor();
@@ -282,7 +267,7 @@ public class WaitCommandTests(ITestOutputHelper outputHelper)
         var exitCode = await result.InvokeAsync().DefaultTimeout();
 
         Assert.Equal(ExitCodeConstants.Success, exitCode);
-        Assert.Equal("apiservice-tzykkput", backchannel.LastWaitResourceName);
+        Assert.Equal("apiservice", backchannel.LastWaitResourceName);
         Assert.Equal("healthy", backchannel.LastWaitStatus);
         Assert.Equal(5, backchannel.LastWaitTimeoutSeconds);
     }
@@ -294,10 +279,6 @@ public class WaitCommandTests(ITestOutputHelper outputHelper)
 
         var backchannel = new TestAppHostAuxiliaryBackchannel
         {
-            ResourceSnapshots =
-            [
-                new ResourceSnapshot { Name = "apiservice-tzykkput", DisplayName = "apiservice", ResourceType = "Project", State = "Running" }
-            ],
             WaitForResourceResult = new WaitForResourceResponse { Success = true, State = "Running", HealthStatus = "Healthy" }
         };
         var monitor = new TestAuxiliaryBackchannelMonitor();
@@ -346,17 +327,13 @@ public class WaitCommandTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public async Task WaitCommand_AmbiguousDisplayName_ReturnsFailureWithoutWaiting()
+    public async Task WaitCommand_AmbiguousDisplayName_PassesThroughToAppHost()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
 
         var backchannel = new TestAppHostAuxiliaryBackchannel
         {
-            ResourceSnapshots =
-            [
-                new ResourceSnapshot { Name = "cache-abc12345", DisplayName = "cache", ResourceType = "Container", State = "Running" },
-                new ResourceSnapshot { Name = "cache-def67890", DisplayName = "cache", ResourceType = "Container", State = "Running" }
-            ]
+            WaitForResourceResult = new WaitForResourceResponse { Success = false, ResourceNotFound = true, ErrorMessage = "Resource 'cache' was not found." }
         };
         var monitor = new TestAuxiliaryBackchannelMonitor();
         monitor.AddConnection("hash", "/tmp/test.sock", backchannel);
@@ -373,21 +350,17 @@ public class WaitCommandTests(ITestOutputHelper outputHelper)
         var exitCode = await result.InvokeAsync().DefaultTimeout();
 
         Assert.Equal(ExitCodeConstants.WaitResourceFailed, exitCode);
-        Assert.Null(backchannel.LastWaitResourceName);
+        Assert.Equal("cache", backchannel.LastWaitResourceName);
     }
 
     [Fact]
-    public async Task WaitCommand_DisplayName_ResolvedResourceDisappearsBeforeWait_ReturnsFailure()
+    public async Task WaitCommand_DisplayName_PassesThroughWhenResourceNotFound()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
 
         var backchannel = new TestAppHostAuxiliaryBackchannel
         {
-            ResourceSnapshots =
-            [
-                new ResourceSnapshot { Name = "apiservice-tzykkput", DisplayName = "apiservice", ResourceType = "Project", State = "Running" }
-            ],
-            WaitForResourceResult = new WaitForResourceResponse { Success = false, ResourceNotFound = true, ErrorMessage = "Resource 'apiservice-tzykkput' was not found." }
+            WaitForResourceResult = new WaitForResourceResponse { Success = false, ResourceNotFound = true, ErrorMessage = "Resource 'apiservice' was not found." }
         };
         var monitor = new TestAuxiliaryBackchannelMonitor();
         monitor.AddConnection("hash", "/tmp/test.sock", backchannel);
@@ -404,7 +377,7 @@ public class WaitCommandTests(ITestOutputHelper outputHelper)
         var exitCode = await result.InvokeAsync().DefaultTimeout();
 
         Assert.Equal(ExitCodeConstants.WaitResourceFailed, exitCode);
-        Assert.Equal("apiservice-tzykkput", backchannel.LastWaitResourceName);
+        Assert.Equal("apiservice", backchannel.LastWaitResourceName);
         Assert.Equal("healthy", backchannel.LastWaitStatus);
         Assert.Equal(5, backchannel.LastWaitTimeoutSeconds);
     }

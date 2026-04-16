@@ -102,36 +102,19 @@ internal sealed class WaitCommand : BaseCommand
 
         var connection = result.Connection!;
 
-        var resourceResolution = await ResolveResourceNameAsync(connection, resourceName, cancellationToken).ConfigureAwait(false);
-        if (resourceResolution.IsAmbiguous)
-        {
-            _interactionService.DisplayError(string.Format(CultureInfo.CurrentCulture, WaitCommandStrings.AmbiguousResourceName, resourceName, resourceResolution.AmbiguousMatches));
-            return ExitCodeConstants.WaitResourceFailed;
-        }
-
-        var resolvedResourceName = resourceResolution.ResolvedResourceName ?? resourceName;
-
-        return await WaitForResourceAsync(connection, resourceName, resolvedResourceName, status, timeoutSeconds, cancellationToken);
+        return await WaitForResourceAsync(connection, resourceName, status, timeoutSeconds, cancellationToken);
     }
 
     private async Task<int> WaitForResourceAsync(
         IAppHostAuxiliaryBackchannel connection,
         string resourceName,
-        string resolvedResourceName,
         string status,
         int timeoutSeconds,
         CancellationToken cancellationToken)
     {
         var statusLabel = GetStatusLabel(status);
 
-        if (string.Equals(resourceName, resolvedResourceName, StringComparison.OrdinalIgnoreCase))
-        {
-            _logger.LogDebug("Waiting for resource '{ResourceName}' to reach status '{Status}' with timeout {Timeout}s", resourceName, status, timeoutSeconds);
-        }
-        else
-        {
-            _logger.LogDebug("Waiting for resource '{ResourceName}' resolved to '{ResolvedResourceName}' to reach status '{Status}' with timeout {Timeout}s", resourceName, resolvedResourceName, status, timeoutSeconds);
-        }
+        _logger.LogDebug("Waiting for resource '{ResourceName}' to reach status '{Status}' with timeout {Timeout}s", resourceName, status, timeoutSeconds);
 
         var startTimestamp = _timeProvider.GetTimestamp();
 
@@ -139,7 +122,7 @@ internal sealed class WaitCommand : BaseCommand
             string.Format(CultureInfo.CurrentCulture, WaitCommandStrings.WaitingForResource, resourceName, statusLabel),
             async () =>
             {
-                var response = await connection.WaitForResourceAsync(resolvedResourceName, status, timeoutSeconds, cancellationToken).ConfigureAwait(false);
+                var response = await connection.WaitForResourceAsync(resourceName, status, timeoutSeconds, cancellationToken).ConfigureAwait(false);
 
                 if (response.Success)
                 {
@@ -175,28 +158,6 @@ internal sealed class WaitCommand : BaseCommand
         return exitCode;
     }
 
-    private static async Task<ResourceResolutionResult> ResolveResourceNameAsync(
-        IAppHostAuxiliaryBackchannel connection,
-        string resourceName,
-        CancellationToken cancellationToken)
-    {
-        var snapshots = await connection.GetResourceSnapshotsAsync(includeHidden: true, cancellationToken).ConfigureAwait(false);
-        var resolvedResources = ResourceSnapshotMapper.ResolveResources(resourceName, snapshots);
-        if (resolvedResources.Count == 1)
-        {
-            return new ResourceResolutionResult(resolvedResources[0].Name);
-        }
-
-        var ambiguousMatches = snapshots
-            .Where(s => string.Equals(s.DisplayName, resourceName, StringComparison.OrdinalIgnoreCase))
-            .Select(s => s.Name)
-            .ToList();
-
-        return ambiguousMatches.Count > 1
-            ? new ResourceResolutionResult(null, string.Join(", ", ambiguousMatches))
-            : new ResourceResolutionResult(null);
-    }
-
     private static bool IsValidStatus(string status)
     {
         return status is "healthy" or "up" or "down";
@@ -211,10 +172,5 @@ internal sealed class WaitCommand : BaseCommand
             "down" => "down",
             _ => status
         };
-    }
-
-    private sealed record ResourceResolutionResult(string? ResolvedResourceName, string? AmbiguousMatches = null)
-    {
-        public bool IsAmbiguous => AmbiguousMatches is not null;
     }
 }
