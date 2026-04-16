@@ -247,17 +247,6 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var appModel = serviceProvider.GetService<DistributedApplicationModel>();
-        if (appModel is not null && !appModel.Resources.Any(r => string.Equals(r.Name, request.ResourceName, StringComparisons.ResourceName)))
-        {
-            return new WaitForResourceResponse
-            {
-                Success = false,
-                ResourceNotFound = true,
-                ErrorMessage = $"Resource '{request.ResourceName}' was not found."
-            };
-        }
-
         var notificationService = serviceProvider.GetRequiredService<ResourceNotificationService>();
 
         using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(request.TimeoutSeconds));
