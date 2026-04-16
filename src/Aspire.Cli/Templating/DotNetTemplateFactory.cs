@@ -603,6 +603,12 @@ internal class DotNetTemplateFactory(
         if (inputs.Name is not { } name || !ProjectNameValidator.IsProjectNameValid(name))
         {
             var defaultName = executionContext.WorkingDirectory.Name;
+
+            if (!hostEnvironment.SupportsInteractiveInput)
+            {
+                return defaultName;
+            }
+
             name = await prompter.PromptForProjectNameAsync(defaultName, cancellationToken);
         }
 
@@ -613,7 +619,16 @@ internal class DotNetTemplateFactory(
     {
         if (inputs.Output is not { } outputPath)
         {
-            outputPath = await prompter.PromptForOutputPath(pathDeriver(projectName), cancellationToken);
+            var defaultPath = pathDeriver(projectName);
+
+            if (!hostEnvironment.SupportsInteractiveInput)
+            {
+                outputPath = defaultPath;
+            }
+            else
+            {
+                outputPath = await prompter.PromptForOutputPath(defaultPath, cancellationToken);
+            }
         }
 
         outputPath = Path.GetFullPath(outputPath);
@@ -713,6 +728,12 @@ internal class DotNetTemplateFactory(
         // If channel was specified via --channel option or global setting (but no --version), 
         // automatically select the highest version from that channel without prompting
         if (hasChannelSetting)
+        {
+            return orderedPackagesFromChannels.First();
+        }
+
+        // In non-interactive mode, automatically select the highest version
+        if (!hostEnvironment.SupportsInteractiveInput)
         {
             return orderedPackagesFromChannels.First();
         }

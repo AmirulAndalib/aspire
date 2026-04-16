@@ -4,6 +4,7 @@
 using Aspire.Cli.Configuration;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.Packaging;
+using Aspire.Cli.Utils;
 
 namespace Aspire.Cli.Templating;
 
@@ -14,7 +15,8 @@ internal sealed class TemplateNuGetConfigService(
     IInteractionService interactionService,
     CliExecutionContext executionContext,
     IPackagingService packagingService,
-    IConfigurationService configurationService)
+    IConfigurationService configurationService,
+    ICliHostEnvironment hostEnvironment)
 {
     /// <summary>
     /// Applies NuGet.config create/update behavior for a resolved package channel.
@@ -42,7 +44,7 @@ internal sealed class TemplateNuGetConfigService(
         var normalizedWorkingPath = workingDir.FullName;
         var isInPlaceCreation = string.Equals(normalizedOutputPath, normalizedWorkingPath, StringComparison.OrdinalIgnoreCase);
 
-        var nugetConfigPrompter = new NuGetConfigPrompter(interactionService);
+        var nugetConfigPrompter = new NuGetConfigPrompter(interactionService, hostEnvironment);
 
         if (!isInPlaceCreation)
         {

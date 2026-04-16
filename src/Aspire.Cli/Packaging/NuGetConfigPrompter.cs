@@ -3,6 +3,7 @@
 
 using Aspire.Cli.Interaction;
 using Aspire.Cli.Resources;
+using Aspire.Cli.Utils;
 
 namespace Aspire.Cli.Packaging;
 
@@ -12,11 +13,14 @@ namespace Aspire.Cli.Packaging;
 internal class NuGetConfigPrompter
 {
     private readonly IInteractionService _interactionService;
+    private readonly ICliHostEnvironment _hostEnvironment;
 
-    public NuGetConfigPrompter(IInteractionService interactionService)
+    public NuGetConfigPrompter(IInteractionService interactionService, ICliHostEnvironment hostEnvironment)
     {
         ArgumentNullException.ThrowIfNull(interactionService);
+        ArgumentNullException.ThrowIfNull(hostEnvironment);
         _interactionService = interactionService;
+        _hostEnvironment = hostEnvironment;
     }
 
     /// <summary>
@@ -47,14 +51,23 @@ internal class NuGetConfigPrompter
 
         if (!hasConfigInTargetDir)
         {
-            // Ask for confirmation before creating the file
-            var choice = await _interactionService.PromptForSelectionAsync(
-                TemplatingStrings.CreateNugetConfigConfirmation,
-                [TemplatingStrings.Yes, TemplatingStrings.No],
-                c => c,
-                cancellationToken: cancellationToken);
+            bool shouldCreate;
 
-            if (string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput))
+            if (!_hostEnvironment.SupportsInteractiveInput)
+            {
+                shouldCreate = true;
+            }
+            else
+            {
+                var choice = await _interactionService.PromptForSelectionAsync(
+                    TemplatingStrings.CreateNugetConfigConfirmation,
+                    [TemplatingStrings.Yes, TemplatingStrings.No],
+                    c => c,
+                    cancellationToken: cancellationToken);
+                shouldCreate = string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput);
+            }
+
+            if (shouldCreate)
             {
                 await NuGetConfigMerger.CreateOrUpdateAsync(targetDirectory, channel, cancellationToken: cancellationToken);
                 _interactionService.DisplayMessage(KnownEmojis.Package, TemplatingStrings.NuGetConfigCreatedConfirmationMessage);
@@ -62,13 +75,23 @@ internal class NuGetConfigPrompter
         }
         else if (hasMissingSources)
         {
-            var updateChoice = await _interactionService.PromptForSelectionAsync(
-                TemplatingStrings.UpdateNuGetConfigConfirmation,
-                [TemplatingStrings.Yes, TemplatingStrings.No],
-                c => c,
-                cancellationToken: cancellationToken);
+            bool shouldUpdate;
 
-            if (string.Equals(updateChoice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput))
+            if (!_hostEnvironment.SupportsInteractiveInput)
+            {
+                shouldUpdate = true;
+            }
+            else
+            {
+                var updateChoice = await _interactionService.PromptForSelectionAsync(
+                    TemplatingStrings.UpdateNuGetConfigConfirmation,
+                    [TemplatingStrings.Yes, TemplatingStrings.No],
+                    c => c,
+                    cancellationToken: cancellationToken);
+                shouldUpdate = string.Equals(updateChoice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput);
+            }
+
+            if (shouldUpdate)
             {
                 await NuGetConfigMerger.CreateOrUpdateAsync(targetDirectory, channel, cancellationToken: cancellationToken);
                 _interactionService.DisplayMessage(KnownEmojis.Package, TemplatingStrings.NuGetConfigUpdatedConfirmationMessage);

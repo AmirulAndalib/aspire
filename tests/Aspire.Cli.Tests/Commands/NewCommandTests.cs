@@ -575,6 +575,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options => {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = (sp) => {
                 testInteractionService = new TestInteractionService();
                 return testInteractionService;
@@ -723,6 +724,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -814,6 +816,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
+            options.InteractionServiceFactory = _ => new TestInteractionService();
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -879,6 +883,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = _ => new TestInteractionService
             {
                 PromptForSelectionCallback = (promptText, choices, choiceFormatter, cancellationToken) => choices.Cast<object>().First()
@@ -964,6 +969,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
+            options.InteractionServiceFactory = _ => new TestInteractionService();
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -1676,6 +1683,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
             options.ExtensionBackchannelFactory = _ => new TestExtensionBackchannel
             {
@@ -1744,6 +1752,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
             options.ExtensionBackchannelFactory = _ => new TestExtensionBackchannel
             {
@@ -1812,6 +1821,9 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
+            // Use TestInteractionService (not ExtensionInteractionService) to stay in console/non-extension mode
+            options.InteractionServiceFactory = _ => new TestInteractionService();
             // Default InteractionServiceFactory creates ConsoleInteractionService (not extension mode)
 
             options.NewCommandPrompterFactory = (sp) =>
@@ -1880,6 +1892,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
             var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
             {
+                options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
                 options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
                 options.ExtensionBackchannelFactory = _ => new TestExtensionBackchannel
                 {

@@ -267,6 +267,14 @@ internal sealed class NewCommand : BaseCommand, IPackageMetaPrefetchingCommand
             return null;
         }
 
+        if (!_hostEnvironment.SupportsInteractiveInput)
+        {
+            InteractionService.DisplayError(NewCommandStrings.NonInteractiveTemplateRequired);
+            var templateNames = string.Join(", ", templatesForPrompt.Select(t => t.Name));
+            InteractionService.DisplaySubtleMessage(string.Format(CultureInfo.CurrentCulture, InteractionServiceStrings.NonInteractiveAvailableValues, templateNames));
+            return null;
+        }
+
         var result = await _prompter.PromptForTemplateAsync(templatesForPrompt, cancellationToken);
 
         // The prompt is cleared after selection.

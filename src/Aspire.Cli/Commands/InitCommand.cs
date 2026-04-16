@@ -347,7 +347,7 @@ internal sealed class InitCommand : BaseCommand, IPackageMetaPrefetchingCommand
 
         // Create or update NuGet.config for explicit channels in the solution directory
         // This matches the behavior of 'aspire new' when creating in-place
-        var nugetConfigPrompter = new NuGetConfigPrompter(InteractionService);
+        var nugetConfigPrompter = new NuGetConfigPrompter(InteractionService, _hostEnvironment);
         await nugetConfigPrompter.PromptToCreateOrUpdateAsync(
             ExecutionContext.WorkingDirectory,
             selectedTemplateDetails.Channel,
