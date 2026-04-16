@@ -290,29 +290,16 @@ internal class DotNetTemplateFactory(
 
     private async Task PromptForDevLocalhostTldOptionAsync(ParseResult result, List<string> extraArgs, CancellationToken cancellationToken)
     {
-        var fallback = FallbackOptions.Create(result, _localhostTldOption);
-        var (wasProvided, value) = fallback.Resolve();
+        var fallback = FallbackOptions.CreateBoolAsSelection(result, _localhostTldOption, TemplatingStrings.Yes, TemplatingStrings.No);
 
-        bool? useLocalhostTld;
-        if (wasProvided)
-        {
-            useLocalhostTld = value;
-        }
-        else if (!hostEnvironment.SupportsInteractiveInput)
-        {
-            return;
-        }
-        else
-        {
-            useLocalhostTld = await interactionService.PromptForSelectionAsync(TemplatingStrings.UseLocalhostTld_Prompt, [TemplatingStrings.No, TemplatingStrings.Yes], choice => choice, cancellationToken: cancellationToken) switch
-            {
-                var choice when string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput) => true,
-                var choice when string.Equals(choice, TemplatingStrings.No, StringComparisons.CliInputOrOutput) => false,
-                _ => throw new InvalidOperationException(TemplatingStrings.UseLocalhostTld_UnexpectedChoice)
-            };
-        }
+        var selected = await interactionService.PromptForSelectionAsync(
+            TemplatingStrings.UseLocalhostTld_Prompt,
+            [TemplatingStrings.No, TemplatingStrings.Yes],
+            choice => choice,
+            fallback: fallback,
+            cancellationToken: cancellationToken);
 
-        if (useLocalhostTld ?? false)
+        if (string.Equals(selected, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput))
         {
             interactionService.DisplayMessage(KnownEmojis.CheckMark, TemplatingStrings.UseLocalhostTld_UsingLocalhostTld);
             extraArgs.Add("--localhost-tld");
@@ -321,29 +308,16 @@ internal class DotNetTemplateFactory(
 
     private async Task PromptForRedisCacheOptionAsync(ParseResult result, List<string> extraArgs, CancellationToken cancellationToken)
     {
-        var fallback = FallbackOptions.Create(result, _useRedisCacheOption);
-        var (wasProvided, value) = fallback.Resolve();
+        var fallback = FallbackOptions.CreateBoolAsSelection(result, _useRedisCacheOption, TemplatingStrings.Yes, TemplatingStrings.No);
 
-        bool? useRedisCache;
-        if (wasProvided)
-        {
-            useRedisCache = value;
-        }
-        else if (!hostEnvironment.SupportsInteractiveInput)
-        {
-            return;
-        }
-        else
-        {
-            useRedisCache = await interactionService.PromptForSelectionAsync(TemplatingStrings.UseRedisCache_Prompt, [TemplatingStrings.Yes, TemplatingStrings.No], choice => choice, cancellationToken: cancellationToken) switch
-            {
-                var choice when string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput) => true,
-                var choice when string.Equals(choice, TemplatingStrings.No, StringComparisons.CliInputOrOutput) => false,
-                _ => throw new InvalidOperationException(TemplatingStrings.UseRedisCache_UnexpectedChoice)
-            };
-        }
+        var selected = await interactionService.PromptForSelectionAsync(
+            TemplatingStrings.UseRedisCache_Prompt,
+            [TemplatingStrings.Yes, TemplatingStrings.No],
+            choice => choice,
+            fallback: fallback,
+            cancellationToken: cancellationToken);
 
-        if (useRedisCache ?? false)
+        if (string.Equals(selected, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput))
         {
             interactionService.DisplayMessage(KnownEmojis.CheckMark, TemplatingStrings.UseRedisCache_UsingRedisCache);
             extraArgs.Add("--use-redis-cache");
@@ -353,7 +327,7 @@ internal class DotNetTemplateFactory(
     private async Task PromptForTestFrameworkOptionsAsync(ParseResult result, List<string> extraArgs, CancellationToken cancellationToken)
     {
         var fallback = FallbackOptions.Create(result, _testFrameworkOption);
-        var (wasProvided, testFramework) = fallback.Resolve();
+        var (wasProvided, _) = fallback.Resolve();
 
         if (!wasProvided)
         {
@@ -372,17 +346,18 @@ internal class DotNetTemplateFactory(
             {
                 return;
             }
-
-            testFramework = await interactionService.PromptForSelectionAsync(
-                TemplatingStrings.PromptForTFM_Prompt,
-                ["MSTest", "NUnit", "xUnit.net", TemplatingStrings.None],
-                choice => choice,
-                cancellationToken: cancellationToken);
         }
 
-        if (testFramework is { } && !string.Equals(testFramework, TemplatingStrings.None, StringComparisons.CliInputOrOutput))
+        var testFramework = await interactionService.PromptForSelectionAsync(
+            TemplatingStrings.PromptForTFM_Prompt,
+            ["MSTest", "NUnit", "xUnit.net", TemplatingStrings.None],
+            choice => choice,
+            fallback: fallback,
+            cancellationToken: cancellationToken);
+
+        if (!string.Equals(testFramework, TemplatingStrings.None, StringComparisons.CliInputOrOutput))
         {
-            if (testFramework.ToLower() == "xunit.net")
+            if (string.Equals(testFramework, "xUnit.net", StringComparison.OrdinalIgnoreCase))
             {
                 await PromptForXUnitVersionOptionsAsync(result, extraArgs, cancellationToken);
             }
@@ -396,27 +371,17 @@ internal class DotNetTemplateFactory(
 
     private async Task PromptForXUnitVersionOptionsAsync(ParseResult result, List<string> extraArgs, CancellationToken cancellationToken)
     {
-        var fallback = FallbackOptions.Create(result, _xunitVersionOption);
-        var (wasProvided, xunitVersion) = fallback.Resolve();
+        var fallback = FallbackOptions.Create(result, _xunitVersionOption, "v3mtp");
 
-        if (!wasProvided || string.IsNullOrEmpty(xunitVersion))
-        {
-            if (!hostEnvironment.SupportsInteractiveInput)
-            {
-                xunitVersion = "v3mtp";
-            }
-            else
-            {
-                xunitVersion = await interactionService.PromptForSelectionAsync(
-                    TemplatingStrings.EnterXUnitVersion_Prompt,
-                    ["v2", "v3", "v3mtp"],
-                    choice => choice,
-                    cancellationToken: cancellationToken);
-            }
-        }
+        var xunitVersion = await interactionService.PromptForSelectionAsync(
+            TemplatingStrings.EnterXUnitVersion_Prompt,
+            ["v2", "v3", "v3mtp"],
+            choice => choice,
+            fallback: fallback,
+            cancellationToken: cancellationToken);
 
         extraArgs.Add("--xunit-version");
-        extraArgs.Add(xunitVersion!);
+        extraArgs.Add(xunitVersion);
     }
 
     private void ApplyExtraAspireStarterOptions(Command command)

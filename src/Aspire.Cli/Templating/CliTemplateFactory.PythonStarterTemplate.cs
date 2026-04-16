@@ -137,31 +137,16 @@ internal sealed partial class CliTemplateFactory
 
     private async Task<bool> ResolveUseRedisCacheAsync(System.CommandLine.ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var fallback = FallbackOptions.Create(parseResult, _useRedisCacheOption);
-        var (wasProvided, value) = fallback.Resolve();
+        var fallback = FallbackOptions.CreateBoolAsSelection(parseResult, _useRedisCacheOption, TemplatingStrings.Yes, TemplatingStrings.No);
 
-        bool useRedisCache;
-        if (wasProvided)
-        {
-            useRedisCache = value ?? false;
-        }
-        else if (!_hostEnvironment.SupportsInteractiveInput)
-        {
-            return false;
-        }
-        else
-        {
-            useRedisCache = await _interactionService.PromptForSelectionAsync(
-                TemplatingStrings.UseRedisCache_Prompt,
-                [TemplatingStrings.Yes, TemplatingStrings.No],
-                choice => choice,
-                cancellationToken: cancellationToken) switch
-            {
-                var choice when string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput) => true,
-                var choice when string.Equals(choice, TemplatingStrings.No, StringComparisons.CliInputOrOutput) => false,
-                _ => throw new InvalidOperationException(TemplatingStrings.UseRedisCache_UnexpectedChoice)
-            };
-        }
+        var selected = await _interactionService.PromptForSelectionAsync(
+            TemplatingStrings.UseRedisCache_Prompt,
+            [TemplatingStrings.Yes, TemplatingStrings.No],
+            choice => choice,
+            fallback: fallback,
+            cancellationToken: cancellationToken);
+
+        var useRedisCache = string.Equals(selected, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput);
 
         if (useRedisCache)
         {

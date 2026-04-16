@@ -62,6 +62,16 @@ internal sealed class FallbackOptions<T>
 /// </summary>
 internal static class FallbackOptions
 {
+    public static (bool WasProvided, T? Value) Resolve<T>(FallbackOptions<T>? options)
+    {
+        if (options == null)
+        {
+            return default;
+        }
+
+        return options.Resolve();
+    }
+
     public static FallbackOptions<T> Create<T>(ParseResult parseResult, Option<T> option) =>
         new(parseResult, FormatOptionName(option), BuildOptionResolver(option), default, hasDefaultValue: false);
 
@@ -73,6 +83,14 @@ internal static class FallbackOptions
 
     public static FallbackOptions<T> Create<T>(ParseResult parseResult, Argument<T> argument, T defaultValue) =>
         new(parseResult, FormatArgumentName(argument), BuildArgumentResolver(argument), defaultValue, hasDefaultValue: true);
+
+    /// <summary>
+    /// Creates a <see cref="FallbackOptions{T}"/> for a <c>bool?</c> option that maps to Yes/No selection choices.
+    /// When the option is explicitly provided, resolves to <paramref name="trueValue"/> or <paramref name="falseValue"/>.
+    /// When not provided in non-interactive mode, defaults to <paramref name="falseValue"/>.
+    /// </summary>
+    public static FallbackOptions<string?> CreateBoolAsSelection(ParseResult parseResult, Option<bool?> option, string trueValue, string falseValue) =>
+        new(parseResult, FormatOptionName(option), BuildBoolAsSelectionResolver(option, trueValue, falseValue), falseValue, hasDefaultValue: true);
 
     private static string FormatOptionName<T>(Option<T> option) => $"'--{option.Name}'";
 
@@ -97,6 +115,19 @@ internal static class FallbackOptions
             if (result is not null && !result.Implicit)
             {
                 return (true, parseResult.GetValue(argument));
+            }
+
+            return (false, default);
+        };
+
+    private static Func<ParseResult, (bool, string?)> BuildBoolAsSelectionResolver(Option<bool?> option, string trueValue, string falseValue) =>
+        parseResult =>
+        {
+            var result = parseResult.GetResult(option);
+            if (result is not null && !result.Implicit)
+            {
+                var value = parseResult.GetValue(option);
+                return (true, value == true ? trueValue : falseValue);
             }
 
             return (false, default);

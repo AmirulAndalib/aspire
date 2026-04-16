@@ -124,31 +124,16 @@ internal sealed partial class CliTemplateFactory
 
     private async Task<bool> ResolveUseLocalhostTldAsync(System.CommandLine.ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var fallback = FallbackOptions.Create(parseResult, _localhostTldOption);
-        var (wasProvided, value) = fallback.Resolve();
+        var fallback = FallbackOptions.CreateBoolAsSelection(parseResult, _localhostTldOption, TemplatingStrings.Yes, TemplatingStrings.No);
 
-        bool useLocalhostTld;
-        if (wasProvided)
-        {
-            useLocalhostTld = value ?? false;
-        }
-        else if (!_hostEnvironment.SupportsInteractiveInput)
-        {
-            return false;
-        }
-        else
-        {
-            useLocalhostTld = await _interactionService.PromptForSelectionAsync(
-                TemplatingStrings.UseLocalhostTld_Prompt,
-                [TemplatingStrings.No, TemplatingStrings.Yes],
-                choice => choice,
-                cancellationToken: cancellationToken) switch
-            {
-                var choice when string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput) => true,
-                var choice when string.Equals(choice, TemplatingStrings.No, StringComparisons.CliInputOrOutput) => false,
-                _ => throw new InvalidOperationException(TemplatingStrings.UseLocalhostTld_UnexpectedChoice)
-            };
-        }
+        var selected = await _interactionService.PromptForSelectionAsync(
+            TemplatingStrings.UseLocalhostTld_Prompt,
+            [TemplatingStrings.No, TemplatingStrings.Yes],
+            choice => choice,
+            fallback: fallback,
+            cancellationToken: cancellationToken);
+
+        var useLocalhostTld = string.Equals(selected, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput);
 
         if (useLocalhostTld)
         {
