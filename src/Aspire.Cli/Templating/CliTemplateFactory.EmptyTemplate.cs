@@ -28,20 +28,13 @@ internal sealed partial class CliTemplateFactory
             return new TemplateResult(ExitCodeConstants.InvalidCommand);
         }
 
-        var projectName = inputs.Name;
-        if (string.IsNullOrWhiteSpace(projectName))
+        var (projectNameResolved, projectName) = await ResolveProjectNameAsync(inputs, cancellationToken);
+        if (!projectNameResolved || projectName is null)
         {
-            var defaultName = _executionContext.WorkingDirectory.Name;
-            projectName = await _prompter.PromptForProjectNameAsync(defaultName, cancellationToken);
+            return new TemplateResult(ExitCodeConstants.InvalidCommand);
         }
 
-        var outputPath = inputs.Output;
-        if (string.IsNullOrWhiteSpace(outputPath))
-        {
-            var defaultOutputPath = $"./{projectName}";
-            outputPath = await _prompter.PromptForOutputPath(defaultOutputPath, cancellationToken);
-        }
-        outputPath = Path.GetFullPath(outputPath, _executionContext.WorkingDirectory.FullName);
+        var outputPath = await ResolveOutputPathAsync(inputs.Output, projectName, cancellationToken);
 
         _logger.LogDebug("Applying empty AppHost template. LanguageId: {LanguageId}, Language: {LanguageDisplayName}, ProjectName: {ProjectName}, OutputPath: {OutputPath}.", languageId, language.DisplayName, projectName, outputPath);
 

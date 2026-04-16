@@ -14,11 +14,10 @@ internal sealed partial class CliTemplateFactory
 {
     private async Task<TemplateResult> ApplyTypeScriptStarterTemplateAsync(CallbackTemplate _, TemplateInputs inputs, System.CommandLine.ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var projectName = inputs.Name;
-        if (string.IsNullOrWhiteSpace(projectName))
+        var (projectNameResolved, projectName) = await ResolveProjectNameAsync(inputs, cancellationToken);
+        if (!projectNameResolved || projectName is null)
         {
-            var defaultName = _executionContext.WorkingDirectory.Name;
-            projectName = await _prompter.PromptForProjectNameAsync(defaultName, cancellationToken);
+            return new TemplateResult(ExitCodeConstants.InvalidCommand);
         }
 
         if (string.IsNullOrWhiteSpace(inputs.Version))
@@ -28,13 +27,7 @@ internal sealed partial class CliTemplateFactory
         }
 
         var aspireVersion = inputs.Version;
-        var outputPath = inputs.Output;
-        if (string.IsNullOrWhiteSpace(outputPath))
-        {
-            var defaultOutputPath = $"./{projectName}";
-            outputPath = await _prompter.PromptForOutputPath(defaultOutputPath, cancellationToken);
-        }
-        outputPath = Path.GetFullPath(outputPath, _executionContext.WorkingDirectory.FullName);
+        var outputPath = await ResolveOutputPathAsync(inputs.Output, projectName, cancellationToken);
 
         _logger.LogDebug("Applying TypeScript starter template. ProjectName: {ProjectName}, OutputPath: {OutputPath}, AspireVersion: {AspireVersion}.", projectName, outputPath, aspireVersion);
 

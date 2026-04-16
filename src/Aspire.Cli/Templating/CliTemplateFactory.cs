@@ -273,4 +273,47 @@ internal sealed partial class CliTemplateFactory : ITemplateFactory
             _interactionService.DisplayMessage(KnownEmojis.Information, TemplatingStrings.RunAspireRun);
         }
     }
+
+    private async Task<(bool Success, string? ProjectName)> ResolveProjectNameAsync(TemplateInputs inputs, CancellationToken cancellationToken)
+    {
+        if (inputs.Name is { } projectName && ProjectNameValidator.IsProjectNameValid(projectName))
+        {
+            return (true, projectName);
+        }
+
+        if (!_hostEnvironment.SupportsInteractiveInput)
+        {
+            if (inputs.Name is not null)
+            {
+                _interactionService.DisplayError(NewCommandStrings.InvalidProjectName);
+                return (false, null);
+            }
+
+            var defaultName = _executionContext.WorkingDirectory.Name;
+            if (!ProjectNameValidator.IsProjectNameValid(defaultName))
+            {
+                _interactionService.DisplayError(NewCommandStrings.InvalidProjectName);
+                return (false, null);
+            }
+
+            return (true, defaultName);
+        }
+
+        var promptedName = await _prompter.PromptForProjectNameAsync(_executionContext.WorkingDirectory.Name, cancellationToken);
+        return (true, promptedName);
+    }
+
+    private async Task<string> ResolveOutputPathAsync(string? outputPath, string projectName, CancellationToken cancellationToken)
+    {
+        var resolvedOutputPath = outputPath;
+        if (string.IsNullOrWhiteSpace(resolvedOutputPath))
+        {
+            var defaultOutputPath = $"./{projectName}";
+            resolvedOutputPath = _hostEnvironment.SupportsInteractiveInput
+                ? await _prompter.PromptForOutputPath(defaultOutputPath, cancellationToken)
+                : defaultOutputPath;
+        }
+
+        return Path.GetFullPath(resolvedOutputPath, _executionContext.WorkingDirectory.FullName);
+    }
 }

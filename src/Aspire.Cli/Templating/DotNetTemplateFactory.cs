@@ -473,7 +473,12 @@ internal class DotNetTemplateFactory(
             return new TemplateResult(ExitCodeConstants.SdkNotInstalled);
         }
 
-        var name = await GetProjectNameAsync(inputs, cancellationToken);
+        var (nameResolved, name) = await GetProjectNameAsync(inputs, cancellationToken);
+        if (!nameResolved || name is null)
+        {
+            return new TemplateResult(ExitCodeConstants.InvalidCommand);
+        }
+
         var outputPath = await GetOutputPathAsync(inputs, template.PathDeriver, name, cancellationToken);
 
         return await ApplyTemplateAsync(template, inputs, name, outputPath, parseResult, extraArgsCallback, cancellationToken);
@@ -598,25 +603,46 @@ internal class DotNetTemplateFactory(
         }
     }
 
-    private async Task<string> GetProjectNameAsync(TemplateInputs inputs, CancellationToken cancellationToken)
+    private async Task<(bool Success, string? ProjectName)> GetProjectNameAsync(TemplateInputs inputs, CancellationToken cancellationToken)
     {
-        if (inputs.Name is not { } name || !ProjectNameValidator.IsProjectNameValid(name))
+        if (inputs.Name is { } name && ProjectNameValidator.IsProjectNameValid(name))
         {
-            var defaultName = executionContext.WorkingDirectory.Name;
-            name = await prompter.PromptForProjectNameAsync(defaultName, cancellationToken);
+            return (true, name);
         }
 
-        return name;
+        if (!hostEnvironment.SupportsInteractiveInput)
+        {
+            if (inputs.Name is not null)
+            {
+                interactionService.DisplayError(NewCommandStrings.InvalidProjectName);
+                return (false, null);
+            }
+
+            var defaultName = executionContext.WorkingDirectory.Name;
+            if (!ProjectNameValidator.IsProjectNameValid(defaultName))
+            {
+                interactionService.DisplayError(NewCommandStrings.InvalidProjectName);
+                return (false, null);
+            }
+
+            return (true, defaultName);
+        }
+
+        var promptedName = await prompter.PromptForProjectNameAsync(executionContext.WorkingDirectory.Name, cancellationToken);
+        return (true, promptedName);
     }
 
     private async Task<string> GetOutputPathAsync(TemplateInputs inputs, Func<string, string> pathDeriver, string projectName, CancellationToken cancellationToken)
     {
         if (inputs.Output is not { } outputPath)
         {
-            outputPath = await prompter.PromptForOutputPath(pathDeriver(projectName), cancellationToken);
+            var defaultOutputPath = pathDeriver(projectName);
+            outputPath = hostEnvironment.SupportsInteractiveInput
+                ? await prompter.PromptForOutputPath(defaultOutputPath, cancellationToken)
+                : defaultOutputPath;
         }
 
-        outputPath = Path.GetFullPath(outputPath);
+        outputPath = Path.GetFullPath(outputPath, executionContext.WorkingDirectory.FullName);
 
         // When running in extension mode (VS Code), the folder picker returns the parent
         // directory the user selected. Append the project name as a subdirectory so the

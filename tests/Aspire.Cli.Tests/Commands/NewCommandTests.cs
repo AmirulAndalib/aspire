@@ -302,6 +302,75 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public async Task NewCommandNonInteractiveWithoutOutputUsesDefaultOutputPathForDotNetTemplate()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        string? capturedOutputPath = null;
+        var promptedForOutputPath = false;
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.CliHostEnvironmentFactory = (sp) =>
+            {
+                var configuration = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+                return new CliHostEnvironment(configuration, nonInteractive: true);
+            };
+
+            options.NewCommandPrompterFactory = (sp) =>
+            {
+                var interactionService = sp.GetRequiredService<IInteractionService>();
+                var prompter = new TestNewCommandPrompter(interactionService);
+                prompter.PromptForOutputPathCallback = (_) =>
+                {
+                    promptedForOutputPath = true;
+                    throw new InvalidOperationException("Should not prompt for output in non-interactive mode.");
+                };
+
+                return prompter;
+            };
+
+            options.DotNetCliRunnerFactory = (_) =>
+            {
+                var runner = new TestDotNetCliRunner();
+                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, runnerOptions, cancellationToken) =>
+                {
+                    var package = new NuGetPackage()
+                    {
+                        Id = "Aspire.ProjectTemplates",
+                        Source = "nuget",
+                        Version = "9.2.0"
+                    };
+
+                    return (0, new NuGetPackage[] { package });
+                };
+
+                runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, invocationOptions, ct) =>
+                {
+                    return (0, version);
+                };
+
+                runner.NewProjectAsyncCallback = (templateName, projectName, outputPath, invocationOptions, ct) =>
+                {
+                    capturedOutputPath = outputPath;
+                    return 0;
+                };
+
+                return runner;
+            };
+        });
+
+        var provider = services.BuildServiceProvider();
+        var command = provider.GetRequiredService<NewCommand>();
+        var result = command.Parse("new aspire-starter --name SmokeApp");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(0, exitCode);
+        Assert.False(promptedForOutputPath);
+        Assert.Equal(Path.Combine(workspace.WorkspaceRoot.FullName, "SmokeApp"), capturedOutputPath);
+    }
+
+    [Fact]
     public async Task NewCommandWithChannelOptionUsesSpecifiedChannel()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
@@ -1276,6 +1345,73 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public async Task NewCommandNonInteractiveWithoutOutputUsesDefaultOutputPathForCliTemplate()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        string? capturedTargetDirectory = null;
+        var promptedForOutputPath = false;
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.CliHostEnvironmentFactory = (sp) =>
+            {
+                var configuration = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+                return new CliHostEnvironment(configuration, nonInteractive: true);
+            };
+
+            options.NewCommandPrompterFactory = (sp) =>
+            {
+                var interactionService = sp.GetRequiredService<IInteractionService>();
+                var prompter = new TestNewCommandPrompter(interactionService);
+                prompter.PromptForOutputPathCallback = (_) =>
+                {
+                    promptedForOutputPath = true;
+                    throw new InvalidOperationException("Should not prompt for output in non-interactive mode.");
+                };
+
+                return prompter;
+            };
+
+            options.DotNetCliRunnerFactory = (_) =>
+            {
+                var runner = new TestDotNetCliRunner();
+                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, runnerOptions, cancellationToken) =>
+                {
+                    var package = new NuGetPackage()
+                    {
+                        Id = "Aspire.ProjectTemplates",
+                        Source = "nuget",
+                        Version = "9.2.0"
+                    };
+
+                    return (0, new NuGetPackage[] { package });
+                };
+
+                return runner;
+            };
+        });
+
+        services.AddSingleton<IScaffoldingService>(new TestScaffoldingService
+        {
+            ScaffoldAsyncCallback = (context, cancellationToken) =>
+            {
+                capturedTargetDirectory = context.TargetDirectory.FullName;
+                return Task.FromResult(true);
+            }
+        });
+
+        var provider = services.BuildServiceProvider();
+        var command = provider.GetRequiredService<NewCommand>();
+        var result = command.Parse("new aspire-ts-empty --name TestApp --localhost-tld false");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(0, exitCode);
+        Assert.False(promptedForOutputPath);
+        Assert.Equal(Path.Combine(workspace.WorkspaceRoot.FullName, "TestApp"), capturedTargetDirectory);
+    }
+
+    [Fact]
     public async Task NewCommandWithEmptyTemplateAndTypeScriptPromptsForLocalhostTldAndUsesSelection()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
@@ -1676,6 +1812,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
             options.ExtensionBackchannelFactory = _ => new TestExtensionBackchannel
             {
@@ -1744,6 +1881,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
             options.ExtensionBackchannelFactory = _ => new TestExtensionBackchannel
             {
@@ -1812,7 +1950,11 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
-            // Default InteractionServiceFactory creates ConsoleInteractionService (not extension mode)
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
+            options.InteractionServiceFactory = _ => new TestInteractionService
+            {
+                ConfirmCallback = (_, _) => false
+            };
 
             options.NewCommandPrompterFactory = (sp) =>
             {
@@ -1880,6 +2022,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
             var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
             {
+                options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
                 options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
                 options.ExtensionBackchannelFactory = _ => new TestExtensionBackchannel
                 {
