@@ -253,7 +253,12 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
 
         if (targetResource is null)
         {
-            return new WaitForResourceResponse { Success = false, ResourceNotFound = true, ErrorMessage = $"Resource '{request.ResourceName}' was not found." };
+            return new WaitForResourceResponse
+            {
+                Success = false,
+                ResourceNotFound = true,
+                ErrorMessage = $"Resource '{request.ResourceName}' was not found."
+            };
         }
 
         using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(request.TimeoutSeconds));
@@ -309,6 +314,7 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
             HealthStatus = resourceEvent.Snapshot.HealthStatus?.ToString()
         };
 
+        // Keep this aligned with the local ShouldYield helper in ResourceNotificationService.WaitForResourceHealthyAsync.
         static bool ShouldYield(WaitBehavior waitBehavior, CustomResourceSnapshot snapshot) =>
             waitBehavior switch
             {
