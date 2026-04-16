@@ -279,7 +279,7 @@ internal sealed class NewCommand : BaseCommand, IPackageMetaPrefetchingCommand
             InteractionService.DisplayError(NewCommandStrings.NonInteractiveTemplateRequired);
             var templateNames = string.Join(", ", templatesForPrompt.Select(t => t.Name));
             InteractionService.DisplaySubtleMessage(string.Format(CultureInfo.CurrentCulture, InteractionServiceStrings.NonInteractiveAvailableValues, templateNames));
-            return null;
+            throw new NonInteractiveException("template");
         }
 
         var result = await _prompter.PromptForTemplateAsync(templatesForPrompt, cancellationToken);
