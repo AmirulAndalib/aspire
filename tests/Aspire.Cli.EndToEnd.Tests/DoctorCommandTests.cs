@@ -139,7 +139,12 @@ public sealed class DoctorCommandTests(ITestOutputHelper output)
         await auto.WaitUntilTextAsync("Created apphost.ts", timeout: TimeSpan.FromMinutes(2));
         await auto.WaitForSuccessPromptAsync(counter);
 
-        TypeScriptAppHostToolchainTestHelpers.SetPackageManager(workspace.WorkspaceRoot.FullName, toolchain);
+        TypeScriptAppHostToolchainTestHelpers.SetPackageManager(workspace.WorkspaceRoot.FullName, toolchain, cleanInstallState: true);
+
+        // Verify the configured toolchain can start and stop the generated AppHost
+        // before doctor is asked to report that the toolchain is missing from PATH.
+        await auto.AspireStartAsync(counter);
+        await auto.AspireStopAsync(counter);
 
         await auto.TypeAsync("""mkdir -p ./doctor-path && ln -sf "$(command -v aspire)" ./doctor-path/aspire && ln -sf "$(command -v dotnet)" ./doctor-path/dotnet && if command -v docker >/dev/null 2>&1; then ln -sf "$(command -v docker)" ./doctor-path/docker; fi && export PATH="$PWD/doctor-path" """);
         await auto.EnterAsync();
