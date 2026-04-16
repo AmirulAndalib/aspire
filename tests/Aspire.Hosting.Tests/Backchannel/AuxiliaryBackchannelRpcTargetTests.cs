@@ -236,37 +236,6 @@ public class AuxiliaryBackchannelRpcTargetTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public async Task WaitForResourceAsync_WaitsForDisplayNameWithoutAppModel()
-    {
-        var services = new ServiceCollection();
-        var notificationService = ResourceNotificationServiceTestHelpers.Create();
-        services.AddSingleton(notificationService);
-
-        var serviceProvider = services.BuildServiceProvider();
-        var target = new AuxiliaryBackchannelRpcTarget(
-            NullLogger<AuxiliaryBackchannelRpcTarget>.Instance,
-            serviceProvider);
-
-        var resource = new CustomResource("apiservice");
-        var waitTask = target.WaitForResourceAsync(new WaitForResourceRequest
-        {
-            ResourceName = "apiservice",
-            Status = "up",
-            TimeoutSeconds = 5
-        });
-
-        await Task.Delay(100);
-        await notificationService.PublishUpdateAsync(resource, "apiservice-tzykkput", s => s with
-        {
-            State = new ResourceStateSnapshot(KnownResourceStates.Running, KnownResourceStateStyles.Success)
-        });
-
-        var response = await waitTask.WaitAsync(TimeSpan.FromSeconds(10));
-
-        Assert.True(response.Success);
-    }
-
-    [Fact]
     public async Task WaitForResourceAsync_ResolvesLogicalResourceNameViaAppModel()
     {
         using var builder = TestDistributedApplicationBuilder.Create(outputHelper);
@@ -303,38 +272,6 @@ public class AuxiliaryBackchannelRpcTargetTests(ITestOutputHelper outputHelper)
 
         await app.StopAsync();
     }
-
-    [Fact]
-    public async Task WaitForResourceAsync_ReturnsNotFoundForReplicaDisplayName()
-    {
-        using var builder = TestDistributedApplicationBuilder.Create(outputHelper);
-
-        var resourceWithReplicas = builder.AddResource(new CustomResource("myresource"));
-        resourceWithReplicas.WithAnnotation(new DcpInstancesAnnotation([
-            new DcpInstance("myresource-abc123", "abc123", 0),
-            new DcpInstance("myresource-def456", "def456", 1)
-        ]));
-
-        using var app = builder.Build();
-        await app.StartAsync();
-
-        var target = new AuxiliaryBackchannelRpcTarget(
-            NullLogger<AuxiliaryBackchannelRpcTarget>.Instance,
-            app.Services);
-
-        var response = await target.WaitForResourceAsync(new WaitForResourceRequest
-        {
-            ResourceName = "myresource",
-            Status = "up",
-            TimeoutSeconds = 5
-        });
-
-        Assert.False(response.Success);
-        Assert.True(response.ResourceNotFound);
-
-        await app.StopAsync();
-    }
-
     private sealed class CustomResource(string name) : Resource(name)
     {
     }

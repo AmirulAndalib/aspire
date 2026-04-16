@@ -392,6 +392,8 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
             return new WaitResourceTarget(requestedResourceName, resourceEvent.ResourceId, null);
         }
 
+        // During startup the resource may not have published its first snapshot yet, so fall back to
+        // the app model to resolve the requested logical name or resolved resource id.
         var appModel = serviceProvider.GetService<DistributedApplicationModel>();
         if (appModel is null)
         {
