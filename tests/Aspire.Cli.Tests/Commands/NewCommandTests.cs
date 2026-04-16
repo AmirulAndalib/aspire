@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.CommandLine;
 using System.Globalization;
 using Aspire.Cli.Utils;
 using Aspire.Cli.Certificates;
@@ -9,7 +8,6 @@ using Aspire.Cli.Commands;
 using RootCommand = Aspire.Cli.Commands.RootCommand;
 using Aspire.Cli.Configuration;
 using Aspire.Cli.Interaction;
-using Aspire.Cli.NuGet;
 using Aspire.Cli.Packaging;
 using Aspire.Cli.Projects;
 using Aspire.Cli.Resources;
@@ -19,9 +17,6 @@ using Aspire.Cli.Tests.TestServices;
 using Aspire.Cli.Tests.Utils;
 using Microsoft.AspNetCore.InternalTesting;
 using Microsoft.Extensions.DependencyInjection;
-using Spectre.Console;
-using Spectre.Console.Rendering;
-using Aspire.Cli.Backchannel;
 using NuGetPackage = Aspire.Shared.NuGetPackageCli;
 
 namespace Aspire.Cli.Tests.Commands;
@@ -32,7 +27,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public async Task NewCommandWithHelpArgumentReturnsZero()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
+        var services = CreateServiceCollection(workspace);
         var provider = services.BuildServiceProvider();
 
         var command = provider.GetRequiredService<RootCommand>();
@@ -46,7 +41,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public void NewCommandWithPolyglotEnabled_ExposesTemplateSubcommands()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.FeatureFlagsFactory = _ =>
             {
@@ -55,23 +50,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 return features;
             };
 
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
-            };
         });
         var provider = services.BuildServiceProvider();
 
@@ -86,7 +64,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public void NewCommandWithPolyglotDisabled_ExposesTemplateSubcommands()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper);
+        var services = CreateServiceCollection(workspace);
         var provider = services.BuildServiceProvider();
 
         var command = provider.GetRequiredService<NewCommand>();
@@ -98,36 +76,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public async Task NewCommandInteractiveFlowSmokeTest()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
-        {
-            // Set of options that we'll give when prompted.
-            options.NewCommandPrompterFactory = (sp) =>
-            {
-                var interactionService = sp.GetRequiredService<IInteractionService>();
-                return new TestNewCommandPrompter(interactionService);
-            };
-
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (
-                        0, // Exit code.
-                        new NuGetPackage[] { package } // Single package.
-                        );
-                };
-
-                return runner;
-            };
-        });
+        var services = CreateServiceCollection(workspace);
         var provider = services.BuildServiceProvider();
 
         var command = provider.GetRequiredService<NewCommand>();
@@ -142,9 +91,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public async Task NewCommandDerivesOutputPathFromProjectNameForStarterTemplate()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options => {
-
-            // Set of options that we'll give when prompted.
+        var services = CreateServiceCollection(workspace, options =>
+        {
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -163,27 +111,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
                 return prompter;
             };
-
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (
-                        0, // Exit code.
-                        new NuGetPackage[] { package } // Single package.
-                        );
-                };
-
-                return runner;
-            };
         });
         var provider = services.BuildServiceProvider();
 
@@ -200,9 +127,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         var promptedForName = false;
 
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options => {
-
-            // Set of options that we'll give when prompted.
+        var services = CreateServiceCollection(workspace, options =>
+        {
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -215,27 +141,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 };
 
                 return prompter;
-            };
-
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (
-                        0, // Exit code.
-                        new NuGetPackage[] { package } // Single package.
-                        );
-                };
-
-                return runner;
             };
         });
         var provider = services.BuildServiceProvider();
@@ -254,10 +159,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         bool promptedForPath = false;
 
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
-
-            // Set of options that we'll give when prompted.
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -270,27 +173,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 };
 
                 return prompter;
-            };
-
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (
-                        0, // Exit code.
-                        new NuGetPackage[] { package } // Single package.
-                        );
-                };
-
-                return runner;
             };
         });
         var provider = services.BuildServiceProvider();
@@ -311,7 +193,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         string? channelNameUsed = null;
         bool promptedForVersion = false;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.NewCommandPrompterFactory = (sp) =>
             {
@@ -329,10 +211,10 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
             options.PackagingServiceFactory = (sp) =>
             {
-                var packagingService = new NewCommandTestPackagingService();
+                var packagingService = new TestPackagingService();
                 packagingService.GetChannelsAsyncCallback = (ct) =>
                 {
-                    var stableCache = new NewCommandTestFakeNuGetPackageCache();
+                    var stableCache = new FakeNuGetPackageCache();
                     stableCache.GetTemplatePackagesAsyncCallback = (dir, prerelease, nugetConfig, ct) =>
                     {
                         channelNameUsed = "stable";
@@ -340,7 +222,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                         return Task.FromResult<IEnumerable<NuGetPackage>>([package]);
                     };
                     
-                    var dailyCache = new NewCommandTestFakeNuGetPackageCache();
+                    var dailyCache = new FakeNuGetPackageCache();
                     dailyCache.GetTemplatePackagesAsyncCallback = (dir, prerelease, nugetConfig, ct) =>
                     {
                         channelNameUsed = "daily";
@@ -392,7 +274,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         string? selectedVersion = null;
         bool promptedForVersion = false;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.NewCommandPrompterFactory = (sp) =>
             {
@@ -410,10 +292,10 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
             options.PackagingServiceFactory = (sp) =>
             {
-                var packagingService = new NewCommandTestPackagingService();
+                var packagingService = new TestPackagingService();
                 packagingService.GetChannelsAsyncCallback = (ct) =>
                 {
-                    var fakeCache = new NewCommandTestFakeNuGetPackageCache();
+                    var fakeCache = new FakeNuGetPackageCache();
                     fakeCache.GetTemplatePackagesAsyncCallback = (dir, prerelease, nugetConfig, ct) =>
                     {
                         // Return multiple versions to test auto-selection of highest
@@ -468,9 +350,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         bool promptedForTemplate = false;
 
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options => {
-
-            // Set of options that we'll give when prompted.
+        var services = CreateServiceCollection(workspace, options =>
+        {
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -483,27 +364,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 };
 
                 return prompter;
-            };
-
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (
-                        0, // Exit code.
-                        new NuGetPackage[] { package } // Single package.
-                        );
-                };
-
-                return runner;
             };
         });
         var provider = services.BuildServiceProvider();
@@ -522,9 +382,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         bool promptedForTemplateVersion = false;
 
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options => {
-
-            // Set of options that we'll give when prompted.
+        var services = CreateServiceCollection(workspace, options =>
+        {
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -537,27 +396,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 };
 
                 return prompter;
-            };
-
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetConfigFile, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (
-                        0, // Exit code.
-                        new NuGetPackage[] { package } // Single package.
-                        );
-                };
-
-                return runner;
             };
         });
         var provider = services.BuildServiceProvider();
@@ -576,7 +414,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         TestInteractionService? testInteractionService = null;
 
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options => {
+        var services = CreateServiceCollection(workspace, options => {
             options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = (sp) => {
                 testInteractionService = new TestInteractionService();
@@ -608,7 +446,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public async Task NewCommand_WhenCertificateServiceThrows_ReturnsNonZeroExitCode()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.NewCommandPrompterFactory = (sp) => {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -619,21 +457,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
             options.DotNetCliRunnerFactory = (sp) =>
             {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (
-                        0, // Exit code.
-                        new NuGetPackage[] { package } // Single package.
-                        );
-                };
+                var runner = CreateTestRunnerWithStandardPackages();
 
                 runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, options, cancellationToken) =>
                 {
@@ -661,9 +485,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public async Task NewCommandWithExitCode73ShowsUserFriendlyError()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options => {
-
-            // Set of options that we'll give when prompted.
+        var services = CreateServiceCollection(workspace, options =>
+        {
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
@@ -672,21 +495,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
             options.DotNetCliRunnerFactory = (sp) =>
             {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (
-                        0, // Exit code.
-                        new NuGetPackage[] { package } // Single package.
-                        );
-                };
+                var runner = CreateTestRunnerWithStandardPackages();
 
                 runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, options, cancellationToken) =>
                 {
@@ -710,6 +519,34 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         Assert.Equal(ExitCodeConstants.FailedToCreateNewProject, exitCode);
     }
 
+    private IServiceCollection CreateServiceCollection(
+        TemporaryWorkspace workspace,
+        Action<CliServiceCollectionTestOptions>? configure = null)
+    {
+        return CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.DotNetCliRunnerFactory = _ => CreateTestRunnerWithStandardPackages();
+            configure?.Invoke(options);
+        });
+    }
+
+    private static TestDotNetCliRunner CreateTestRunnerWithStandardPackages()
+    {
+        var runner = new TestDotNetCliRunner();
+        runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
+        {
+            var package = new NuGetPackage()
+            {
+                Id = "Aspire.ProjectTemplates",
+                Source = "nuget",
+                Version = "9.2.0"
+            };
+
+            return (0, new NuGetPackage[] { package });
+        };
+        return runner;
+    }
+
     private sealed class ThrowingCertificateService : ICertificateService
     {
         public Task<EnsureCertificatesTrustedResult> EnsureCertificatesTrustedAsync(CancellationToken cancellationToken)
@@ -724,7 +561,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         var operationOrder = new List<string>();
 
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.NewCommandPrompterFactory = (sp) =>
@@ -758,27 +595,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                     return choices.Cast<object>().First();
                 };
                 return testInteractionService;
-            };
-
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetConfigFile, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (
-                        0, // Exit code.
-                        new NuGetPackage[] { package } // Single package.
-                        );
-                };
-
-                return runner;
             };
         });
 
@@ -816,7 +632,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         var capturedOutputPathDefault = string.Empty;
 
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = _ => new TestInteractionService();
@@ -844,23 +660,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 return prompter;
             };
 
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
-            };
         });
         var provider = services.BuildServiceProvider();
 
@@ -883,29 +682,12 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         var scaffoldedLanguageId = string.Empty;
         (string Name, string Description)[]? promptedTemplates = null;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = _ => new TestInteractionService
             {
                 PromptForSelectionCallback = (promptText, choices, choiceFormatter, cancellationToken) => choices.Cast<object>().First()
-            };
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, dotnetOptions, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
             };
             options.NewCommandPrompterFactory = (sp) =>
             {
@@ -949,7 +731,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public void NewCommandTemplateSubcommandsListTechnicalNamesForNonInteractiveFlows()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.FeatureFlagsFactory = _ => new TestFeatures().SetFeature(KnownFeatures.ShowAllTemplates, true);
         });
@@ -969,7 +751,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         string[]? promptedTemplateDescriptions = null;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = _ => new TestInteractionService();
@@ -987,23 +769,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 };
 
                 return prompter;
-            };
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, dotnetOptions, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
             };
         });
 
@@ -1024,7 +789,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         string? scaffoldedLanguageId = null;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.FeatureFlagsFactory = _ =>
             {
@@ -1033,23 +798,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 return features;
             };
 
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
-            };
         });
 
         services.AddSingleton<IScaffoldingService>(new TestScaffoldingService
@@ -1077,26 +825,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
-        {
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
-            };
-        });
+        var services = CreateServiceCollection(workspace);
         var provider = services.BuildServiceProvider();
 
         var command = provider.GetRequiredService<NewCommand>();
@@ -1113,7 +842,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         var localhostPrompted = false;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
 
@@ -1141,23 +870,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
                 return prompter;
             };
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
-            };
         });
 
         var provider = services.BuildServiceProvider();
@@ -1181,26 +893,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         var scaffoldingInvoked = false;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
-        {
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
-            };
-        });
+        var services = CreateServiceCollection(workspace);
 
         services.AddSingleton<IScaffoldingService>(new TestScaffoldingService
         {
@@ -1226,7 +919,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         string? capturedTargetDirectory = null;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.NewCommandPrompterFactory = (sp) =>
             {
@@ -1239,23 +932,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 return prompter;
             };
 
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
-            };
         });
 
         services.AddSingleton<IScaffoldingService>(new TestScaffoldingService
@@ -1291,7 +967,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         var scaffoldingInvoked = false;
         var localhostPrompted = false;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
 
@@ -1318,23 +994,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                     templates.Single(t => t.Name.Equals("aspire-ts-empty", StringComparison.OrdinalIgnoreCase));
 
                 return prompter;
-            };
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
             };
         });
 
@@ -1388,7 +1047,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         string? channelSeenByProject = null;
         string? sdkVersionSeenByProject = null;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.DotNetCliRunnerFactory = _ => new TestDotNetCliRunner
             {
@@ -1405,11 +1064,11 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 }
             };
 
-            options.PackagingServiceFactory = _ => new NewCommandTestPackagingService
+            options.PackagingServiceFactory = _ => new TestPackagingService
             {
                 GetChannelsAsyncCallback = cancellationToken =>
                 {
-                    var dailyCache = new NewCommandTestFakeNuGetPackageCache
+                    var dailyCache = new FakeNuGetPackageCache
                     {
                         GetTemplatePackagesAsyncCallback = (dir, prerelease, nugetConfig, ct) =>
                         {
@@ -1463,7 +1122,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var interactionService = new TestInteractionService();
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.DotNetCliRunnerFactory = _ => new TestDotNetCliRunner
             {
@@ -1480,11 +1139,11 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 }
             };
 
-            options.PackagingServiceFactory = _ => new NewCommandTestPackagingService
+            options.PackagingServiceFactory = _ => new TestPackagingService
             {
                 GetChannelsAsyncCallback = cancellationToken =>
                 {
-                    var dailyCache = new NewCommandTestFakeNuGetPackageCache
+                    var dailyCache = new FakeNuGetPackageCache
                     {
                         GetTemplatePackagesAsyncCallback = (dir, prerelease, nugetConfig, ct) =>
                         {
@@ -1523,7 +1182,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public async Task NewCommandNonInteractiveDoesNotPrompt()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             // Configure non-interactive host environment
             options.CliHostEnvironmentFactory = (sp) =>
@@ -1532,26 +1191,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 return new CliHostEnvironment(configuration, nonInteractive: true);
             };
 
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (
-                        0, // Exit code.
-                        new NuGetPackage[] { package } // Single package.
-                        );
-                };
-
-                return runner;
-            };
         });
         var provider = services.BuildServiceProvider();
 
@@ -1567,12 +1206,132 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public async Task NewCommandNonInteractiveWithoutTemplate_DisplaysErrorWithAvailableTemplates()
+    {
+        TestInteractionService? testInteractionService = null;
+
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var services = CreateServiceCollection(workspace, options =>
+        {
+            options.CliHostEnvironmentFactory = (sp) =>
+            {
+                var configuration = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+                return new CliHostEnvironment(configuration, nonInteractive: true);
+            };
+
+            options.InteractionServiceFactory = (sp) =>
+            {
+                testInteractionService = new TestInteractionService();
+                return testInteractionService;
+            };
+
+        });
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<NewCommand>();
+        var result = command.Parse("new");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(ExitCodeConstants.MissingRequiredArgument, exitCode);
+        Assert.NotNull(testInteractionService);
+        Assert.Contains(testInteractionService.DisplayedErrors,
+            e => string.Equals(e, NewCommandStrings.NonInteractiveTemplateRequired, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task NewCommandNonInteractiveUsesDefaultNameWhenNotProvided()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        string? capturedProjectName = null;
+        string? capturedOutputPath = null;
+
+        var services = CreateServiceCollection(workspace, options =>
+        {
+            options.CliHostEnvironmentFactory = (sp) =>
+            {
+                var configuration = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+                return new CliHostEnvironment(configuration, nonInteractive: true);
+            };
+
+            options.DotNetCliRunnerFactory = (sp) =>
+            {
+                var runner = CreateTestRunnerWithStandardPackages();
+
+                runner.NewProjectAsyncCallback = (templateName, projectName, outputPath, invocationOptions, ct) =>
+                {
+                    capturedProjectName = projectName;
+                    capturedOutputPath = outputPath;
+                    return 0;
+                };
+
+                return runner;
+            };
+        });
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<NewCommand>();
+        // Neither --name nor --output is provided, so both use their defaults
+        var result = command.Parse("new aspire-starter --use-redis-cache --test-framework None");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(0, exitCode);
+        // The default project name is derived from the workspace directory name
+        Assert.Equal(workspace.WorkspaceRoot.Name, capturedProjectName);
+        // The default output path ends with the project name subdirectory
+        Assert.Equal(workspace.WorkspaceRoot.Name, Path.GetFileName(capturedOutputPath));
+    }
+
+    [Fact]
+    public async Task NewCommandNonInteractiveWithAllOptions_Succeeds()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        string? capturedProjectName = null;
+        string? capturedOutputPath = null;
+
+        var services = CreateServiceCollection(workspace, options =>
+        {
+            options.CliHostEnvironmentFactory = (sp) =>
+            {
+                var configuration = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+                return new CliHostEnvironment(configuration, nonInteractive: true);
+            };
+
+            options.DotNetCliRunnerFactory = (sp) =>
+            {
+                var runner = CreateTestRunnerWithStandardPackages();
+
+                runner.NewProjectAsyncCallback = (templateName, projectName, outputPath, invocationOptions, ct) =>
+                {
+                    capturedProjectName = projectName;
+                    capturedOutputPath = outputPath;
+                    return 0;
+                };
+
+                return runner;
+            };
+        });
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<NewCommand>();
+        var result = command.Parse("new aspire-starter --name MyProject --output ./my-project --use-redis-cache --test-framework None");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal("MyProject", capturedProjectName);
+        Assert.NotNull(capturedOutputPath);
+        Assert.Contains("my-project", capturedOutputPath);
+    }
+
+    [Fact]
     public async Task NewCommand_WhenCSharpTemplateApplyFails_DisplaysCreationErrorMessage()
     {
         TestInteractionService? testInteractionService = null;
 
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.InteractionServiceFactory = (sp) =>
             {
@@ -1588,18 +1347,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
             options.DotNetCliRunnerFactory = (sp) =>
             {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
+                var runner = CreateTestRunnerWithStandardPackages();
 
                 runner.NewProjectAsyncCallback = (templateName, projectName, outputPath, invocationOptions, ct) =>
                 {
@@ -1631,7 +1379,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         TestInteractionService? testInteractionService = null;
 
         using var workspace = TemporaryWorkspace.Create(outputHelper);
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.InteractionServiceFactory = (sp) =>
             {
@@ -1639,23 +1387,6 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
                 return testInteractionService;
             };
 
-            options.DotNetCliRunnerFactory = (sp) =>
-            {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-
-                    return (0, new NuGetPackage[] { package });
-                };
-
-                return runner;
-            };
         });
 
         services.AddSingleton<IScaffoldingService>(new TestScaffoldingService
@@ -1683,7 +1414,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         string? capturedOutputPath = null;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
@@ -1708,17 +1439,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
             options.DotNetCliRunnerFactory = (sp) =>
             {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-                    return (0, new NuGetPackage[] { package });
-                };
+                var runner = CreateTestRunnerWithStandardPackages();
                 runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, invocationOptions, ct) =>
                 {
                     return (0, version);
@@ -1752,7 +1473,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         string? capturedOutputPath = null;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
@@ -1777,17 +1498,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
             options.DotNetCliRunnerFactory = (sp) =>
             {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-                    return (0, new NuGetPackage[] { package });
-                };
+                var runner = CreateTestRunnerWithStandardPackages();
                 runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, invocationOptions, ct) =>
                 {
                     return (0, version);
@@ -1821,7 +1532,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         string? capturedOutputPath = null;
 
-        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        var services = CreateServiceCollection(workspace, options =>
         {
             options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             // Use TestInteractionService (not ExtensionInteractionService) to stay in console/non-extension mode
@@ -1844,17 +1555,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
             options.DotNetCliRunnerFactory = (sp) =>
             {
-                var runner = new TestDotNetCliRunner();
-                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                {
-                    var package = new NuGetPackage()
-                    {
-                        Id = "Aspire.ProjectTemplates",
-                        Source = "nuget",
-                        Version = "9.2.0"
-                    };
-                    return (0, new NuGetPackage[] { package });
-                };
+                var runner = CreateTestRunnerWithStandardPackages();
                 runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, invocationOptions, ct) =>
                 {
                     return (0, version);
@@ -1892,7 +1593,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
             using var workspace = TemporaryWorkspace.Create(outputHelper);
             string? capturedOutputPath = null;
 
-            var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+            var services = CreateServiceCollection(workspace, options =>
             {
                 options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
                 options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
@@ -1916,17 +1617,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
                 options.DotNetCliRunnerFactory = (sp) =>
                 {
-                    var runner = new TestDotNetCliRunner();
-                    runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
-                    {
-                        var package = new NuGetPackage()
-                        {
-                            Id = "Aspire.ProjectTemplates",
-                            Source = "nuget",
-                            Version = "9.2.0"
-                        };
-                        return (0, new NuGetPackage[] { package });
-                    };
+                    var runner = CreateTestRunnerWithStandardPackages();
                     runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, invocationOptions, ct) =>
                     {
                         return (0, version);
@@ -1963,286 +1654,3 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     }
 }
 
-internal sealed class TestNewCommandPrompter(IInteractionService interactionService) : NewCommandPrompter(interactionService)
-{
-    public Func<IEnumerable<(NuGetPackage Package, PackageChannel Channel)>, (NuGetPackage Package, PackageChannel Channel)>? PromptForTemplatesVersionCallback { get; set; }
-    public Func<ITemplate[], ITemplate>? PromptForTemplateCallback { get; set; }
-    public Func<string, string>? PromptForProjectNameCallback { get; set; }
-    public Func<string, string>? PromptForOutputPathCallback { get; set; }
-
-    public override Task<ITemplate> PromptForTemplateAsync(ITemplate[] validTemplates, CancellationToken cancellationToken)
-    {
-        return PromptForTemplateCallback switch
-        {
-            { } callback => Task.FromResult(callback(validTemplates)),
-            _ => Task.FromResult(validTemplates[0]) // If no callback is provided just accept the first template.
-        };
-    }
-
-    public override Task<string> PromptForProjectNameAsync(string defaultName, ParseResult parseResult, CancellationToken cancellationToken)
-    {
-        return PromptForProjectNameCallback switch
-        {
-            { } callback => Task.FromResult(callback(defaultName)),
-            _ => Task.FromResult(defaultName) // If no callback is provided just accept the default.
-        };
-    }
-
-    public override Task<string> PromptForOutputPath(string path, ParseResult parseResult, CancellationToken cancellationToken)
-    {
-        return PromptForOutputPathCallback switch
-        {
-            { } callback => Task.FromResult(callback(path)),
-            _ => Task.FromResult(path) // If no callback is provided just accept the default.
-        };
-    }
-
-    public override Task<(NuGetPackage Package, PackageChannel Channel)> PromptForTemplatesVersionAsync(IEnumerable<(NuGetPackage Package, PackageChannel Channel)> candidatePackages, CancellationToken cancellationToken)
-    {
-        return PromptForTemplatesVersionCallback switch
-        {
-            { } callback => Task.FromResult(callback(candidatePackages)),
-            _ => Task.FromResult(candidatePackages.First()) // If no callback is provided just accept the first package.
-        };
-    }
-}
-
-internal sealed class OrderTrackingInteractionService(List<string> operationOrder) : IInteractionService
-{
-    public ConsoleOutput Console { get; set; }
-
-    public Task<T> ShowStatusAsync<T>(string statusText, Func<Task<T>> action, KnownEmoji? emoji = null, bool allowMarkup = false)
-    {
-        return action();
-    }
-
-    public void ShowStatus(string statusText, Action action, KnownEmoji? emoji = null, bool allowMarkup = false)
-    {
-        action();
-    }
-
-    public Task<string> PromptForStringAsync(string promptText, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(binding?.DefaultValue ?? string.Empty);
-    }
-
-    public Task<T> PromptForSelectionAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull
-    {
-        if (!choices.Any())
-        {
-            throw new EmptyChoicesException($"No items available for selection: {promptText}");
-        }
-
-        // Track template option prompts
-        if (promptText?.Contains("Redis") == true ||
-            promptText?.Contains("test framework") == true ||
-            promptText?.Contains("Create a test project") == true ||
-            promptText?.Contains("xUnit") == true)
-        {
-            operationOrder.Add("TemplateOption");
-        }
-
-        return Task.FromResult(choices.First());
-    }
-
-    public Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, IEnumerable<T>? preSelected = null, bool optional = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull
-    {
-        if (!choices.Any())
-        {
-            throw new EmptyChoicesException($"No items available for selection: {promptText}");
-        }
-
-        if (preSelected is not null)
-        {
-            return Task.FromResult<IReadOnlyList<T>>(preSelected.ToList());
-        }
-
-        return Task.FromResult<IReadOnlyList<T>>(choices.ToList());
-    }
-
-    public int DisplayIncompatibleVersionError(AppHostIncompatibleException ex, string appHostHostingVersion) => 0;
-    public void DisplayError(string errorMessage) { }
-    public void DisplayMessage(KnownEmoji emoji, string message, bool allowMarkup = false) { }
-    public void DisplaySuccess(string message, bool allowMarkup = false) { }
-    public void DisplayLines(IEnumerable<(OutputLineStream Stream, string Line)> lines) { }
-    public void DisplayCancellationMessage() { }
-    public Task<bool> ConfirmAsync(string promptText, PromptBinding<bool>? binding = null, CancellationToken cancellationToken = default) => Task.FromResult(true);
-    public Task<string> PromptForFilePathAsync(string promptText, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
-        => PromptForStringAsync(promptText, validator, isSecret: false, required, binding, cancellationToken);
-    public void DisplaySubtleMessage(string message, bool escapeMarkup = true) { }
-    public void DisplayEmptyLine() { }
-    public void DisplayPlainText(string text) { }
-    public void DisplayRawText(string text, ConsoleOutput? consoleOverride = null) { }
-    public void DisplayMarkdown(string markdown, ConsoleOutput? consoleOverride = null) { }
-    public void DisplayMarkupLine(string markup) { }
-    public void WriteConsoleLog(string message, int? lineNumber = null, string? type = null, bool isErrorMessage = false) { }
-    public void DisplayVersionUpdateNotification(string newerVersion, string? updateCommand = null) { }
-    public void DisplayRenderable(IRenderable renderable) { }
-    public Task DisplayLiveAsync(IRenderable initialRenderable, Func<Action<IRenderable>, Task> callback) => callback(_ => { });
-}
-
-internal sealed class NewCommandTestPackagingService : IPackagingService
-{
-    public Func<CancellationToken, Task<IEnumerable<PackageChannel>>>? GetChannelsAsyncCallback { get; set; }
-
-    public Task<IEnumerable<PackageChannel>> GetChannelsAsync(CancellationToken cancellationToken = default)
-    {
-        if (GetChannelsAsyncCallback is not null)
-        {
-            return GetChannelsAsyncCallback(cancellationToken);
-        }
-        
-        // Default: Return a fake channel
-        var testChannel = PackageChannel.CreateImplicitChannel(new NewCommandTestFakeNuGetPackageCache());
-        return Task.FromResult<IEnumerable<PackageChannel>>(new[] { testChannel });
-    }
-}
-
-internal sealed class NewCommandTestFakeNuGetPackageCache : INuGetPackageCache
-{
-    public Func<DirectoryInfo, bool, FileInfo?, CancellationToken, Task<IEnumerable<NuGetPackage>>>? GetTemplatePackagesAsyncCallback { get; set; }
-
-    public Task<IEnumerable<NuGetPackage>> GetTemplatePackagesAsync(DirectoryInfo workingDirectory, bool prerelease, FileInfo? nugetConfigFile, CancellationToken cancellationToken)
-    {
-        if (GetTemplatePackagesAsyncCallback is not null)
-        {
-            return GetTemplatePackagesAsyncCallback(workingDirectory, prerelease, nugetConfigFile, cancellationToken);
-        }
-
-        var package = new NuGetPackage
-        {
-            Id = "Aspire.ProjectTemplates",
-            Source = "nuget",
-            Version = "10.0.0"
-        };
-        return Task.FromResult<IEnumerable<NuGetPackage>>(new[] { package });
-    }
-
-    public Task<IEnumerable<NuGetPackage>> GetIntegrationPackagesAsync(DirectoryInfo workingDirectory, bool prerelease, FileInfo? nugetConfigFile, CancellationToken cancellationToken)
-    {
-        return Task.FromResult<IEnumerable<NuGetPackage>>(Array.Empty<NuGetPackage>());
-    }
-
-    public Task<IEnumerable<NuGetPackage>> GetCliPackagesAsync(DirectoryInfo workingDirectory, bool prerelease, FileInfo? nugetConfigFile, CancellationToken cancellationToken)
-    {
-        return Task.FromResult<IEnumerable<NuGetPackage>>(Array.Empty<NuGetPackage>());
-    }
-
-    public Task<IEnumerable<NuGetPackage>> GetPackagesAsync(DirectoryInfo workingDirectory, string packageId, Func<string, bool>? filter, bool prerelease, FileInfo? nugetConfigFile, bool useCache, CancellationToken cancellationToken)
-    {
-        return Task.FromResult<IEnumerable<NuGetPackage>>(Array.Empty<NuGetPackage>());
-    }
-}
-
-internal sealed class TestScaffoldingService : IScaffoldingService
-{
-    public Func<ScaffoldContext, CancellationToken, Task<bool>>? ScaffoldAsyncCallback { get; set; }
-
-    public Task<bool> ScaffoldAsync(ScaffoldContext context, CancellationToken cancellationToken)
-    {
-        if (ScaffoldAsyncCallback is not null)
-        {
-            return ScaffoldAsyncCallback(context, cancellationToken);
-        }
-
-        return Task.FromResult(true);
-    }
-}
-
-internal sealed class TestTypeScriptStarterProjectFactory(Func<DirectoryInfo, CancellationToken, Task<bool>> buildAndGenerateSdkAsync) : IAppHostProjectFactory
-{
-    private readonly TestTypeScriptStarterProject _project = new(buildAndGenerateSdkAsync);
-
-    public IAppHostProject GetProject(LanguageInfo language)
-    {
-        ArgumentNullException.ThrowIfNull(language);
-
-        if (!string.Equals(language.LanguageId, KnownLanguageId.TypeScript, StringComparison.Ordinal))
-        {
-            throw new NotSupportedException($"No handler available for language '{language.LanguageId}'.");
-        }
-
-        return _project;
-    }
-
-    public IAppHostProject? TryGetProject(FileInfo appHostFile)
-    {
-        return appHostFile.Name.Equals("apphost.ts", StringComparison.OrdinalIgnoreCase) ? _project : null;
-    }
-
-    public IAppHostProject GetProject(FileInfo appHostFile)
-    {
-        return TryGetProject(appHostFile) ?? throw new NotSupportedException($"No handler available for AppHost file '{appHostFile.Name}'.");
-    }
-}
-
-internal sealed class TestTypeScriptStarterProject(Func<DirectoryInfo, CancellationToken, Task<bool>> buildAndGenerateSdkAsync) : IAppHostProject, IGuestAppHostSdkGenerator
-{
-    public bool IsUnsupported { get; set; }
-
-    public string LanguageId => KnownLanguageId.TypeScript;
-
-    public string DisplayName => "TypeScript (Node.js)";
-
-    public string? AppHostFileName => "apphost.ts";
-
-    public Task<string[]> GetDetectionPatternsAsync(CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult<string[]>(["apphost.ts"]);
-    }
-
-    public bool CanHandle(FileInfo appHostFile)
-    {
-        return appHostFile.Name.Equals("apphost.ts", StringComparison.OrdinalIgnoreCase);
-    }
-
-    public bool IsUsingProjectReferences(FileInfo appHostFile)
-    {
-        return false;
-    }
-
-    public Task<int> RunAsync(AppHostProjectContext context, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<int> PublishAsync(PublishContext context, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<AppHostValidationResult> ValidateAppHostAsync(FileInfo appHostFile, CancellationToken cancellationToken)
-    {
-        return Task.FromResult(new AppHostValidationResult(IsValid: CanHandle(appHostFile)));
-    }
-
-    public Task<bool> AddPackageAsync(AddPackageContext context, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<UpdatePackagesResult> UpdatePackagesAsync(UpdatePackagesContext context, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<RunningInstanceResult> FindAndStopRunningInstanceAsync(FileInfo appHostFile, DirectoryInfo homeDirectory, CancellationToken cancellationToken)
-    {
-        return Task.FromResult(RunningInstanceResult.NoRunningInstance);
-    }
-
-    public Task<string?> GetUserSecretsIdAsync(FileInfo appHostFile, bool autoInit, CancellationToken cancellationToken)
-    {
-        return Task.FromResult<string?>(null);
-    }
-
-    public Task<IReadOnlyList<(string PackageId, string Version)>> GetPackageReferencesAsync(FileInfo appHostFile, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<bool> BuildAndGenerateSdkAsync(DirectoryInfo directory, CancellationToken cancellationToken)
-    {
-        return buildAndGenerateSdkAsync(directory, cancellationToken);
-    }
-}

@@ -10,7 +10,6 @@ using Aspire.Cli.Commands;
 using Aspire.Cli.Configuration;
 using Aspire.Cli.DotNet;
 using Aspire.Cli.Interaction;
-using Aspire.Cli.NuGet;
 using Aspire.Cli.Packaging;
 using Aspire.Cli.Templating;
 using Aspire.Cli.Tests.Telemetry;
@@ -30,26 +29,6 @@ public class DotNetTemplateFactoryTests
     public DotNetTemplateFactoryTests(ITestOutputHelper outputHelper)
     {
         _outputHelper = outputHelper;
-    }
-
-    private sealed class FakeNuGetPackageCache : INuGetPackageCache
-    {
-        public Task<IEnumerable<Aspire.Shared.NuGetPackageCli>> GetTemplatePackagesAsync(DirectoryInfo workingDirectory, bool prerelease, FileInfo? nugetConfigFile, CancellationToken cancellationToken)
-        {
-            _ = workingDirectory; _ = prerelease; _ = nugetConfigFile; _ = cancellationToken; return Task.FromResult<IEnumerable<Aspire.Shared.NuGetPackageCli>>([]);
-        }
-        public Task<IEnumerable<Aspire.Shared.NuGetPackageCli>> GetIntegrationPackagesAsync(DirectoryInfo workingDirectory, bool prerelease, FileInfo? nugetConfigFile, CancellationToken cancellationToken)
-        {
-            _ = workingDirectory; _ = prerelease; _ = nugetConfigFile; _ = cancellationToken; return Task.FromResult<IEnumerable<Aspire.Shared.NuGetPackageCli>>([]);
-        }
-        public Task<IEnumerable<Aspire.Shared.NuGetPackageCli>> GetCliPackagesAsync(DirectoryInfo workingDirectory, bool prerelease, FileInfo? nugetConfigFile, CancellationToken cancellationToken)
-        {
-            _ = workingDirectory; _ = prerelease; _ = nugetConfigFile; _ = cancellationToken; return Task.FromResult<IEnumerable<Aspire.Shared.NuGetPackageCli>>([]);
-        }
-        public Task<IEnumerable<Aspire.Shared.NuGetPackageCli>> GetPackagesAsync(DirectoryInfo workingDirectory, string packageId, Func<string, bool>? filter, bool prerelease, FileInfo? nugetConfigFile, bool useCache, CancellationToken cancellationToken)
-        {
-            _ = workingDirectory; _ = packageId; _ = filter; _ = prerelease; _ = nugetConfigFile; _ = useCache; _ = cancellationToken; return Task.FromResult<IEnumerable<Aspire.Shared.NuGetPackageCli>>([]);
-        }
     }
 
     private static PackageChannel CreateExplicitChannel(PackageMapping[] mappings) =>
@@ -527,12 +506,6 @@ public class DotNetTemplateFactoryTests
     {
         public Task<EnsureCertificatesTrustedResult> EnsureCertificatesTrustedAsync(CancellationToken cancellationToken)
             => Task.FromResult(new EnsureCertificatesTrustedResult { EnvironmentVariables = new Dictionary<string, string>() });
-    }
-
-    private sealed class TestPackagingService : IPackagingService
-    {
-        public Task<IEnumerable<PackageChannel>> GetChannelsAsync(CancellationToken cancellationToken)
-            => throw new NotImplementedException();
     }
 
     private sealed class TestNewCommandPrompter : INewCommandPrompter, ITemplateVersionPrompter

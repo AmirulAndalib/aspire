@@ -1075,21 +1075,3 @@ internal sealed class TestProjectUpdater : IProjectUpdater
         return Task.FromResult(new ProjectUpdateResult { UpdatedApplied = false });
     }
 }
-
-// Test implementation of IPackagingService
-internal sealed class TestPackagingService : IPackagingService
-{
-    public Func<CancellationToken, Task<IEnumerable<PackageChannel>>>? GetChannelsAsyncCallback { get; set; }
-
-    public Task<IEnumerable<PackageChannel>> GetChannelsAsync(CancellationToken cancellationToken = default)
-    {
-        if (GetChannelsAsyncCallback != null)
-        {
-            return GetChannelsAsyncCallback(cancellationToken);
-        }
-
-        // Default behavior - return a fake channel
-        var testChannel = new PackageChannel("test", PackageChannelQuality.Stable, null, null!);
-        return Task.FromResult<IEnumerable<PackageChannel>>(new[] { testChannel });
-    }
-}
