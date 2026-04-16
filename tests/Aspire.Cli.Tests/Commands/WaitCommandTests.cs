@@ -248,6 +248,46 @@ public class WaitCommandTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public async Task WaitCommand_HiddenDisplayName_ResolvesToCanonicalResourceName()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var backchannel = new TestAppHostAuxiliaryBackchannel
+        {
+            ResourceSnapshots =
+            [
+                new ResourceSnapshot
+                {
+                    Name = "apiservice-tzykkput",
+                    DisplayName = "apiservice",
+                    ResourceType = "Project",
+                    State = "Running",
+                    IsHidden = true
+                }
+            ],
+            WaitForResourceResult = new WaitForResourceResponse { Success = true, State = "Running", HealthStatus = "Healthy" }
+        };
+        var monitor = new TestAuxiliaryBackchannelMonitor();
+        monitor.AddConnection("hash", "/tmp/test.sock", backchannel);
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.AuxiliaryBackchannelMonitorFactory = _ => monitor;
+        });
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<RootCommand>();
+        var result = command.Parse("wait apiservice --status healthy --timeout 5");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(ExitCodeConstants.Success, exitCode);
+        Assert.Equal("apiservice-tzykkput", backchannel.LastWaitResourceName);
+        Assert.Equal("healthy", backchannel.LastWaitStatus);
+        Assert.Equal(5, backchannel.LastWaitTimeoutSeconds);
+    }
+
+    [Fact]
     public async Task WaitCommand_CanonicalResourceName_PassesThroughUnchanged()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
