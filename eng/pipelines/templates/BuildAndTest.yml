@@ -109,124 +109,6 @@ steps:
                 /bl:${{ parameters.repoLogPath }}/AspireCliTool.Pointer.binlog
         displayName: 🟣Pack CLI tool pointer package
 
-    # Verify the signed win-x64 CLI archive works (version check + project creation)
-    - pwsh: |
-        $ErrorActionPreference = 'Stop'
-        $archiveDir = "${{ parameters.repoArtifactsPath }}/packages/${{ parameters.buildConfig }}"
-        $archive = Get-ChildItem -Path $archiveDir -Filter "aspire-cli-win-x64-*.zip" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-        if (-not $archive) {
-          Write-Host "##[warning]No win-x64 CLI archive found - skipping verification"
-          exit 0
-        }
-        Write-Host "Found archive: $($archive.FullName)"
-        & "$(Build.SourcesDirectory)/eng/scripts/verify-cli-archive.ps1" -ArchivePath $archive.FullName
-        if ($LASTEXITCODE -ne 0) {
-          Write-Host "##[error]CLI archive verification failed"
-          exit 1
-        }
-      displayName: 🟣Verify CLI archive (win-x64)
-      condition: succeeded()
-      env:
-        ASPIRE_CLI_TELEMETRY_OPTOUT: 'true'
-        DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
-
-    # Log MicroBuild environment for debugging
-    # MicroBuildOutputFolderOverride is set by the MicroBuildSigningPlugin task in eng/common/templates-official/job/onelocbuild.yml
-    # which is installed via the Arcade SDK's install-microbuild.yml template that runs before our build steps.
-    # This environment variable points to where MicroBuild plugins are installed on the build agent.
-    - pwsh: |
-        Write-Host "=== MicroBuild Environment Check ==="
-        Write-Host "MicroBuildOutputFolderOverride: $env:MicroBuildOutputFolderOverride"
-        if ($env:MicroBuildOutputFolderOverride) {
-          $pluginPath = Join-Path $env:MicroBuildOutputFolderOverride "MicroBuild.Plugins.Signing"
-          if (Test-Path $pluginPath) {
-            Write-Host "✅ MicroBuild.Plugins.Signing found at: $pluginPath"
-            Get-ChildItem $pluginPath -Recurse | Select-Object FullName | Format-Table
-          } else {
-            Write-Host "##[warning]MicroBuild.Plugins.Signing NOT found at: $pluginPath"
-            Write-Host "Contents of MicroBuildOutputFolderOverride:"
-            Get-ChildItem $env:MicroBuildOutputFolderOverride -Recurse -ErrorAction SilentlyContinue | Select-Object FullName | Format-Table
-          }
-        } else {
-          Write-Host "##[warning]MicroBuildOutputFolderOverride environment variable is not set!"
-        }
-        Write-Host "=== End MicroBuild Environment Check ==="
-      displayName: 🟣Check MicroBuild environment
-      condition: and(succeeded(), eq(variables['_SignType'], 'real'))
-
-    # Sign the VS Code extension .signature.p7s file using MicroBuild with VSCodePublisher certificate
-    # This must happen after the main build (which creates the manifest) but before publishing
-    # MicroBuild is already installed by the install-microbuild.yml step that runs before our build
-    # Pass MicroBuildOutputFolderOverride as a property to ensure MSBuild can find the signing plugin
-    - script: ${{ parameters.dotnetScript }}
-              build
-              extension/signing/signVsix.proj
-              -c ${{ parameters.buildConfig }}
-              /bl:${{ parameters.repoLogPath }}/signVsix.binlog
-              /p:SignType=$(_SignType)
-              "/p:MicroBuildOutputFolderOverride=%MicroBuildOutputFolderOverride%"
-      displayName: 🟣Sign VS Code extension
-      condition: and(succeeded(), eq(variables['_SignType'], 'real'))
-
-    # Verify the VS Code extension signature using vsce verify-signature
-    - pwsh: |
-        $vsixDir = '${{ parameters.repoArtifactsPath }}/packages/Release/vscode'
-        $vsixFiles = Get-ChildItem -Path "$vsixDir/*.vsix" -ErrorAction SilentlyContinue
-        if ($vsixFiles.Count -eq 0) {
-          Write-Host "##[warning]No .vsix files found - VS Code extension may not have been built"
-          exit 0
-        }
-        foreach ($vsix in $vsixFiles) {
-          $baseName = [System.IO.Path]::GetFileNameWithoutExtension($vsix.FullName)
-          $manifestPath = Join-Path $vsixDir "$baseName.manifest"
-          $signaturePath = Join-Path $vsixDir "$baseName.signature.p7s"
-          
-          if (-not (Test-Path $manifestPath)) {
-            Write-Host "##[error]Manifest file not found: $manifestPath"
-            exit 1
-          }
-          if (-not (Test-Path $signaturePath)) {
-            Write-Host "##[error]Signature file not found: $signaturePath"
-            exit 1
-          }
-          
-          # First verify the .signature.p7s is in PKCS#7 format (binary)
-          $bytes = [System.IO.File]::ReadAllBytes($signaturePath)
-          if ($bytes.Length -eq 0 -or $bytes[0] -ne 0x30) {
-            $firstByte = if ($bytes.Length -gt 0) { "0x{0:X2}" -f $bytes[0] } else { "empty" }
-            Write-Host "##[error]$baseName.signature.p7s does NOT appear to be signed. First byte: $firstByte (expected 0x30 for PKCS#7)"
-            exit 1
-          }
-          
-          Write-Host "Verifying signature for $($vsix.Name)..."
-          npx vsce verify-signature --packagePath $vsix.FullName --manifestPath $manifestPath --signaturePath $signaturePath
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "##[error]Signature verification failed for $($vsix.Name)"
-            exit 1
-          }
-          Write-Host "✅ $($vsix.Name) signature verified successfully"
-        }
-      displayName: 🟣Verify VS Code extension signature
-      condition: and(succeeded(), eq(variables['_SignType'], 'real'))
-
-    # Publish the signed VS Code extension to the Marketplace
-    # Requires vscePublishToken parameter to be set with a Personal Access Token for the VS Marketplace
-    - ${{ if and(eq(parameters.publishVSCodeExtension, true), ne(parameters.vscePublishToken, '')) }}:
-      # Verify the PAT is valid before attempting to publish
-      - pwsh: |
-          Write-Host "Verifying VS Code Marketplace PAT..."
-          $publisher = "microsoft-aspire"
-          npx vsce verify-pat $publisher
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "##[error]PAT verification failed for publisher '$publisher'. Ensure the token has 'Marketplace: Manage' scope."
-            exit 1
-          }
-          Write-Host "✅ PAT verified successfully for publisher '$publisher'"
-        displayName: 🟣Verify VS Code Marketplace PAT
-        condition: and(succeeded(), eq(variables['_SignType'], 'real'))
-        env:
-          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-
     - ${{ if eq(parameters.publishVSCodeExtension, true) }}:
       - script: ${{ parameters.buildScript }}
                 -restore -build
@@ -255,6 +137,29 @@ steps:
                 /p:TargetRids=${{ join(':', parameters.targetRids) }}
                 /p:SkipTestProjects=true
         displayName: 🟣Build
+
+    # Verify the signed win-x64 CLI archive works (version check + project creation)
+    # Only win-x64 is verified because the Windows build agent is amd64 and cannot
+    # execute win-arm64 binaries (unlike ARM64 Windows which can emulate x64).
+    - pwsh: |
+        $ErrorActionPreference = 'Stop'
+        $archiveDir = "${{ parameters.repoArtifactsPath }}/packages/${{ parameters.buildConfig }}"
+        $archive = Get-ChildItem -Path $archiveDir -Filter "aspire-cli-win-x64-*.zip" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $archive) {
+          Write-Host "##[error]No win-x64 CLI archive found under $archiveDir"
+          exit 1
+        }
+        Write-Host "Found archive: $($archive.FullName)"
+        & "$(Build.SourcesDirectory)/eng/scripts/verify-cli-archive.ps1" -ArchivePath $archive.FullName
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "##[error]CLI archive verification failed"
+          exit 1
+        }
+      displayName: 🟣Verify CLI archive (win-x64)
+      condition: succeeded()
+      env:
+        ASPIRE_CLI_TELEMETRY_OPTOUT: 'true'
+        DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
 
     - ${{ if and(eq(parameters.packCliToolPackages, true), eq(parameters.isWindows, 'true')) }}:
       - pwsh: |
