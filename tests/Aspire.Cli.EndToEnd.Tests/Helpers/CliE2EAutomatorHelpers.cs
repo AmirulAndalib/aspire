@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Xml.Linq;
 using Aspire.Cli.Tests.Utils;
 using Hex1b.Automation;
 
@@ -12,13 +13,16 @@ namespace Aspire.Cli.EndToEnd.Tests.Helpers;
 /// </summary>
 internal static class CliE2EAutomatorHelpers
 {
+    private static readonly string s_expectedStableVersionMarker = GetExpectedStableVersionMarker();
+
     /// <summary>
     /// Prepares the Docker environment by setting up prompt counting, umask, and environment variables.
     /// </summary>
     internal static async Task PrepareDockerEnvironmentAsync(
         this Hex1bTerminalAutomator auto,
         SequenceCounter counter,
-        TemporaryWorkspace? workspace = null)
+        TemporaryWorkspace? workspace = null,
+        bool enableDcpDiagnostics = false)
     {
         // Wait for container to be ready (root prompt)
         await auto.WaitUntilTextAsync("# ", timeout: TimeSpan.FromSeconds(60));
@@ -41,14 +45,26 @@ internal static class CliE2EAutomatorHelpers
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
+        if (enableDcpDiagnostics)
+        {
+            await auto.TypeAsync("export DCP_DIAGNOSTICS_LOG_LEVEL=debug DCP_DIAGNOSTICS_LOG_FOLDER=~/.aspire/dcp-logs DCP_PRESERVE_EXECUTABLE_LOGS=1");
+            await auto.EnterAsync();
+            await auto.WaitForSuccessPromptAsync(counter);
+        }
+
         if (workspace is not null)
         {
-            await auto.TypeAsync($"cd /workspace/{workspace.WorkspaceRoot.Name}");
+            var containerWorkspace = $"/workspace/{workspace.WorkspaceRoot.Name}";
+            var dcpCopyCommand = enableDcpDiagnostics
+                ? $"; cp -r ~/.aspire/dcp-logs {containerWorkspace}/.aspire-dcp-logs 2>/dev/null"
+                : string.Empty;
+
+            await auto.TypeAsync($"cd {containerWorkspace}");
             await auto.EnterAsync();
             await auto.WaitForSuccessPromptAsync(counter);
 
-            // Set up EXIT trap to copy .aspire diagnostics to workspace for CI capture
-            await auto.TypeAsync($"trap 'cp -r ~/.aspire/logs /workspace/{workspace.WorkspaceRoot.Name}/.aspire-logs 2>/dev/null; cp -r ~/.aspire/packages /workspace/{workspace.WorkspaceRoot.Name}/.aspire-packages 2>/dev/null' EXIT");
+            // Set up EXIT trap to copy .aspire diagnostics to workspace for CI capture.
+            await auto.TypeAsync($"trap 'cp -r ~/.aspire/logs {containerWorkspace}/.aspire-logs 2>/dev/null; cp -r ~/.aspire/packages {containerWorkspace}/.aspire-packages 2>/dev/null{dcpCopyCommand}' EXIT");
             await auto.EnterAsync();
             await auto.WaitForSuccessPromptAsync(counter);
         }
@@ -95,6 +111,91 @@ internal static class CliE2EAutomatorHelpers
             default:
                 throw new ArgumentOutOfRangeException(nameof(installMode));
         }
+    }
+
+    /// <summary>
+    /// Installs the Aspire CLI inside a Docker container using the given install strategy.
+    /// Handles all modes: LocalHive, PullRequest, and InstallScript.
+    /// </summary>
+    internal static async Task InstallAspireCliAsync(
+        this Hex1bTerminalAutomator auto,
+        CliInstallStrategy strategy,
+        SequenceCounter counter)
+    {
+        switch (strategy.Mode)
+        {
+            case CliInstallMode.LocalHive:
+                // Extract the localhive archive into ~/.aspire
+                await auto.TypeAsync("mkdir -p ~/.aspire && tar -xzf /tmp/aspire-localhive.tar.gz -C ~/.aspire");
+                await auto.EnterAsync();
+                await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(30));
+                await auto.TypeAsync("export PATH=~/.aspire/bin:$PATH");
+                await auto.EnterAsync();
+                await auto.WaitForSuccessPromptAsync(counter);
+                // Set the channel to 'local' so the CLI finds the hive packages
+                await auto.TypeAsync("aspire config set channel local -g");
+                await auto.EnterAsync();
+                await auto.WaitForSuccessPromptAsync(counter);
+                break;
+
+            case CliInstallMode.PullRequest:
+                var prNumber = CliE2ETestHelpers.GetRequiredPrNumber();
+                await auto.TypeAsync($"/opt/aspire-scripts/get-aspire-cli-pr.sh {prNumber}");
+                await auto.EnterAsync();
+                await auto.WaitForSuccessPromptFailFastAsync(counter, TimeSpan.FromSeconds(300));
+                await auto.TypeAsync("export PATH=~/.aspire/bin:~/.aspire:$PATH");
+                await auto.EnterAsync();
+                await auto.WaitForSuccessPromptAsync(counter);
+                break;
+
+            case CliInstallMode.InstallScript:
+                var scriptArgs = "";
+                if (strategy.Quality is not null)
+                {
+                    scriptArgs = $" --quality {strategy.Quality.Value.ToString().ToLowerInvariant()}";
+                }
+                else if (strategy.Version is not null)
+                {
+                    scriptArgs = $" --version {strategy.Version}";
+                }
+                await auto.TypeAsync($"/opt/aspire-scripts/get-aspire-cli.sh{scriptArgs}");
+                await auto.EnterAsync();
+                await auto.WaitForSuccessPromptFailFastAsync(counter, TimeSpan.FromSeconds(120));
+                await auto.TypeAsync("export PATH=~/.aspire/bin:$PATH");
+                await auto.EnterAsync();
+                await auto.WaitForSuccessPromptAsync(counter);
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(strategy), strategy.Mode, "Unknown install mode");
+        }
+
+        // Log the installed version for debugging — visible in asciinema recordings
+        await auto.TypeAsync("aspire --version");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
+    }
+
+    /// <summary>
+    /// Mounts the workspace-local Aspire package hive into the standard local hive path inside Docker.
+    /// Used for SourceBuild E2E runs where the CLI binary is local but package resolution still needs
+    /// locally packed Aspire packages.
+    /// </summary>
+    internal static async Task MountLocalChannelPackagesAsync(
+        this Hex1bTerminalAutomator auto,
+        CliE2ETestHelpers.LocalChannelInfo? localChannel,
+        TemporaryWorkspace workspace,
+        SequenceCounter counter)
+    {
+        if (localChannel is null)
+        {
+            return;
+        }
+
+        var containerLocalChannelPackagesPath = CliE2ETestHelpers.ToContainerPath(localChannel.PackagesPath, workspace);
+        await auto.TypeAsync($"mkdir -p ~/.aspire/hives/local && rm -rf ~/.aspire/hives/local/packages && ln -s '{containerLocalChannelPackagesPath}' ~/.aspire/hives/local/packages");
+        await auto.EnterAsync();
+        await auto.WaitForSuccessPromptAsync(counter);
     }
 
     /// <summary>
@@ -161,26 +262,37 @@ internal static class CliE2EAutomatorHelpers
         string commitSha,
         SequenceCounter counter)
     {
-        var versionPrefix = CliE2ETestHelpers.GetVersionPrefix();
-        var isStabilized = CliE2ETestHelpers.IsStabilizedBuild();
+        if (commitSha.Length != 40)
+        {
+            throw new ArgumentException($"Commit SHA must be exactly 40 characters, got {commitSha.Length}: '{commitSha}'", nameof(commitSha));
+        }
+
+        var shortCommitSha = commitSha[..8];
 
         await auto.TypeAsync("aspire --version");
         await auto.EnterAsync();
 
-        // Always verify the version prefix matches the branch's version (e.g., "13.3.0").
-        await auto.WaitUntilTextAsync(versionPrefix, timeout: TimeSpan.FromSeconds(10));
-
-        // For non-stabilized builds (all PR CI builds), also verify the commit SHA suffix
-        // to uniquely identify the exact build. Stabilized builds (official releases only)
-        // produce versions without SHA suffixes, so we skip this check.
-        if (!isStabilized && commitSha.Length == 40)
-        {
-            var shortCommitSha = commitSha[..8];
-            var expectedVersionSuffix = $"g{shortCommitSha}";
-            await auto.WaitUntilTextAsync(expectedVersionSuffix, timeout: TimeSpan.FromSeconds(10));
-        }
+        // Stabilized PR builds can omit the commit SHA from the printed version, so accept
+        // either the expected major/minor marker from eng/Versions.props or the PR commit SHA.
+        await auto.WaitUntilAsync(
+            snapshot => snapshot.ContainsText(s_expectedStableVersionMarker) || snapshot.ContainsText($"g{shortCommitSha}"),
+            timeout: TimeSpan.FromSeconds(10),
+            description: $"Aspire CLI version containing '{s_expectedStableVersionMarker}' or 'g{shortCommitSha}'");
 
         await auto.WaitForSuccessPromptAsync(counter);
+    }
+
+    private static string GetExpectedStableVersionMarker()
+    {
+        var versionsPropsPath = Path.Combine(CliE2ETestHelpers.GetRepoRoot(), "eng", "Versions.props");
+        var document = XDocument.Load(versionsPropsPath);
+
+        var majorVersion = document.Descendants("MajorVersion").FirstOrDefault()?.Value;
+        var minorVersion = document.Descendants("MinorVersion").FirstOrDefault()?.Value;
+
+        return !string.IsNullOrEmpty(majorVersion) && !string.IsNullOrEmpty(minorVersion)
+            ? $"{majorVersion}.{minorVersion}."
+            : throw new InvalidOperationException($"Could not determine Aspire version marker from '{versionsPropsPath}'.");
     }
 
     /// <summary>
@@ -360,9 +472,60 @@ internal static class CliE2EAutomatorHelpers
     }
 
     /// <summary>
+    /// Asserts that the specified resources exist in the running AppHost by running
+    /// <c>aspire describe &lt;resource&gt; --format json</c> for each expected resource.
+    /// The CLI handles name/displayName resolution internally.
+    /// On failure, the error output from the CLI is visible in the terminal recording.
+    /// </summary>
+    internal static async Task AssertResourcesExistAsync(
+        this Hex1bTerminalAutomator auto,
+        SequenceCounter counter,
+        params string[] expectedResourceNames)
+    {
+        foreach (var resource in expectedResourceNames)
+        {
+            var expectedCounter = counter.Value;
+            await auto.TypeAsync($"aspire describe {resource} --format json");
+            await auto.EnterAsync();
+
+            var succeeded = false;
+            await auto.WaitUntilAsync(s =>
+            {
+                var successSearcher = new CellPatternSearcher()
+                    .FindPattern(expectedCounter.ToString())
+                    .RightText(" OK] $ ");
+                if (successSearcher.Search(s).Count > 0)
+                {
+                    succeeded = true;
+                    return true;
+                }
+
+                var errorSearcher = new CellPatternSearcher()
+                    .FindPattern(expectedCounter.ToString())
+                    .RightText(" ERR:");
+                return errorSearcher.Search(s).Count > 0;
+            }, timeout: TimeSpan.FromSeconds(30), description: $"aspire describe {resource}");
+
+            counter.Increment();
+
+            if (!succeeded)
+            {
+                // Dump all resources so we can see what's actually running
+                await auto.TypeAsync("aspire describe --format json");
+                await auto.EnterAsync();
+                await auto.WaitForAnyPromptAsync(counter);
+
+                throw new InvalidOperationException(
+                    $"Resource '{resource}' not found. 'aspire describe {resource}' exited with an error. " +
+                    "Check the terminal recording for the full resource list above.");
+            }
+        }
+    }
+
+    /// <summary>
     /// Copies interesting diagnostic directories from <c>~/.aspire</c> to the mounted workspace
     /// so they are captured by <see cref="CaptureWorkspaceOnFailureAttribute"/>. Call this before
-    /// exiting the container. Copies logs and NuGet restore output (libs directories).
+    /// exiting the container. Copies CLI logs, NuGet restore output, and any opt-in DCP logs.
     /// </summary>
     internal static async Task CaptureAspireDiagnosticsAsync(
         this Hex1bTerminalAutomator auto,
@@ -371,11 +534,26 @@ internal static class CliE2EAutomatorHelpers
     {
         var containerWorkspace = $"/workspace/{workspace.WorkspaceRoot.Name}";
 
-        // Copy CLI logs
         await auto.TypeAsync($"cp -r ~/.aspire/logs {containerWorkspace}/.aspire-logs 2>/dev/null; " +
                              $"cp -r ~/.aspire/packages {containerWorkspace}/.aspire-packages 2>/dev/null; " +
+                             $"cp -r ~/.aspire/dcp-logs {containerWorkspace}/.aspire-dcp-logs 2>/dev/null; " +
                              "echo done");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
+    }
+
+    /// <summary>
+    /// Destroys the current deployment using <c>aspire destroy --yes</c> and waits for pipeline success.
+    /// </summary>
+    internal static async Task AspireDestroyAsync(
+        this Hex1bTerminalAutomator auto,
+        SequenceCounter counter,
+        TimeSpan? timeout = null)
+    {
+        timeout ??= TimeSpan.FromMinutes(2);
+        await auto.TypeAsync("aspire destroy --yes");
+        await auto.EnterAsync();
+        await auto.WaitForPipelineSuccessAsync(timeout: timeout.Value);
+        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(1));
     }
 }

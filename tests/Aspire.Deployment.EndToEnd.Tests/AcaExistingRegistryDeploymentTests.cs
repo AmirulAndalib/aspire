@@ -180,24 +180,9 @@ builder.Build().Run();
 
             // Step 11: Deploy to Azure Container Apps using aspire deploy
             output.WriteLine("Step 11: Starting Azure Container Apps deployment...");
-            var pipelineSucceeded = false;
             await auto.TypeAsync("aspire deploy --clear-cache");
             await auto.EnterAsync();
-            await auto.WaitUntilAsync(s =>
-            {
-                if (s.ContainsText("PIPELINE SUCCEEDED"))
-                {
-                    pipelineSucceeded = true;
-                    return true;
-                }
-                return s.ContainsText("PIPELINE FAILED");
-            }, timeout: TimeSpan.FromMinutes(35), description: "pipeline succeeded or failed");
-
-            if (!pipelineSucceeded)
-            {
-                throw new InvalidOperationException("Deployment pipeline failed. Check the terminal output for details.");
-            }
-
+            await auto.WaitForPipelineSuccessAsync(timeout: TimeSpan.FromMinutes(35));
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(2));
 
             // Step 12: Extract deployment URLs and verify endpoints with retry
