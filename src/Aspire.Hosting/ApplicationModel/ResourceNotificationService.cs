@@ -494,7 +494,7 @@ public class ResourceNotificationService : IDisposable
             var watchToken = watchCts.Token;
             await foreach (var resourceEvent in WatchAsync(watchToken).ConfigureAwait(false))
             {
-                if (string.Equals(resourceName, resourceEvent.ResourceId, StringComparisons.ResourceName) && predicate(resourceEvent))
+                if (MatchesResourceIdentifier(resourceName, resourceEvent) && predicate(resourceEvent))
                 {
                     return resourceEvent;
                 }
@@ -508,6 +508,13 @@ public class ResourceNotificationService : IDisposable
 
         throw new OperationCanceledException(BuildCancellationErrorMessage(cancellationMessage, resourceName));
     }
+
+    private static bool MatchesResourceIdentifier(string resourceName, ResourceEvent resourceEvent)
+    {
+        return string.Equals(resourceName, resourceEvent.ResourceId, StringComparisons.ResourceName)
+            || string.Equals(resourceName, resourceEvent.Resource.Name, StringComparisons.ResourceName);
+    }
+
     private readonly object _onResourceUpdatedLock = new();
 
     /// <summary>
