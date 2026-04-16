@@ -96,13 +96,33 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public async Task NewCommandInteractiveFlowSmokeTest()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var promptedForProjectName = false;
+        var promptedForOutputPath = false;
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
+            options.InteractionServiceFactory = _ => new TestInteractionService
+            {
+                ConfirmCallback = (_, _) => false
+            };
+
             // Set of options that we'll give when prompted.
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
-                return new TestNewCommandPrompter(interactionService);
+                var prompter = new TestNewCommandPrompter(interactionService);
+                prompter.PromptForProjectNameCallback = (defaultName) =>
+                {
+                    promptedForProjectName = true;
+                    return defaultName;
+                };
+                prompter.PromptForOutputPathCallback = (path) =>
+                {
+                    promptedForOutputPath = true;
+                    return path;
+                };
+
+                return prompter;
             };
 
             options.DotNetCliRunnerFactory = (sp) =>
@@ -133,6 +153,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.Equal(0, exitCode);
+        Assert.True(promptedForProjectName);
+        Assert.True(promptedForOutputPath);
     }
 
     [Fact]
@@ -140,7 +162,14 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public async Task NewCommandDerivesOutputPathFromProjectNameForStarterTemplate()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var promptedForProjectName = false;
+        var promptedForOutputPath = false;
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options => {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
+            options.InteractionServiceFactory = _ => new TestInteractionService
+            {
+                ConfirmCallback = (_, _) => false
+            };
 
             // Set of options that we'll give when prompted.
             options.NewCommandPrompterFactory = (sp) =>
@@ -150,11 +179,13 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
                 prompter.PromptForProjectNameCallback = (defaultName) =>
                 {
+                    promptedForProjectName = true;
                     return "CustomName";
                 };
 
                 prompter.PromptForOutputPathCallback = (path) =>
                 {
+                    promptedForOutputPath = true;
                     Assert.Equal("./CustomName", path);
                     return path;
                 };
@@ -190,6 +221,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.Equal(0, exitCode);
+        Assert.True(promptedForProjectName);
+        Assert.True(promptedForOutputPath);
     }
 
     [Fact]
@@ -743,11 +776,24 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     public async Task NewCommand_WhenCertificateServiceThrows_ReturnsNonZeroExitCode()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var promptedForProjectName = false;
+        var promptedForOutputPath = false;
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
             options.NewCommandPrompterFactory = (sp) => {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
                 var prompter = new TestNewCommandPrompter(interactionService);
+                prompter.PromptForProjectNameCallback = (defaultName) =>
+                {
+                    promptedForProjectName = true;
+                    return defaultName;
+                };
+                prompter.PromptForOutputPathCallback = (path) =>
+                {
+                    promptedForOutputPath = true;
+                    return path;
+                };
                 return prompter;
             };
             options.CertificateServiceFactory = _ => new ThrowingCertificateService();
@@ -790,19 +836,36 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.Equal(ExitCodeConstants.FailedToTrustCertificates, exitCode);
+        Assert.True(promptedForProjectName);
+        Assert.True(promptedForOutputPath);
     }
 
     [Fact]
     public async Task NewCommandWithExitCode73ShowsUserFriendlyError()
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var promptedForProjectName = false;
+        var promptedForOutputPath = false;
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options => {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
 
             // Set of options that we'll give when prompted.
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
-                return new TestNewCommandPrompter(interactionService);
+                var prompter = new TestNewCommandPrompter(interactionService);
+                prompter.PromptForProjectNameCallback = (defaultName) =>
+                {
+                    promptedForProjectName = true;
+                    return defaultName;
+                };
+                prompter.PromptForOutputPathCallback = (path) =>
+                {
+                    promptedForOutputPath = true;
+                    return path;
+                };
+
+                return prompter;
             };
 
             options.DotNetCliRunnerFactory = (sp) =>
@@ -843,6 +906,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.Equal(ExitCodeConstants.FailedToCreateNewProject, exitCode);
+        Assert.True(promptedForProjectName);
+        Assert.True(promptedForOutputPath);
     }
 
     private sealed class ThrowingCertificateService : ICertificateService
@@ -1360,16 +1425,26 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     {
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         string? capturedTargetDirectory = null;
+        var promptedForOutputPath = false;
 
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
+            options.CliHostEnvironmentFactory = _ => TestHelpers.CreateInteractiveHostEnvironment();
+            options.InteractionServiceFactory = _ => new TestInteractionService
+            {
+                ConfirmCallback = (_, _) => false
+            };
             options.NewCommandPrompterFactory = (sp) =>
             {
                 var interactionService = sp.GetRequiredService<IInteractionService>();
                 var prompter = new TestNewCommandPrompter(interactionService);
 
                 // Accept the default "./TestApp" path from the prompt
-                prompter.PromptForOutputPathCallback = (path) => path;
+                prompter.PromptForOutputPathCallback = (path) =>
+                {
+                    promptedForOutputPath = true;
+                    return path;
+                };
 
                 return prompter;
             };
@@ -1410,6 +1485,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         var exitCode = await result.InvokeAsync().DefaultTimeout();
         Assert.Equal(0, exitCode);
         Assert.NotNull(capturedTargetDirectory);
+        Assert.True(promptedForOutputPath);
 
         // The output path should be properly normalized without "./" segments
         Assert.DoesNotContain("./", capturedTargetDirectory);
