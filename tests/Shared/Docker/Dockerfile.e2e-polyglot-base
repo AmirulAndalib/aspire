@@ -22,12 +22,10 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 ARG SKIP_SOURCE_BUILD=false
 
-COPY tests/Shared/Docker/apt-retry.sh /usr/local/bin/apt-retry
-RUN chmod +x /usr/local/bin/apt-retry
-
 # Install native AOT build toolchain.
 RUN if [ "$SKIP_SOURCE_BUILD" != "true" ]; then \
-      /usr/local/bin/apt-retry sh -c 'apt-get update -qq && apt-get install -y --no-install-recommends clang zlib1g-dev' && \
+      apt-get update -qq && \
+      apt-get install -y --no-install-recommends clang zlib1g-dev && \
       rm -rf /var/lib/apt/lists/*; \
     fi
 
@@ -50,11 +48,10 @@ RUN if [ "$SKIP_SOURCE_BUILD" != "true" ]; then \
 # ============================================================
 FROM ubuntu:24.04 AS runtime
 
-COPY tests/Shared/Docker/apt-retry.sh /usr/local/bin/apt-retry
-RUN chmod +x /usr/local/bin/apt-retry
-
 # Install base tools and Docker CLI.
-RUN /usr/local/bin/apt-retry sh -c 'apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl gpg docker.io git libicu74' && \
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends \
+      ca-certificates curl gpg docker.io git libicu74 && \
     rm -rf /var/lib/apt/lists/*
 
 # Install gh CLI (needed by get-aspire-cli-pr.sh to download PR artifacts).
@@ -62,12 +59,13 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
       | gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
       > /etc/apt/sources.list.d/github-cli.list && \
-    /usr/local/bin/apt-retry sh -c 'apt-get update -qq && apt-get install -y --no-install-recommends gh' && \
+    apt-get update -qq && \
+    apt-get install -y --no-install-recommends gh && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Node.js (needed for TypeScript AppHosts and JS templates).
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    /usr/local/bin/apt-retry sh -c 'apt-get update -qq && apt-get install -y --no-install-recommends nodejs' && \
+    apt-get install -y --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
 
 # --- Aspire CLI setup ---
