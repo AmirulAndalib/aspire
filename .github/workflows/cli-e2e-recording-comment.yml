@@ -167,8 +167,8 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            // Parse TRX (XML) files to extract test method outcomes
-            // TRX format: <UnitTestResult testName="MethodName" outcome="Passed|Failed|..."/>
+            // Parse TRX (XML) files to extract test method outcomes.
+            // Each UnitTestResult element has testName and outcome attributes (in any order).
             const trxDir = 'trx_files';
             const outcomes = {}; // Map of test method name -> outcome
 
@@ -179,33 +179,26 @@ jobs:
               for (const trxFile of trxFiles) {
                 const content = fs.readFileSync(path.join(trxDir, trxFile), 'utf8');
 
-                // Extract all UnitTestResult entries with testName and outcome
-                // The testName in TRX is the display name (method name for simple tests)
-                const resultRegex = /<UnitTestResult[^>]*\btestName="([^"]*)"[^>]*\boutcome="([^"]*)"/g;
-                const resultRegexAlt = /<UnitTestResult[^>]*\boutcome="([^"]*)"[^>]*\btestName="([^"]*)"/g;
+                // Match each <UnitTestResult ...> opening tag, then extract attributes independently.
+                // This handles attributes in any order within the element.
+                const elementRegex = /<UnitTestResult\s[^>]*>/g;
+                let elementMatch;
+                while ((elementMatch = elementRegex.exec(content)) !== null) {
+                  const element = elementMatch[0];
+                  const nameMatch = element.match(/\btestName="([^"]*)"/);
+                  const outcomeMatch = element.match(/\boutcome="([^"]*)"/);
 
-                let match;
-                while ((match = resultRegex.exec(content)) !== null) {
-                  const testName = match[1];
-                  const outcome = match[2];
-                  // Store by the simple method name (last part after dot)
-                  const methodName = testName.includes('.') ? testName.split('.').pop() : testName;
-                  outcomes[methodName] = outcome;
-                  // Also store the full name for exact matching
-                  outcomes[testName] = outcome;
-                  console.log(`  ${testName}: ${outcome}`);
-                }
+                  if (nameMatch && outcomeMatch) {
+                    const testName = nameMatch[1];
+                    const outcome = outcomeMatch[1];
 
-                // Try alternate attribute order
-                while ((match = resultRegexAlt.exec(content)) !== null) {
-                  const outcome = match[1];
-                  const testName = match[2];
-                  const methodName = testName.includes('.') ? testName.split('.').pop() : testName;
-                  if (!outcomes[methodName]) {
+                    // .cast files are named after the test method name (via [CallerMemberName]).
+                    // Store by simple method name (last segment after dot) for matching.
+                    const methodName = testName.includes('.') ? testName.split('.').pop() : testName;
                     outcomes[methodName] = outcome;
-                  }
-                  if (!outcomes[testName]) {
+                    // Also store the full display name for exact matching
                     outcomes[testName] = outcome;
+                    console.log(`  ${testName}: ${outcome}`);
                   }
                 }
               }
@@ -268,8 +261,9 @@ jobs:
                 echo "Uploading $castfile..."
                 TOTAL_COUNT=$((TOTAL_COUNT + 1))
 
-                # Look up test outcome from TRX data
-                # Try the filename as method name (jq query with null fallback)
+                # Look up test outcome from TRX data.
+                # .cast files are named after the test method name (via [CallerMemberName] in CreateTestTerminal),
+                # so the filename matches the method name key in the outcomes JSON.
                 TEST_OUTCOME=$(jq -r --arg name "$filename" '.[$name] // "Unknown"' test_outcomes.json)
                 if [ "$TEST_OUTCOME" = "Passed" ]; then
                   STATUS_EMOJI="✅"
