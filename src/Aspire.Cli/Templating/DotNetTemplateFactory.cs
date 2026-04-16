@@ -634,7 +634,8 @@ internal class DotNetTemplateFactory(
 
     private async Task<string> GetOutputPathAsync(TemplateInputs inputs, Func<string, string> pathDeriver, string projectName, CancellationToken cancellationToken)
     {
-        if (inputs.Output is not { } outputPath)
+        var outputPath = inputs.Output;
+        if (string.IsNullOrWhiteSpace(outputPath))
         {
             var defaultOutputPath = pathDeriver(projectName);
             outputPath = hostEnvironment.SupportsInteractiveInput
