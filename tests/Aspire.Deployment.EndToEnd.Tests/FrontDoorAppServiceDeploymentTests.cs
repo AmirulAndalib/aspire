@@ -184,21 +184,21 @@ builder.Build().Run();
                   "done; " +
                   "if [ \"$success\" -eq 0 ]; then echo \"  ❌ Failed after 18 attempts\"; failed=1; fi; " +
                   "done && " +
-                  // Verify Front Door endpoints
+                  // Verify Front Door endpoints (Front Door can take 5-15 minutes to propagate after provisioning)
                   "if [ -n \"$fdurls\" ]; then " +
                   "for url in $fdurls; do " +
                   "echo \"Checking Front Door https://$url...\"; " +
                   "success=0; " +
-                  "for i in $(seq 1 18); do " +
+                  "for i in $(seq 1 60); do " +
                   "STATUS=$(curl -s -o /dev/null -w \"%{http_code}\" \"https://$url\" --max-time 30 2>/dev/null); " +
                   "if [ \"$STATUS\" = \"200\" ] || [ \"$STATUS\" = \"302\" ]; then echo \"  ✅ $STATUS (attempt $i)\"; success=1; break; fi; " +
                   "echo \"  Attempt $i: $STATUS, retrying in 10s...\"; sleep 10; " +
                   "done; " +
-                  "if [ \"$success\" -eq 0 ]; then echo \"  ❌ Front Door check failed after 18 attempts\"; failed=1; fi; " +
+                  "if [ \"$success\" -eq 0 ]; then echo \"  ❌ Front Door check failed after 60 attempts\"; failed=1; fi; " +
                   "done; fi && " +
                   "if [ \"$failed\" -ne 0 ]; then echo \"❌ One or more endpoint checks failed\"; exit 1; fi");
             await auto.EnterAsync();
-            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(5));
+            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(15));
 
             // Step 11: Exit terminal
             await auto.TypeAsync("exit");
