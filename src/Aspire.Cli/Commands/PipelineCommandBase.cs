@@ -977,7 +977,7 @@ internal abstract class PipelineCommandBase : BaseCommand
             promptText,
             options,
             choice => choice.Value.EscapeMarkup(),
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         if (value == CustomChoiceValue)
         {

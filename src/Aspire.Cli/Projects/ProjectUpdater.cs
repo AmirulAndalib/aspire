@@ -70,7 +70,7 @@ internal sealed partial class ProjectUpdater(ILogger<ProjectUpdater> logger, IDo
             interactionService.DisplayEmptyLine();
         }
 
-        if (!await interactionService.ConfirmAsync(UpdateCommandStrings.PerformUpdatesPrompt, true, cancellationToken))
+        if (!await interactionService.ConfirmAsync(UpdateCommandStrings.PerformUpdatesPrompt, true, cancellationToken: cancellationToken))
         {
             return new ProjectUpdateResult { UpdatedApplied = false };
         }
@@ -909,7 +909,7 @@ internal sealed partial class ProjectUpdater(ILogger<ProjectUpdater> logger, IDo
         var shouldProceed = await interactionService.ConfirmAsync(
             UpdateCommandStrings.ApplyChangesToNuGetConfig,
             defaultValue: true,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         return shouldProceed;
     }

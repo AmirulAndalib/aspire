@@ -98,8 +98,13 @@ internal class ExtensionInteractionService : IExtensionInteractionService
         }
     }
 
-    public async Task<string> PromptForStringAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, CancellationToken cancellationToken = default)
+    public async Task<string> PromptForStringAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default)
     {
+        // Delegate fallback resolution to the console interaction service which handles
+        // ParseResult checking, non-interactive defaults, and error messages.
+        // If a CLI arg was explicitly provided, ConsoleInteractionService returns it immediately
+        // without prompting, so we don't need to check here.
+
         if (_extensionPromptEnabled)
         {
             var tcs = new TaskCompletionSource<string>();
@@ -142,11 +147,11 @@ internal class ExtensionInteractionService : IExtensionInteractionService
         }
         else
         {
-            return await _consoleInteractionService.PromptForStringAsync(promptText, defaultValue, validator, isSecret, required, cancellationToken).ConfigureAwait(false);
+            return await _consoleInteractionService.PromptForStringAsync(promptText, defaultValue, validator, isSecret, required, fallback, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    public async Task<string> PromptForFilePathAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, CancellationToken cancellationToken = default)
+    public async Task<string> PromptForFilePathAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default)
     {
         if (_extensionPromptEnabled)
         {
@@ -192,13 +197,13 @@ internal class ExtensionInteractionService : IExtensionInteractionService
             }
 
             // Fall back to string prompt for older extensions without file picker support
-            return await PromptForStringAsync(promptText, defaultValue, validator, isSecret: false, required, cancellationToken).ConfigureAwait(false);
+            return await PromptForStringAsync(promptText, defaultValue, validator, isSecret: false, required, fallback, cancellationToken).ConfigureAwait(false);
         }
 
-        return await _consoleInteractionService.PromptForFilePathAsync(promptText, defaultValue, validator, directory, required, cancellationToken).ConfigureAwait(false);
+        return await _consoleInteractionService.PromptForFilePathAsync(promptText, defaultValue, validator, directory, required, fallback, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<bool> ConfirmAsync(string promptText, bool defaultValue = true, CancellationToken cancellationToken = default)
+    public async Task<bool> ConfirmAsync(string promptText, bool defaultValue = true, FallbackOptions<bool>? fallback = null, CancellationToken cancellationToken = default)
     {
         if (_extensionPromptEnabled)
         {
@@ -225,12 +230,12 @@ internal class ExtensionInteractionService : IExtensionInteractionService
         }
         else
         {
-            return await _consoleInteractionService.ConfirmAsync(promptText, defaultValue, cancellationToken);
+            return await _consoleInteractionService.ConfirmAsync(promptText, defaultValue, fallback, cancellationToken);
         }
     }
 
     public async Task<T> PromptForSelectionAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter,
-        CancellationToken cancellationToken = default) where T : notnull
+        FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) where T : notnull
     {
         if (_extensionPromptEnabled)
         {
@@ -257,12 +262,12 @@ internal class ExtensionInteractionService : IExtensionInteractionService
         }
         else
         {
-            return await _consoleInteractionService.PromptForSelectionAsync(promptText, choices, choiceFormatter, cancellationToken);
+            return await _consoleInteractionService.PromptForSelectionAsync(promptText, choices, choiceFormatter, fallback, cancellationToken);
         }
     }
 
     public async Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter,
-        IEnumerable<T>? preSelected = null, bool optional = false, CancellationToken cancellationToken = default) where T : notnull
+        IEnumerable<T>? preSelected = null, bool optional = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) where T : notnull
     {
         if (_extensionPromptEnabled)
         {
@@ -291,7 +296,7 @@ internal class ExtensionInteractionService : IExtensionInteractionService
         }
         else
         {
-            return await _consoleInteractionService.PromptForSelectionsAsync(promptText, choices, choiceFormatter, preSelected, optional, cancellationToken);
+            return await _consoleInteractionService.PromptForSelectionsAsync(promptText, choices, choiceFormatter, preSelected, optional, fallback, cancellationToken);
         }
     }
 

@@ -186,7 +186,7 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
             loc => $"{loc.Name} — {loc.Description}",
             preSelected: SkillLocation.All.Where(l => l.IsDefault),
             optional: true,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         // --- Phase 2: Skill and MCP server selection (only if locations were selected) ---
         IReadOnlyList<SkillDefinition> selectedSkills = [];
@@ -230,7 +230,7 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
                 },
                 preSelected: preSelectedItems,
                 optional: true,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             selectedSkills = selectedItems.OfType<SkillDefinition>().ToList();
 

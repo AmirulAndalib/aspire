@@ -135,7 +135,7 @@ internal sealed partial class CliTemplateFactory
                 TemplatingStrings.UseRedisCache_Prompt,
                 [TemplatingStrings.Yes, TemplatingStrings.No],
                 choice => choice,
-                cancellationToken) switch
+                cancellationToken: cancellationToken) switch
             {
                 var choice when string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput) => true,
                 var choice when string.Equals(choice, TemplatingStrings.No, StringComparisons.CliInputOrOutput) => false,

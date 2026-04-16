@@ -52,7 +52,7 @@ internal class NuGetConfigPrompter
                 TemplatingStrings.CreateNugetConfigConfirmation,
                 [TemplatingStrings.Yes, TemplatingStrings.No],
                 c => c,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             if (string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput))
             {
@@ -66,7 +66,7 @@ internal class NuGetConfigPrompter
                 TemplatingStrings.UpdateNuGetConfigConfirmation,
                 [TemplatingStrings.Yes, TemplatingStrings.No],
                 c => c,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             if (string.Equals(updateChoice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput))
             {

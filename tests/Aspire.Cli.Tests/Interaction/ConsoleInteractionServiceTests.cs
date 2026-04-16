@@ -32,7 +32,7 @@ public class ConsoleInteractionServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<EmptyChoicesException>(() =>
-            interactionService.PromptForSelectionAsync("Select an item:", choices, x => x, CancellationToken.None));
+            interactionService.PromptForSelectionAsync("Select an item:", choices, x => x, cancellationToken: CancellationToken.None));
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public class ConsoleInteractionServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            interactionService.PromptForStringAsync("Enter value:", null, null, false, false, CancellationToken.None));
+            interactionService.PromptForStringAsync("Enter value:", null, null, false, false, fallback: null, cancellationToken: CancellationToken.None));
         Assert.Contains(InteractionServiceStrings.InteractiveInputNotSupported, exception.Message);
     }
 
@@ -260,7 +260,7 @@ public class ConsoleInteractionServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            interactionService.PromptForSelectionAsync("Select an item:", choices, x => x, CancellationToken.None));
+            interactionService.PromptForSelectionAsync("Select an item:", choices, x => x, cancellationToken: CancellationToken.None));
         Assert.Contains(InteractionServiceStrings.InteractiveInputNotSupported, exception.Message);
     }
 
@@ -289,7 +289,7 @@ public class ConsoleInteractionServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            interactionService.ConfirmAsync("Confirm?", true, CancellationToken.None));
+            interactionService.ConfirmAsync("Confirm?", true, cancellationToken: CancellationToken.None));
         Assert.Contains(InteractionServiceStrings.InteractiveInputNotSupported, exception.Message);
     }
 
@@ -852,7 +852,7 @@ public class ConsoleInteractionServiceTests
         var interactionService = CreateInteractionService(console, executionContext);
 
         // Act
-        await interactionService.ConfirmAsync("Proceed?", defaultValue, CancellationToken.None);
+        await interactionService.ConfirmAsync("Proceed?", defaultValue, cancellationToken: CancellationToken.None);
 
         // Assert - the output should contain the [Y/n] or [y/N] suffix
         var outputString = output.ToString();
@@ -871,7 +871,7 @@ public class ConsoleInteractionServiceTests
         var interactionService = CreateInteractionService(console, executionContext);
 
         // Act
-        var result = await interactionService.ConfirmAsync("Proceed?", defaultValue, CancellationToken.None);
+        var result = await interactionService.ConfirmAsync("Proceed?", defaultValue, cancellationToken: CancellationToken.None);
 
         // Assert - pressing Enter should accept the default value
         Assert.Equal(defaultValue, result);

@@ -319,7 +319,7 @@ internal sealed class InitCommand : BaseCommand, IPackageMetaPrefetchingCommand
                     "Add ServiceDefaults reference?",
                     serviceDefaultsActions,
                     (action) => action.Value,
-                    cancellationToken
+                    cancellationToken: cancellationToken
                 );
 
                 switch (selection.Key)

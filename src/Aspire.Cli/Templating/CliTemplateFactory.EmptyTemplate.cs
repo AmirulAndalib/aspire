@@ -122,7 +122,7 @@ internal sealed partial class CliTemplateFactory
                 TemplatingStrings.UseLocalhostTld_Prompt,
                 [TemplatingStrings.No, TemplatingStrings.Yes],
                 choice => choice,
-                cancellationToken) switch
+                cancellationToken: cancellationToken) switch
             {
                 var choice when string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput) => true,
                 var choice when string.Equals(choice, TemplatingStrings.No, StringComparisons.CliInputOrOutput) => false,

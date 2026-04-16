@@ -303,7 +303,7 @@ internal class DotNetTemplateFactory(
         var useLocalhostTld = result.GetValue(_localhostTldOption);
         if (!useLocalhostTld.HasValue)
         {
-            useLocalhostTld = await interactionService.PromptForSelectionAsync(TemplatingStrings.UseLocalhostTld_Prompt, [TemplatingStrings.No, TemplatingStrings.Yes], choice => choice, cancellationToken) switch
+            useLocalhostTld = await interactionService.PromptForSelectionAsync(TemplatingStrings.UseLocalhostTld_Prompt, [TemplatingStrings.No, TemplatingStrings.Yes], choice => choice, cancellationToken: cancellationToken) switch
             {
                 var choice when string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput) => true,
                 var choice when string.Equals(choice, TemplatingStrings.No, StringComparisons.CliInputOrOutput) => false,
@@ -323,7 +323,7 @@ internal class DotNetTemplateFactory(
         var useRedisCache = result.GetValue(_useRedisCacheOption);
         if (!useRedisCache.HasValue)
         {
-            useRedisCache = await interactionService.PromptForSelectionAsync(TemplatingStrings.UseRedisCache_Prompt, [TemplatingStrings.Yes, TemplatingStrings.No], choice => choice, cancellationToken) switch
+            useRedisCache = await interactionService.PromptForSelectionAsync(TemplatingStrings.UseRedisCache_Prompt, [TemplatingStrings.Yes, TemplatingStrings.No], choice => choice, cancellationToken: cancellationToken) switch
             {
                 var choice when string.Equals(choice, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput) => true,
                 var choice when string.Equals(choice, TemplatingStrings.No, StringComparisons.CliInputOrOutput) => false,
@@ -348,7 +348,7 @@ internal class DotNetTemplateFactory(
                 TemplatingStrings.PromptForTFMOptions_Prompt,
                 [TemplatingStrings.No, TemplatingStrings.Yes],
                 choice => choice,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             if (string.Equals(createTestProject, TemplatingStrings.No, StringComparisons.CliInputOrOutput))
             {
@@ -362,7 +362,7 @@ internal class DotNetTemplateFactory(
                 TemplatingStrings.PromptForTFM_Prompt,
                 ["MSTest", "NUnit", "xUnit.net", TemplatingStrings.None],
                 choice => choice,
-                cancellationToken);
+                cancellationToken: cancellationToken);
         }
 
         if (testFramework is { } && !string.Equals(testFramework, TemplatingStrings.None, StringComparisons.CliInputOrOutput))

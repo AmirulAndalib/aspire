@@ -161,7 +161,7 @@ internal sealed class NewCommand : BaseCommand, IPackageMetaPrefetchingCommand
             "Which language would you like to use?",
             choices,
             choice => choice.DisplayName.EscapeMarkup(),
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         return selected.LanguageId;
     }
@@ -472,7 +472,7 @@ internal class NewCommandPrompter(IInteractionService interactionService) : INew
                 NewCommandStrings.SelectATemplateVersion,
                 packageChoices,
                 c => c.Label,
-                ct);
+                cancellationToken: ct);
 
             return selection.Result;
         }
@@ -516,7 +516,7 @@ internal class NewCommandPrompter(IInteractionService interactionService) : INew
             NewCommandStrings.SelectATemplateVersion,
             rootChoices,
             c => c.Label,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         return await topSelection.Action(cancellationToken);
     }
@@ -552,7 +552,7 @@ internal class NewCommandPrompter(IInteractionService interactionService) : INew
             NewCommandStrings.SelectAProjectTemplate,
             validTemplates,
             t => t.Description.EscapeMarkup(),
-            cancellationToken
+            cancellationToken: cancellationToken
         );
     }
 }

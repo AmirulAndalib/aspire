@@ -184,7 +184,7 @@ internal sealed class UpdateCommand : BaseCommand
                         UpdateCommandStrings.SelectChannelPrompt,
                         allChannels,
                         (c) => $"{c.Name.EscapeMarkup()} ({c.SourceDetails.EscapeMarkup()})",
-                        cancellationToken);
+                        cancellationToken: cancellationToken);
                 }
                 else
                 {
@@ -211,7 +211,7 @@ internal sealed class UpdateCommand : BaseCommand
                 var shouldUpdateCli = await InteractionService.ConfirmAsync(
                     UpdateCommandStrings.UpdateCliAfterProjectUpdatePrompt,
                     defaultValue: true,
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
                 
                 if (shouldUpdateCli)
                 {
@@ -245,7 +245,7 @@ internal sealed class UpdateCommand : BaseCommand
                     var shouldUpdateCli = await InteractionService.ConfirmAsync(
                         UpdateCommandStrings.NoAppHostFoundUpdateCliPrompt,
                         defaultValue: true,
-                        cancellationToken);
+                        cancellationToken: cancellationToken);
                     
                     if (shouldUpdateCli)
                     {
@@ -282,7 +282,7 @@ internal sealed class UpdateCommand : BaseCommand
                 "Select the channel to update to:",
                 channels,
                 q => q,
-                cancellationToken);
+                cancellationToken: cancellationToken);
         }
 
         try
