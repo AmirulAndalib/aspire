@@ -62,6 +62,11 @@
         <target state="new">Playwright CLI requires npm, which was not found on PATH. Skipping installation.</target>
         <note />
       </trans-unit>
+      <trans-unit id="InitCommand_WorkspaceRootOptionDescription">
+        <source>Path to the workspace root directory</source>
+        <target state="new">Path to the workspace root directory</target>
+        <note />
+      </trans-unit>
       <trans-unit id="PlaywrightCliInstaller_FailedToDownload">
         <source>Failed to download {0}.</source>
         <target state="new">Failed to download {0}.</target>

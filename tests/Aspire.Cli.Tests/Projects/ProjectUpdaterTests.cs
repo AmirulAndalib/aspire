@@ -125,7 +125,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         // If this throws then it means that the updater prompted
         // for confirmation to do an update when no update was required!
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
         Assert.False(updateResult.UpdatedApplied);
     }
 
@@ -237,7 +237,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         // If this throws then it means that the updater prompted
         // for confirmation to do an update when no update was required!
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
         // Note: Aspire.Hosting.AppHost is not updated because it's removed during SDK migration
@@ -376,7 +376,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         // If this throws then it means that the updater prompted
         // for confirmation to do an update when no update was required!
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
         // Note: Aspire.Hosting.AppHost is not updated because it's removed during SDK migration
@@ -526,7 +526,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
 
@@ -669,7 +669,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
 
@@ -774,7 +774,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
 
@@ -877,7 +877,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.False(updateResult.UpdatedApplied);
 
@@ -1020,7 +1020,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
 
@@ -1143,7 +1143,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
 
@@ -1261,7 +1261,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         // This should throw a ProjectUpdaterException
         var exception = await Assert.ThrowsAsync<ProjectUpdaterException>(async () =>
         {
-            await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+            await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
         });
 
         Assert.Contains("Unable to resolve MSBuild property 'InvalidVersionProperty' to a valid semantic version", exception.Message);
@@ -1371,7 +1371,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         // This should throw a ProjectUpdaterException
         var exception = await Assert.ThrowsAsync<ProjectUpdaterException>(async () =>
         {
-            await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+            await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
         });
 
         Assert.Contains("Unable to resolve MSBuild property 'NonExistentProperty' to a valid semantic version", exception.Message);
@@ -1466,7 +1466,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = new ProjectUpdater(logger, runner, interactionService, cache, executionContext, fallbackParser);
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         // Should not throw ProjectUpdaterException; should produce update steps including AppHost SDK
         Assert.True(updateResult.UpdatedApplied);
@@ -1568,7 +1568,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = new ProjectUpdater(logger, runner, interactionService, cache, executionContext, fallbackParser);
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         // Should discover package reference (version may be absent) and not crash
         Assert.True(updateResult.UpdatedApplied);
@@ -1650,7 +1650,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
 
         // Should throw ProjectUpdaterException due to invalid XML
         await Assert.ThrowsAsync<ProjectUpdaterException>(() =>
-            projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout());
+            projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout());
     }
 
     [Fact]
@@ -1729,7 +1729,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = new ProjectUpdater(logger, runner, interactionService, cache, executionContext, fallbackParser);
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         // Normal path unaffected - no updates needed since version is already current
         Assert.False(updateResult.UpdatedApplied);
@@ -1808,7 +1808,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = new ProjectUpdater(logger, runner, interactionService, cache, executionContext, fallbackParser);
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
 
@@ -1891,7 +1891,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = new ProjectUpdater(logger, runner, interactionService, cache, executionContext, fallbackParser);
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
 
@@ -1981,7 +1981,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var projectUpdater = new ProjectUpdater(logger, runner, interactionService, cache, executionContext, fallbackParser);
 
         // This should not throw and should handle the * version gracefully
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
     }
@@ -2054,7 +2054,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
 
@@ -2133,7 +2133,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
 
@@ -2224,7 +2224,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         // Both packages should be updated - range expression is treated like wildcard
         Assert.True(updateResult.UpdatedApplied);
@@ -2357,7 +2357,7 @@ public class ProjectUpdaterTests(ITestOutputHelper outputHelper)
         var selectedChannel = channels.Single(c => c.Name == "default");
 
         var projectUpdater = provider.GetRequiredService<IProjectUpdater>();
-        var updateResult = await projectUpdater.UpdateProjectAsync(appHostProjectFile, selectedChannel).DefaultTimeout();
+        var updateResult = await projectUpdater.UpdateProjectAsync(new UpdatePackagesContext { AppHostFile = appHostProjectFile, Channel = selectedChannel }).DefaultTimeout();
 
         Assert.True(updateResult.UpdatedApplied);
 

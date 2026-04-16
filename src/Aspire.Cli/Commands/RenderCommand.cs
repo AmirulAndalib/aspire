@@ -323,14 +323,14 @@ internal sealed class RenderCommand : BaseCommand
 
         var name = await InteractionService.PromptForStringAsync(
             "Enter a test value",
-            defaultValue: "hello",
+            binding: PromptBinding.CreateDefault<string?>("hello"),
             cancellationToken: cancellationToken);
 
         InteractionService.DisplayMessage(KnownEmojis.CheckMark, $"You entered: {name}");
 
         var confirmed = await InteractionService.ConfirmAsync(
             "Do you want to continue?",
-            defaultValue: true,
+            binding: PromptBinding.CreateDefault(true),
             cancellationToken: cancellationToken);
 
         if (confirmed)

@@ -401,5 +401,14 @@ namespace Aspire.Cli.Resources {
                 return ResourceManager.GetString("PlaywrightCliInstaller_InstalledWithMirrorWarnings", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Path to the workspace root directory.
+        /// </summary>
+        internal static string InitCommand_WorkspaceRootOptionDescription {
+            get {
+                return ResourceManager.GetString("InitCommand_WorkspaceRootOptionDescription", resourceCulture);
+            }
+        }
     }
 }

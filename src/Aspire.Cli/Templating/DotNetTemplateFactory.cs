@@ -290,13 +290,13 @@ internal class DotNetTemplateFactory(
 
     private async Task PromptForDevLocalhostTldOptionAsync(ParseResult result, List<string> extraArgs, CancellationToken cancellationToken)
     {
-        var fallback = FallbackOptions.CreateBoolAsSelection(result, _localhostTldOption, TemplatingStrings.Yes, TemplatingStrings.No);
+        var binding = PromptBinding.CreateBoolAsSelection(result, _localhostTldOption, TemplatingStrings.Yes, TemplatingStrings.No);
 
         var selected = await interactionService.PromptForSelectionAsync(
             TemplatingStrings.UseLocalhostTld_Prompt,
             [TemplatingStrings.No, TemplatingStrings.Yes],
             choice => choice,
-            fallback: fallback,
+            binding: binding,
             cancellationToken: cancellationToken);
 
         if (string.Equals(selected, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput))
@@ -308,13 +308,13 @@ internal class DotNetTemplateFactory(
 
     private async Task PromptForRedisCacheOptionAsync(ParseResult result, List<string> extraArgs, CancellationToken cancellationToken)
     {
-        var fallback = FallbackOptions.CreateBoolAsSelection(result, _useRedisCacheOption, TemplatingStrings.Yes, TemplatingStrings.No);
+        var binding = PromptBinding.CreateBoolAsSelection(result, _useRedisCacheOption, TemplatingStrings.Yes, TemplatingStrings.No);
 
         var selected = await interactionService.PromptForSelectionAsync(
             TemplatingStrings.UseRedisCache_Prompt,
             [TemplatingStrings.Yes, TemplatingStrings.No],
             choice => choice,
-            fallback: fallback,
+            binding: binding,
             cancellationToken: cancellationToken);
 
         if (string.Equals(selected, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput))
@@ -326,8 +326,8 @@ internal class DotNetTemplateFactory(
 
     private async Task PromptForTestFrameworkOptionsAsync(ParseResult result, List<string> extraArgs, CancellationToken cancellationToken)
     {
-        var fallback = FallbackOptions.Create(result, _testFrameworkOption);
-        var (wasProvided, _) = fallback.Resolve();
+        var binding = PromptBinding.Create(result, _testFrameworkOption);
+        var (wasProvided, _) = binding.Resolve();
 
         if (!wasProvided)
         {
@@ -352,7 +352,7 @@ internal class DotNetTemplateFactory(
             TemplatingStrings.PromptForTFM_Prompt,
             ["MSTest", "NUnit", "xUnit.net", TemplatingStrings.None],
             choice => choice,
-            fallback: fallback,
+            binding: binding,
             cancellationToken: cancellationToken);
 
         if (!string.Equals(testFramework, TemplatingStrings.None, StringComparisons.CliInputOrOutput))
@@ -371,13 +371,13 @@ internal class DotNetTemplateFactory(
 
     private async Task PromptForXUnitVersionOptionsAsync(ParseResult result, List<string> extraArgs, CancellationToken cancellationToken)
     {
-        var fallback = FallbackOptions.Create(result, _xunitVersionOption, "v3mtp");
+        var binding = PromptBinding.Create(result, _xunitVersionOption, "v3mtp");
 
         var xunitVersion = await interactionService.PromptForSelectionAsync(
             TemplatingStrings.EnterXUnitVersion_Prompt,
             ["v2", "v3", "v3mtp"],
             choice => choice,
-            fallback: fallback,
+            binding: binding,
             cancellationToken: cancellationToken);
 
         extraArgs.Add("--xunit-version");
@@ -452,8 +452,8 @@ internal class DotNetTemplateFactory(
             return new TemplateResult(ExitCodeConstants.SdkNotInstalled);
         }
 
-        var name = await GetProjectNameAsync(inputs, cancellationToken);
-        var outputPath = await GetOutputPathAsync(inputs, template.PathDeriver, name, cancellationToken);
+        var name = await GetProjectNameAsync(inputs, parseResult, cancellationToken);
+        var outputPath = await GetOutputPathAsync(inputs, template.PathDeriver, name, parseResult, cancellationToken);
 
         return await ApplyTemplateAsync(template, inputs, name, outputPath, parseResult, extraArgsCallback, cancellationToken);
     }
@@ -577,7 +577,7 @@ internal class DotNetTemplateFactory(
         }
     }
 
-    private async Task<string> GetProjectNameAsync(TemplateInputs inputs, CancellationToken cancellationToken)
+    private async Task<string> GetProjectNameAsync(TemplateInputs inputs, ParseResult parseResult, CancellationToken cancellationToken)
     {
         if (inputs.Name is not { } name || !ProjectNameValidator.IsProjectNameValid(name))
         {
@@ -588,13 +588,13 @@ internal class DotNetTemplateFactory(
                 return defaultName;
             }
 
-            name = await prompter.PromptForProjectNameAsync(defaultName, cancellationToken);
+            name = await prompter.PromptForProjectNameAsync(defaultName, parseResult, cancellationToken);
         }
 
         return name;
     }
 
-    private async Task<string> GetOutputPathAsync(TemplateInputs inputs, Func<string, string> pathDeriver, string projectName, CancellationToken cancellationToken)
+    private async Task<string> GetOutputPathAsync(TemplateInputs inputs, Func<string, string> pathDeriver, string projectName, ParseResult parseResult, CancellationToken cancellationToken)
     {
         if (inputs.Output is not { } outputPath)
         {
@@ -606,7 +606,7 @@ internal class DotNetTemplateFactory(
             }
             else
             {
-                outputPath = await prompter.PromptForOutputPath(defaultPath, cancellationToken);
+                outputPath = await prompter.PromptForOutputPath(defaultPath, parseResult, cancellationToken);
             }
         }
 

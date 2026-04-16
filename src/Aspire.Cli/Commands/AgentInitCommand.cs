@@ -58,7 +58,14 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
         _playwrightCliInstaller = playwrightCliInstaller;
         _gitRepository = gitRepository;
         _languageDiscovery = languageDiscovery;
+
+        Options.Add(s_workspaceRootOption);
     }
+
+    private static readonly Option<string?> s_workspaceRootOption = new("--workspace-root")
+    {
+        Description = AgentCommandStrings.InitCommand_WorkspaceRootOptionDescription
+    };
 
     protected override bool UpdateNotificationsEnabled => false;
 
@@ -94,7 +101,7 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
 
         var runAgentInit = await interactionService.ConfirmAsync(
             SharedCommandStrings.PromptRunAgentInit,
-            defaultValue: true,
+            binding: PromptBinding.CreateDefault(true),
             cancellationToken: cancellationToken);
 
         if (runAgentInit)
@@ -107,11 +114,11 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
 
     protected override async Task<int> ExecuteAsync(ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var workspaceRoot = await PromptForWorkspaceRootAsync(cancellationToken);
+        var workspaceRoot = await PromptForWorkspaceRootAsync(parseResult, cancellationToken);
         return await ExecuteAgentInitAsync(workspaceRoot, cancellationToken);
     }
 
-    private async Task<DirectoryInfo> PromptForWorkspaceRootAsync(CancellationToken cancellationToken)
+    private async Task<DirectoryInfo> PromptForWorkspaceRootAsync(ParseResult parseResult, CancellationToken cancellationToken)
     {
         // Try to discover the git repository root to use as the default workspace root
         var gitRoot = await _gitRepository.GetRootAsync(cancellationToken);
@@ -120,7 +127,7 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
         // Prompt the user for the workspace root
         var workspaceRootPath = await _interactionService.PromptForFilePathAsync(
             McpCommandStrings.InitCommand_WorkspaceRootPrompt,
-            defaultValue: defaultWorkspaceRoot.FullName,
+            binding: PromptBinding.Create(parseResult, s_workspaceRootOption, defaultWorkspaceRoot.FullName),
             validator: path =>
             {
                 if (string.IsNullOrWhiteSpace(path))

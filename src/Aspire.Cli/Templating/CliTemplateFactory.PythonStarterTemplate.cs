@@ -25,7 +25,7 @@ internal sealed partial class CliTemplateFactory
             }
             else
             {
-                projectName = await _prompter.PromptForProjectNameAsync(defaultName, cancellationToken);
+                projectName = await _prompter.PromptForProjectNameAsync(defaultName, parseResult, cancellationToken);
             }
         }
 
@@ -47,7 +47,7 @@ internal sealed partial class CliTemplateFactory
             }
             else
             {
-                outputPath = await _prompter.PromptForOutputPath(defaultOutputPath, cancellationToken);
+                outputPath = await _prompter.PromptForOutputPath(defaultOutputPath, parseResult, cancellationToken);
             }
         }
         outputPath = Path.GetFullPath(outputPath, _executionContext.WorkingDirectory.FullName);
@@ -137,13 +137,13 @@ internal sealed partial class CliTemplateFactory
 
     private async Task<bool> ResolveUseRedisCacheAsync(System.CommandLine.ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var fallback = FallbackOptions.CreateBoolAsSelection(parseResult, _useRedisCacheOption, TemplatingStrings.Yes, TemplatingStrings.No);
+        var binding = PromptBinding.CreateBoolAsSelection(parseResult, _useRedisCacheOption, TemplatingStrings.Yes, TemplatingStrings.No);
 
         var selected = await _interactionService.PromptForSelectionAsync(
             TemplatingStrings.UseRedisCache_Prompt,
             [TemplatingStrings.Yes, TemplatingStrings.No],
             choice => choice,
-            fallback: fallback,
+            binding: binding,
             cancellationToken: cancellationToken);
 
         var useRedisCache = string.Equals(selected, TemplatingStrings.Yes, StringComparisons.CliInputOrOutput);

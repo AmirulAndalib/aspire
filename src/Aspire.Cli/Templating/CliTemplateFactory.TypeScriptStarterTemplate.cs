@@ -25,7 +25,7 @@ internal sealed partial class CliTemplateFactory
             }
             else
             {
-                projectName = await _prompter.PromptForProjectNameAsync(defaultName, cancellationToken);
+                projectName = await _prompter.PromptForProjectNameAsync(defaultName, parseResult, cancellationToken);
             }
         }
 
@@ -47,7 +47,7 @@ internal sealed partial class CliTemplateFactory
             }
             else
             {
-                outputPath = await _prompter.PromptForOutputPath(defaultOutputPath, cancellationToken);
+                outputPath = await _prompter.PromptForOutputPath(defaultOutputPath, parseResult, cancellationToken);
             }
         }
         outputPath = Path.GetFullPath(outputPath, _executionContext.WorkingDirectory.FullName);

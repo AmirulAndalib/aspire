@@ -33,12 +33,12 @@ internal sealed class NewCommand : BaseCommand, IPackageMetaPrefetchingCommand
     private readonly AgentInitCommand _agentInitCommand;
     private readonly ICliHostEnvironment _hostEnvironment;
 
-    private static readonly Option<string> s_nameOption = new("--name", "-n")
+    internal static readonly Option<string?> s_nameOption = new("--name", "-n")
     {
         Description = NewCommandStrings.NameArgumentDescription,
         Recursive = true
     };
-    private static readonly Option<string?> s_outputOption = new("--output", "-o")
+    internal static readonly Option<string?> s_outputOption = new("--output", "-o")
     {
         Description = NewCommandStrings.OutputArgumentDescription,
         Recursive = true
@@ -415,8 +415,8 @@ internal sealed class NewCommand : BaseCommand, IPackageMetaPrefetchingCommand
 internal interface INewCommandPrompter
 {
     Task<ITemplate> PromptForTemplateAsync(ITemplate[] validTemplates, CancellationToken cancellationToken);
-    Task<string> PromptForProjectNameAsync(string defaultName, CancellationToken cancellationToken);
-    Task<string> PromptForOutputPath(string v, CancellationToken cancellationToken);
+    Task<string> PromptForProjectNameAsync(string defaultName, ParseResult parseResult, CancellationToken cancellationToken);
+    Task<string> PromptForOutputPath(string v, ParseResult parseResult, CancellationToken cancellationToken);
 }
 
 internal interface ITemplateVersionPrompter
@@ -529,25 +529,25 @@ internal class NewCommandPrompter(IInteractionService interactionService) : INew
         return await topSelection.Action(cancellationToken);
     }
 
-    public virtual async Task<string> PromptForOutputPath(string path, CancellationToken cancellationToken)
+    public virtual async Task<string> PromptForOutputPath(string path, ParseResult parseResult, CancellationToken cancellationToken)
     {
         // Escape markup characters in the path to prevent Spectre.Console from trying to parse them as markup
         // when displaying it as the default value in the prompt
         return await interactionService.PromptForFilePathAsync(
             NewCommandStrings.EnterTheOutputPath,
-            defaultValue: path.EscapeMarkup(),
+            binding: PromptBinding.Create(parseResult, NewCommand.s_outputOption, path.EscapeMarkup()),
             directory: true,
             cancellationToken: cancellationToken
             );
     }
 
-    public virtual async Task<string> PromptForProjectNameAsync(string defaultName, CancellationToken cancellationToken)
+    public virtual async Task<string> PromptForProjectNameAsync(string defaultName, ParseResult parseResult, CancellationToken cancellationToken)
     {
         // Escape markup characters in the default name to prevent Spectre.Console from trying to parse them as markup
         // when displaying it as the default value in the prompt
         return await interactionService.PromptForStringAsync(
             NewCommandStrings.EnterTheProjectName,
-            defaultValue: defaultName.EscapeMarkup(),
+            binding: PromptBinding.Create(parseResult, NewCommand.s_nameOption, defaultName.EscapeMarkup()),
             validator: name => ProjectNameValidator.IsProjectNameValid(name)
                 ? ValidationResult.Success()
                 : ValidationResult.Error(NewCommandStrings.InvalidProjectName),

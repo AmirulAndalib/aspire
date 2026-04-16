@@ -20,13 +20,15 @@ namespace Aspire.Cli.Projects;
 
 internal interface IProjectUpdater
 {
-    Task<ProjectUpdateResult> UpdateProjectAsync(FileInfo projectFile, PackageChannel channel, CancellationToken cancellationToken = default);
+    Task<ProjectUpdateResult> UpdateProjectAsync(UpdatePackagesContext context, CancellationToken cancellationToken = default);
 }
 
 internal sealed partial class ProjectUpdater(ILogger<ProjectUpdater> logger, IDotNetCliRunner runner, IInteractionService interactionService, IMemoryCache cache, CliExecutionContext executionContext, FallbackProjectParser fallbackParser) : IProjectUpdater
 {
-    public async Task<ProjectUpdateResult> UpdateProjectAsync(FileInfo projectFile, PackageChannel channel, CancellationToken cancellationToken = default)
+    public async Task<ProjectUpdateResult> UpdateProjectAsync(UpdatePackagesContext context, CancellationToken cancellationToken = default)
     {
+        var projectFile = context.AppHostFile;
+        var channel = context.Channel;
         logger.LogDebug("Fetching '{AppHostPath}' items and properties.", projectFile.FullName);
 
         var (updateSteps, fallbackUsed) = await interactionService.ShowStatusAsync(UpdateCommandStrings.AnalyzingProjectStatus, () => GetUpdateStepsAsync(projectFile, channel, cancellationToken));
@@ -70,7 +72,7 @@ internal sealed partial class ProjectUpdater(ILogger<ProjectUpdater> logger, IDo
             interactionService.DisplayEmptyLine();
         }
 
-        if (!await interactionService.ConfirmAsync(UpdateCommandStrings.PerformUpdatesPrompt, true, cancellationToken: cancellationToken))
+        if (!await interactionService.ConfirmAsync(UpdateCommandStrings.PerformUpdatesPrompt, context.ConfirmBinding, cancellationToken: cancellationToken))
         {
             return new ProjectUpdateResult { UpdatedApplied = false };
         }
@@ -108,14 +110,14 @@ internal sealed partial class ProjectUpdater(ILogger<ProjectUpdater> logger, IDo
 
             var selectedPathForNewNuGetConfigFile = await interactionService.PromptForFilePathAsync(
                 promptText: UpdateCommandStrings.WhichDirectoryNuGetConfigPrompt,
-                defaultValue: recommendedNuGetConfigFileDirectory.EscapeMarkup(),
+                binding: context.NuGetConfigDirBinding,
                 validator: null,
                 directory: true,
                 required: true,
                 cancellationToken: cancellationToken);
 
             var nugetConfigDirectory = new DirectoryInfo(selectedPathForNewNuGetConfigFile);
-            await NuGetConfigMerger.CreateOrUpdateAsync(nugetConfigDirectory, channel, AnalyzeAndConfirmNuGetConfigChanges, cancellationToken: cancellationToken);
+            await NuGetConfigMerger.CreateOrUpdateAsync(nugetConfigDirectory, channel, (_, orig, proposed, ct) => AnalyzeAndConfirmNuGetConfigChanges(context, orig, proposed, ct), cancellationToken: cancellationToken);
         }
 
         interactionService.DisplayEmptyLine();
@@ -892,7 +894,7 @@ internal sealed partial class ProjectUpdater(ILogger<ProjectUpdater> logger, IDo
         }
     }
 
-    private async Task<bool> AnalyzeAndConfirmNuGetConfigChanges(FileInfo targetFile, XmlDocument? originalDocument, XmlDocument proposedDocument, CancellationToken cancellationToken)
+    private async Task<bool> AnalyzeAndConfirmNuGetConfigChanges(UpdatePackagesContext context, XmlDocument? originalDocument, XmlDocument proposedDocument, CancellationToken cancellationToken)
     {
         interactionService.DisplayEmptyLine();
 
@@ -908,7 +910,7 @@ internal sealed partial class ProjectUpdater(ILogger<ProjectUpdater> logger, IDo
 
         var shouldProceed = await interactionService.ConfirmAsync(
             UpdateCommandStrings.ApplyChangesToNuGetConfig,
-            defaultValue: true,
+            binding: context.ConfirmBinding,
             cancellationToken: cancellationToken);
 
         return shouldProceed;

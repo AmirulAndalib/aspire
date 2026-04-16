@@ -245,7 +245,7 @@ public class ConsoleInteractionServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            interactionService.PromptForStringAsync("Enter value:", null, null, false, false, fallback: null, cancellationToken: CancellationToken.None));
+            interactionService.PromptForStringAsync("Enter value:", null, false, false, binding: null, cancellationToken: CancellationToken.None));
         Assert.Contains(InteractionServiceStrings.InteractiveInputNotSupported, exception.Message);
     }
 
@@ -289,7 +289,7 @@ public class ConsoleInteractionServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            interactionService.ConfirmAsync("Confirm?", true, cancellationToken: CancellationToken.None));
+            interactionService.ConfirmAsync("Confirm?", cancellationToken: CancellationToken.None));
         Assert.Contains(InteractionServiceStrings.InteractiveInputNotSupported, exception.Message);
     }
 
@@ -852,7 +852,7 @@ public class ConsoleInteractionServiceTests
         var interactionService = CreateInteractionService(console, executionContext);
 
         // Act
-        await interactionService.ConfirmAsync("Proceed?", defaultValue, cancellationToken: CancellationToken.None);
+        await interactionService.ConfirmAsync("Proceed?", PromptBinding.CreateDefault(defaultValue), cancellationToken: CancellationToken.None);
 
         // Assert - the output should contain the [Y/n] or [y/N] suffix
         var outputString = output.ToString();
@@ -871,7 +871,7 @@ public class ConsoleInteractionServiceTests
         var interactionService = CreateInteractionService(console, executionContext);
 
         // Act
-        var result = await interactionService.ConfirmAsync("Proceed?", defaultValue, cancellationToken: CancellationToken.None);
+        var result = await interactionService.ConfirmAsync("Proceed?", PromptBinding.CreateDefault(defaultValue), cancellationToken: CancellationToken.None);
 
         // Assert - pressing Enter should accept the default value
         Assert.Equal(defaultValue, result);

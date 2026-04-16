@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.CommandLine;
 using Microsoft.AspNetCore.InternalTesting;
 using System.Text.Json;
 using Aspire.Cli.Backchannel;
@@ -435,19 +436,19 @@ public class DotNetTemplateFactoryTests
     {
         public ConsoleOutput Console { get; set; }
 
-        public Task<T> PromptForSelectionAsync<T>(string prompt, IEnumerable<T> choices, Func<T, string> displaySelector, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) where T : notnull
+        public Task<T> PromptForSelectionAsync<T>(string prompt, IEnumerable<T> choices, Func<T, string> displaySelector, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull
             => throw new NotImplementedException();
 
-        public Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, IEnumerable<T>? preSelected = null, bool optional = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) where T : notnull
+        public Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, IEnumerable<T>? preSelected = null, bool optional = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull
             => throw new NotImplementedException();
 
-        public Task<string> PromptForStringAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default)
+        public Task<string> PromptForStringAsync(string promptText, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
-        public Task<string> PromptForFilePathAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default)
+        public Task<string> PromptForFilePathAsync(string promptText, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
-        public Task<bool> ConfirmAsync(string prompt, bool defaultAnswer = true, FallbackOptions<bool>? fallback = null, CancellationToken cancellationToken = default)
+        public Task<bool> ConfirmAsync(string prompt, PromptBinding<bool>? binding = null, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<TResult> ShowStatusAsync<TResult>(string message, Func<Task<TResult>> work, KnownEmoji? emoji = null, bool allowMarkup = false)
@@ -536,10 +537,10 @@ public class DotNetTemplateFactoryTests
 
     private sealed class TestNewCommandPrompter : INewCommandPrompter, ITemplateVersionPrompter
     {
-        public Task<string> PromptForProjectNameAsync(string defaultName, CancellationToken cancellationToken)
+        public Task<string> PromptForProjectNameAsync(string defaultName, ParseResult parseResult, CancellationToken cancellationToken)
             => throw new NotImplementedException();
 
-        public Task<string> PromptForOutputPath(string defaultPath, CancellationToken cancellationToken)
+        public Task<string> PromptForOutputPath(string defaultPath, ParseResult parseResult, CancellationToken cancellationToken)
             => throw new NotImplementedException();
 
         public Task<(Aspire.Shared.NuGetPackageCli Package, PackageChannel Channel)> PromptForTemplatesVersionAsync(IEnumerable<(Aspire.Shared.NuGetPackageCli Package, PackageChannel Channel)> packages, CancellationToken cancellationToken)

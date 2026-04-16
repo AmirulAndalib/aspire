@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Globalization;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Aspire.Cli.Backchannel;
 using Aspire.Cli.Resources;
 using Aspire.Cli.Utils;
@@ -142,30 +142,26 @@ internal class ConsoleInteractionService : IInteractionService
         }
     }
 
-    public async Task<string> PromptForStringAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default)
+    public async Task<string> PromptForStringAsync(string promptText, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(promptText, nameof(promptText));
 
-        // Check CLI arguments first via fallback
-        if (fallback is not null)
+        var (wasProvided, value, defaultValue) = PromptBinding.Resolve(binding);
+        if (wasProvided && value is not null)
         {
-            var (wasProvided, value) = fallback.Resolve();
-            if (wasProvided && value is not null)
-            {
-                return value;
-            }
+            return value;
         }
 
         if (!_hostEnvironment.SupportsInteractiveInput)
         {
-            if (fallback is not null)
+            if (binding != null)
             {
-                if (fallback.HasDefaultValue && fallback.DefaultValue is not null)
+                if (binding.DefaultValue != null)
                 {
-                    return fallback.DefaultValue;
+                    return binding.DefaultValue;
                 }
 
-                ThrowNonInteractiveError(fallback.SymbolDisplayName);
+                ThrowNonInteractiveError(binding.SymbolDisplayName);
             }
 
             throw new InvalidOperationException(InteractionServiceStrings.InteractiveInputNotSupported);
@@ -179,7 +175,7 @@ internal class ConsoleInteractionService : IInteractionService
             AllowEmpty = !required
         };
 
-        if (defaultValue is not null)
+        if (defaultValue != null)
         {
             prompt.DefaultValue(defaultValue);
             prompt.ShowDefaultValue();
@@ -196,47 +192,45 @@ internal class ConsoleInteractionService : IInteractionService
         return result;
     }
 
-    public Task<string> PromptForFilePathAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default)
+    public Task<string> PromptForFilePathAsync(string promptText, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
     {
-        return PromptForStringAsync(promptText, defaultValue, validator, isSecret: false, required, fallback, cancellationToken);
+        return PromptForStringAsync(promptText, validator, isSecret: false, required, binding, cancellationToken);
     }
 
-    public async Task<T> PromptForSelectionAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) where T : notnull
+    public async Task<T> PromptForSelectionAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull
     {
         ArgumentNullException.ThrowIfNull(promptText, nameof(promptText));
         ArgumentNullException.ThrowIfNull(choices, nameof(choices));
         ArgumentNullException.ThrowIfNull(choiceFormatter, nameof(choiceFormatter));
 
-        // Check CLI arguments first via fallback
-        if (fallback is not null)
+        var (wasProvided, value, defaultValue) = PromptBinding.Resolve(binding);
+        if (wasProvided && value is not null)
         {
-            var (wasProvided, value) = fallback.Resolve();
-            if (wasProvided && value is not null)
+            var match = MatchChoice(value, choices, choiceFormatter);
+            if (match is not null)
             {
-                var match = MatchChoice(value, choices, choiceFormatter);
-                if (match is not null)
-                {
-                    return match;
-                }
-
-                ThrowNonInteractiveInvalidValue(value, fallback.SymbolDisplayName, choices, choiceFormatter);
+                return match;
             }
+
+            ThrowNonInteractiveInvalidValue(value, binding!.SymbolDisplayName, choices, choiceFormatter);
         }
 
         if (!_hostEnvironment.SupportsInteractiveInput)
         {
-            if (fallback is not null)
+            if (binding != null)
             {
-                if (fallback.HasDefaultValue && fallback.DefaultValue is not null)
+                if (defaultValue != null)
                 {
-                    var match = MatchChoice(fallback.DefaultValue, choices, choiceFormatter);
+                    var match = MatchChoice(defaultValue, choices, choiceFormatter);
                     if (match is not null)
                     {
                         return match;
                     }
+
+                    ThrowNonInteractiveSelectionError(binding.SymbolDisplayName, choices, choiceFormatter);
                 }
 
-                ThrowNonInteractiveSelectionError(fallback.SymbolDisplayName, choices, choiceFormatter);
+                ThrowNonInteractiveError(binding.SymbolDisplayName);
             }
 
             throw new InvalidOperationException(InteractionServiceStrings.InteractiveInputNotSupported);
@@ -264,44 +258,42 @@ internal class ConsoleInteractionService : IInteractionService
         return result;
     }
 
-    public async Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, IEnumerable<T>? preSelected = null, bool optional = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) where T : notnull
+    public async Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, IEnumerable<T>? preSelected = null, bool optional = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull
     {
         ArgumentNullException.ThrowIfNull(promptText, nameof(promptText));
         ArgumentNullException.ThrowIfNull(choices, nameof(choices));
         ArgumentNullException.ThrowIfNull(choiceFormatter, nameof(choiceFormatter));
 
-        // Check CLI arguments first via fallback
-        if (fallback is not null)
+        var (wasProvided, value, defaultValue) = PromptBinding.Resolve(binding);
+        if (wasProvided && value is not null)
         {
-            var (wasProvided, value) = fallback.Resolve();
-            if (wasProvided && value is not null)
+            var fallbackChoices = choices.ToList();
+            var matched = MatchChoices(value, fallbackChoices, choiceFormatter);
+            if (matched is not null)
             {
-                var fallbackChoices = choices.ToList();
-                var matched = MatchChoices(value, fallbackChoices, choiceFormatter);
-                if (matched is not null)
-                {
-                    return matched;
-                }
-
-                ThrowNonInteractiveInvalidValue(value, fallback.SymbolDisplayName, fallbackChoices, choiceFormatter);
+                return matched;
             }
+
+            ThrowNonInteractiveInvalidValue(value, binding!.SymbolDisplayName, choices, choiceFormatter);
         }
 
         if (!_hostEnvironment.SupportsInteractiveInput)
         {
-            if (fallback is not null)
+            if (binding != null)
             {
-                if (fallback.HasDefaultValue && fallback.DefaultValue is not null)
+                if (defaultValue != null)
                 {
-                    var defaultChoices = choices.ToList();
-                    var matched = MatchChoices(fallback.DefaultValue, defaultChoices, choiceFormatter);
+                    var fallbackChoices = choices.ToList();
+                    var matched = MatchChoices(defaultValue, fallbackChoices, choiceFormatter);
                     if (matched is not null)
                     {
                         return matched;
                     }
+
+                    ThrowNonInteractiveSelectionError(binding.SymbolDisplayName, choices, choiceFormatter);
                 }
 
-                ThrowNonInteractiveSelectionError(fallback.SymbolDisplayName, choices, choiceFormatter);
+                ThrowNonInteractiveError(binding.SymbolDisplayName);
             }
 
             throw new InvalidOperationException(InteractionServiceStrings.InteractiveInputNotSupported);
@@ -466,28 +458,24 @@ internal class ConsoleInteractionService : IInteractionService
         DisplayMessage(KnownEmojis.StopSign, $"[teal bold]{InteractionServiceStrings.StoppingAspire}[/]", allowMarkup: true);
     }
 
-    public async Task<bool> ConfirmAsync(string promptText, bool defaultValue = true, FallbackOptions<bool>? fallback = null, CancellationToken cancellationToken = default)
+    public async Task<bool> ConfirmAsync(string promptText, PromptBinding<bool>? binding = null, CancellationToken cancellationToken = default)
     {
-        // Check CLI arguments first via fallback
-        if (fallback is not null)
+        var (wasProvided, value, defaultValue) = PromptBinding.Resolve(binding);
+        if (wasProvided)
         {
-            var (wasProvided, value) = fallback.Resolve();
-            if (wasProvided)
-            {
-                return value;
-            }
+            return value;
         }
 
         if (!_hostEnvironment.SupportsInteractiveInput)
         {
-            if (fallback is not null)
+            if (binding is not null)
             {
-                if (fallback.HasDefaultValue)
+                if (defaultValue)
                 {
-                    return fallback.DefaultValue;
+                    return binding.DefaultValue;
                 }
 
-                ThrowNonInteractiveError(fallback.SymbolDisplayName);
+                ThrowNonInteractiveError(binding.SymbolDisplayName);
             }
 
             throw new InvalidOperationException(InteractionServiceStrings.InteractiveInputNotSupported);

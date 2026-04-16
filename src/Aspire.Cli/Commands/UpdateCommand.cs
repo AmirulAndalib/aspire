@@ -38,6 +38,14 @@ internal sealed class UpdateCommand : BaseCommand
     {
         Description = UpdateCommandStrings.SelfOptionDescription
     };
+    private static readonly Option<bool> s_yesOption = new("--yes", "-y")
+    {
+        Description = UpdateCommandStrings.YesOptionDescription
+    };
+    private static readonly Option<string?> s_nugetConfigDirOption = new("--nuget-config-dir")
+    {
+        Description = UpdateCommandStrings.NuGetConfigDirOptionDescription
+    };
     private readonly Option<string?> _channelOption;
     private readonly Option<string?> _qualityOption;
 
@@ -68,6 +76,8 @@ internal sealed class UpdateCommand : BaseCommand
 
         Options.Add(s_appHostOption);
         Options.Add(s_selfOption);
+        Options.Add(s_yesOption);
+        Options.Add(s_nugetConfigDirOption);
 
         // Customize description based on whether staging channel is enabled
         var isStagingEnabled = KnownFeatures.IsStagingChannelEnabled(_features, _configuration);
@@ -195,10 +205,14 @@ internal sealed class UpdateCommand : BaseCommand
             }
 
             // Update packages using the appropriate project handler
+            var confirmBinding = PromptBinding.Create(parseResult, s_yesOption, true);
+            var nugetConfigDirBinding = PromptBinding.Create(parseResult, s_nugetConfigDirOption);
             var updateContext = new UpdatePackagesContext
             {
                 AppHostFile = projectFile,
-                Channel = channel
+                Channel = channel,
+                ConfirmBinding = confirmBinding,
+                NuGetConfigDirBinding = nugetConfigDirBinding
             };
             await project.UpdatePackagesAsync(updateContext, cancellationToken);
 
@@ -210,7 +224,7 @@ internal sealed class UpdateCommand : BaseCommand
             {
                 var shouldUpdateCli = await InteractionService.ConfirmAsync(
                     UpdateCommandStrings.UpdateCliAfterProjectUpdatePrompt,
-                    defaultValue: true,
+                    binding: confirmBinding,
                     cancellationToken: cancellationToken);
                 
                 if (shouldUpdateCli)
@@ -244,7 +258,7 @@ internal sealed class UpdateCommand : BaseCommand
                 {
                     var shouldUpdateCli = await InteractionService.ConfirmAsync(
                         UpdateCommandStrings.NoAppHostFoundUpdateCliPrompt,
-                        defaultValue: true,
+                        binding: PromptBinding.Create(parseResult, s_yesOption, true),
                         cancellationToken: cancellationToken);
                     
                     if (shouldUpdateCli)

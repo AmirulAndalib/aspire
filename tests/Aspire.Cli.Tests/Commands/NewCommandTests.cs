@@ -1,10 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.CommandLine;
 using System.Globalization;
 using Aspire.Cli.Utils;
 using Aspire.Cli.Certificates;
 using Aspire.Cli.Commands;
+using RootCommand = Aspire.Cli.Commands.RootCommand;
 using Aspire.Cli.Configuration;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.NuGet;
@@ -1977,7 +1979,7 @@ internal sealed class TestNewCommandPrompter(IInteractionService interactionServ
         };
     }
 
-    public override Task<string> PromptForProjectNameAsync(string defaultName, CancellationToken cancellationToken)
+    public override Task<string> PromptForProjectNameAsync(string defaultName, ParseResult parseResult, CancellationToken cancellationToken)
     {
         return PromptForProjectNameCallback switch
         {
@@ -1986,7 +1988,7 @@ internal sealed class TestNewCommandPrompter(IInteractionService interactionServ
         };
     }
 
-    public override Task<string> PromptForOutputPath(string path, CancellationToken cancellationToken)
+    public override Task<string> PromptForOutputPath(string path, ParseResult parseResult, CancellationToken cancellationToken)
     {
         return PromptForOutputPathCallback switch
         {
@@ -2019,12 +2021,12 @@ internal sealed class OrderTrackingInteractionService(List<string> operationOrde
         action();
     }
 
-    public Task<string> PromptForStringAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default)
+    public Task<string> PromptForStringAsync(string promptText, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(defaultValue ?? string.Empty);
+        return Task.FromResult(binding?.DefaultValue ?? string.Empty);
     }
 
-    public Task<T> PromptForSelectionAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) where T : notnull
+    public Task<T> PromptForSelectionAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull
     {
         if (!choices.Any())
         {
@@ -2043,7 +2045,7 @@ internal sealed class OrderTrackingInteractionService(List<string> operationOrde
         return Task.FromResult(choices.First());
     }
 
-    public Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, IEnumerable<T>? preSelected = null, bool optional = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) where T : notnull
+    public Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, IEnumerable<T>? preSelected = null, bool optional = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull
     {
         if (!choices.Any())
         {
@@ -2064,9 +2066,9 @@ internal sealed class OrderTrackingInteractionService(List<string> operationOrde
     public void DisplaySuccess(string message, bool allowMarkup = false) { }
     public void DisplayLines(IEnumerable<(OutputLineStream Stream, string Line)> lines) { }
     public void DisplayCancellationMessage() { }
-    public Task<bool> ConfirmAsync(string promptText, bool defaultValue = true, FallbackOptions<bool>? fallback = null, CancellationToken cancellationToken = default) => Task.FromResult(true);
-    public Task<string> PromptForFilePathAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default)
-        => PromptForStringAsync(promptText, defaultValue, validator, isSecret: false, required, fallback, cancellationToken);
+    public Task<bool> ConfirmAsync(string promptText, PromptBinding<bool>? binding = null, CancellationToken cancellationToken = default) => Task.FromResult(true);
+    public Task<string> PromptForFilePathAsync(string promptText, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
+        => PromptForStringAsync(promptText, validator, isSecret: false, required, binding, cancellationToken);
     public void DisplaySubtleMessage(string message, bool escapeMarkup = true) { }
     public void DisplayEmptyLine() { }
     public void DisplayPlainText(string text) { }

@@ -57,7 +57,7 @@ public class UpdateCommandTests(ITestOutputHelper outputHelper)
 
             options.ProjectUpdaterFactory = _ => new TestProjectUpdater()
             {
-                UpdateProjectAsyncCallback = (projectFile, channel, cancellationToken) =>
+                UpdateProjectAsyncCallback = (context, cancellationToken) =>
                 {
                     return Task.FromResult(new ProjectUpdateResult { UpdatedApplied = false });
                 }
@@ -220,7 +220,7 @@ public class UpdateCommandTests(ITestOutputHelper outputHelper)
 
             options.ProjectUpdaterFactory = _ => new TestProjectUpdater()
             {
-                UpdateProjectAsyncCallback = (projectFile, channel, cancellationToken) =>
+                UpdateProjectAsyncCallback = (context, cancellationToken) =>
                 {
                     return Task.FromResult(new ProjectUpdateResult { UpdatedApplied = true });
                 }
@@ -291,7 +291,7 @@ public class UpdateCommandTests(ITestOutputHelper outputHelper)
 
             options.ProjectUpdaterFactory = _ => new TestProjectUpdater()
             {
-                UpdateProjectAsyncCallback = (projectFile, channel, cancellationToken) =>
+                UpdateProjectAsyncCallback = (context, cancellationToken) =>
                 {
                     return Task.FromResult(new ProjectUpdateResult { UpdatedApplied = true });
                 }
@@ -501,9 +501,9 @@ public class UpdateCommandTests(ITestOutputHelper outputHelper)
 
             options.ProjectUpdaterFactory = _ => new TestProjectUpdater()
             {
-                UpdateProjectAsyncCallback = (projectFile, channel, cancellationToken) =>
+                UpdateProjectAsyncCallback = (context, cancellationToken) =>
                 {
-                    capturedChannel = channel;
+                    capturedChannel = context.Channel;
                     return Task.FromResult(new ProjectUpdateResult { UpdatedApplied = true });
                 }
             };
@@ -568,9 +568,9 @@ public class UpdateCommandTests(ITestOutputHelper outputHelper)
 
             options.ProjectUpdaterFactory = _ => new TestProjectUpdater()
             {
-                UpdateProjectAsyncCallback = (projectFile, channel, cancellationToken) =>
+                UpdateProjectAsyncCallback = (context, cancellationToken) =>
                 {
-                    capturedChannel = channel;
+                    capturedChannel = context.Channel;
                     return Task.FromResult(new ProjectUpdateResult { UpdatedApplied = true });
                 }
             };
@@ -691,9 +691,9 @@ public class UpdateCommandTests(ITestOutputHelper outputHelper)
 
             options.ProjectUpdaterFactory = _ => new TestProjectUpdater()
             {
-                UpdateProjectAsyncCallback = (projectFile, channel, cancellationToken) =>
+                UpdateProjectAsyncCallback = (context, cancellationToken) =>
                 {
-                    capturedChannel = channel;
+                    capturedChannel = context.Channel;
                     return Task.FromResult(new ProjectUpdateResult { UpdatedApplied = true });
                 }
             };
@@ -813,9 +813,9 @@ public class UpdateCommandTests(ITestOutputHelper outputHelper)
 
             options.ProjectUpdaterFactory = _ => new TestProjectUpdater()
             {
-                UpdateProjectAsyncCallback = (projectFile, channel, cancellationToken) =>
+                UpdateProjectAsyncCallback = (context, cancellationToken) =>
                 {
-                    updatedWithChannel = channel.Name;
+                    updatedWithChannel = context.Channel.Name;
                     return Task.FromResult(new ProjectUpdateResult { UpdatedApplied = false });
                 }
             };
@@ -1024,16 +1024,16 @@ internal sealed class CancellationTrackingInteractionService : IInteractionServi
 
     public Task<T> ShowStatusAsync<T>(string statusText, Func<Task<T>> action, KnownEmoji? emoji = null, bool allowMarkup = false) => _innerService.ShowStatusAsync(statusText, action, emoji, allowMarkup);
     public void ShowStatus(string statusText, Action action, KnownEmoji? emoji = null, bool allowMarkup = false) => _innerService.ShowStatus(statusText, action, emoji, allowMarkup);
-    public Task<string> PromptForStringAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) 
-        => _innerService.PromptForStringAsync(promptText, defaultValue, validator, isSecret, required, fallback, cancellationToken);
-    public Task<string> PromptForFilePathAsync(string promptText, string? defaultValue = null, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default)
-        => _innerService.PromptForFilePathAsync(promptText, defaultValue, validator, directory, required, fallback, cancellationToken);
-    public Task<bool> ConfirmAsync(string promptText, bool defaultValue = true, FallbackOptions<bool>? fallback = null, CancellationToken cancellationToken = default) 
-        => _innerService.ConfirmAsync(promptText, defaultValue, fallback, cancellationToken);
-    public Task<T> PromptForSelectionAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) where T : notnull 
-        => _innerService.PromptForSelectionAsync(promptText, choices, choiceFormatter, fallback, cancellationToken);
-    public Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, IEnumerable<T>? preSelected = null, bool optional = false, FallbackOptions<string?>? fallback = null, CancellationToken cancellationToken = default) where T : notnull 
-        => _innerService.PromptForSelectionsAsync(promptText, choices, choiceFormatter, preSelected, optional, fallback, cancellationToken);
+    public Task<string> PromptForStringAsync(string promptText, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) 
+        => _innerService.PromptForStringAsync(promptText, validator, isSecret, required, binding, cancellationToken);
+    public Task<string> PromptForFilePathAsync(string promptText, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
+        => _innerService.PromptForFilePathAsync(promptText, validator, directory, required, binding, cancellationToken);
+    public Task<bool> ConfirmAsync(string promptText, PromptBinding<bool>? binding = null, CancellationToken cancellationToken = default) 
+        => _innerService.ConfirmAsync(promptText, binding, cancellationToken);
+    public Task<T> PromptForSelectionAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull 
+        => _innerService.PromptForSelectionAsync(promptText, choices, choiceFormatter, binding, cancellationToken);
+    public Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter, IEnumerable<T>? preSelected = null, bool optional = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull 
+        => _innerService.PromptForSelectionsAsync(promptText, choices, choiceFormatter, preSelected, optional, binding, cancellationToken);
     public int DisplayIncompatibleVersionError(AppHostIncompatibleException ex, string appHostHostingVersion) 
         => _innerService.DisplayIncompatibleVersionError(ex, appHostHostingVersion);
     public void DisplayError(string errorMessage) => _innerService.DisplayError(errorMessage);
@@ -1062,13 +1062,13 @@ internal sealed class CancellationTrackingInteractionService : IInteractionServi
 // Test implementation of IProjectUpdater
 internal sealed class TestProjectUpdater : IProjectUpdater
 {
-    public Func<FileInfo, PackageChannel, CancellationToken, Task<ProjectUpdateResult>>? UpdateProjectAsyncCallback { get; set; }
+    public Func<UpdatePackagesContext, CancellationToken, Task<ProjectUpdateResult>>? UpdateProjectAsyncCallback { get; set; }
 
-    public Task<ProjectUpdateResult> UpdateProjectAsync(FileInfo projectFile, PackageChannel channel, CancellationToken cancellationToken = default)
+    public Task<ProjectUpdateResult> UpdateProjectAsync(UpdatePackagesContext context, CancellationToken cancellationToken = default)
     {
         if (UpdateProjectAsyncCallback != null)
         {
-            return UpdateProjectAsyncCallback(projectFile, channel, cancellationToken);
+            return UpdateProjectAsyncCallback(context, cancellationToken);
         }
 
         // Default behavior
