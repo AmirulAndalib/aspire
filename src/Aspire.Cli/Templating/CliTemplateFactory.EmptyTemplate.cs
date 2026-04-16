@@ -124,16 +124,20 @@ internal sealed partial class CliTemplateFactory
 
     private async Task<bool> ResolveUseLocalhostTldAsync(System.CommandLine.ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var localhostTldOptionSpecified = parseResult.Tokens.Any(token =>
-            string.Equals(token.Value, "--localhost-tld", StringComparisons.CliInputOrOutput));
-        var useLocalhostTld = parseResult.GetValue(_localhostTldOption);
-        if (!localhostTldOptionSpecified)
-        {
-            if (!_hostEnvironment.SupportsInteractiveInput)
-            {
-                return false;
-            }
+        var fallback = FallbackOptions.Create(parseResult, _localhostTldOption);
+        var (wasProvided, value) = fallback.Resolve();
 
+        bool useLocalhostTld;
+        if (wasProvided)
+        {
+            useLocalhostTld = value ?? false;
+        }
+        else if (!_hostEnvironment.SupportsInteractiveInput)
+        {
+            return false;
+        }
+        else
+        {
             useLocalhostTld = await _interactionService.PromptForSelectionAsync(
                 TemplatingStrings.UseLocalhostTld_Prompt,
                 [TemplatingStrings.No, TemplatingStrings.Yes],
@@ -146,12 +150,12 @@ internal sealed partial class CliTemplateFactory
             };
         }
 
-        if (useLocalhostTld ?? false)
+        if (useLocalhostTld)
         {
             _interactionService.DisplayMessage(KnownEmojis.CheckMark, TemplatingStrings.UseLocalhostTld_UsingLocalhostTld);
         }
 
-        return useLocalhostTld ?? false;
+        return useLocalhostTld;
     }
 
     private async Task ApplyLocalhostTldToScaffoldedRunProfileAsync(string outputPath, string projectName, CancellationToken cancellationToken)

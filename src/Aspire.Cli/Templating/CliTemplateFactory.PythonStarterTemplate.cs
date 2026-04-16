@@ -137,16 +137,20 @@ internal sealed partial class CliTemplateFactory
 
     private async Task<bool> ResolveUseRedisCacheAsync(System.CommandLine.ParseResult parseResult, CancellationToken cancellationToken)
     {
-        var redisCacheOptionSpecified = parseResult.Tokens.Any(token =>
-            string.Equals(token.Value, "--use-redis-cache", StringComparisons.CliInputOrOutput));
-        var useRedisCache = parseResult.GetValue(_useRedisCacheOption);
-        if (!redisCacheOptionSpecified)
-        {
-            if (!_hostEnvironment.SupportsInteractiveInput)
-            {
-                return false;
-            }
+        var fallback = FallbackOptions.Create(parseResult, _useRedisCacheOption);
+        var (wasProvided, value) = fallback.Resolve();
 
+        bool useRedisCache;
+        if (wasProvided)
+        {
+            useRedisCache = value ?? false;
+        }
+        else if (!_hostEnvironment.SupportsInteractiveInput)
+        {
+            return false;
+        }
+        else
+        {
             useRedisCache = await _interactionService.PromptForSelectionAsync(
                 TemplatingStrings.UseRedisCache_Prompt,
                 [TemplatingStrings.Yes, TemplatingStrings.No],
@@ -159,12 +163,12 @@ internal sealed partial class CliTemplateFactory
             };
         }
 
-        if (useRedisCache ?? false)
+        if (useRedisCache)
         {
             _interactionService.DisplayMessage(KnownEmojis.CheckMark, TemplatingStrings.UseRedisCache_UsingRedisCache);
         }
 
-        return useRedisCache ?? false;
+        return useRedisCache;
     }
 
     private static void AddRedisPackageToConfig(string outputPath, string aspireVersion)
