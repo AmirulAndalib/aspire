@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Azure.Provisioning;
+
 namespace Aspire.Hosting.Azure;
 
 /// <summary>
@@ -22,9 +24,12 @@ public class AzureFrontDoorResource(string name, Action<AzureResourceInfrastruct
     /// <param name="originResourceName">The name of the origin resource (as specified in the Aspire application model).</param>
     /// <returns>A <see cref="BicepOutputReference"/> for the Front Door endpoint URL serving that origin.</returns>
     /// <remarks>
-    /// The output name follows the pattern <c>{originResourceName}_endpointUrl</c>.
+    /// The output name follows the pattern <c>{normalizedOriginName}_endpointUrl</c>.
     /// For example, if the origin resource is named "api", the output is <c>api_endpointUrl</c>.
     /// </remarks>
     public BicepOutputReference GetEndpointUrl(string originResourceName)
-        => new($"{originResourceName}_endpointUrl", this);
+    {
+        var normalizedName = Infrastructure.NormalizeBicepIdentifier(originResourceName);
+        return new($"{normalizedName}_endpointUrl", this);
+    }
 }

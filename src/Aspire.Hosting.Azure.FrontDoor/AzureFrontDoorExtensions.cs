@@ -80,6 +80,7 @@ public static class AzureFrontDoorExtensions
             {
                 var originAnnotation = originAnnotations[i];
                 var originResource = originAnnotation.Resource;
+                var originBicepId = Infrastructure.NormalizeBicepIdentifier(originResource.Name);
                 var originName = originResource.Name.ToLowerInvariant();
 
                 var endpointReference = GetOriginEndpoint(originResource);
@@ -90,10 +91,10 @@ public static class AzureFrontDoorExtensions
                 // Resolve the hostname via the origin resource's compute environment
                 var computeEnv = GetEffectiveComputeEnvironment(originResource);
                 var hostExpression = computeEnv.GetHostAddressExpression(endpointReference);
-                var hostParam = hostExpression.AsProvisioningParameter(infrastructure, $"{originName}_host");
+                var hostParam = hostExpression.AsProvisioningParameter(infrastructure, $"{originBicepId}_host");
 
                 // Endpoint
-                var endpoint = new FrontDoorEndpoint($"{originName}Endpoint")
+                var endpoint = new FrontDoorEndpoint($"{originBicepId}Endpoint")
                 {
                     Parent = profile,
                     Name = BicepFunction.Take(BicepFunction.Interpolate($"{originName}-{BicepFunction.GetUniqueString(BicepFunction.GetResourceGroup().Id)}"), 46),
@@ -102,7 +103,7 @@ public static class AzureFrontDoorExtensions
                 infrastructure.Add(endpoint);
 
                 // Origin group — LoadBalancingSettings is required by ARM even with a single origin.
-                var originGroup = new FrontDoorOriginGroup($"{originName}OriginGroup")
+                var originGroup = new FrontDoorOriginGroup($"{originBicepId}OriginGroup")
                 {
                     Parent = profile,
                     Name = BicepFunction.Take(BicepFunction.Interpolate($"{originName}-og-{BicepFunction.GetUniqueString(BicepFunction.GetResourceGroup().Id)}"), 90),
@@ -121,7 +122,7 @@ public static class AzureFrontDoorExtensions
                 infrastructure.Add(originGroup);
 
                 // Origin
-                var origin = new FrontDoorOrigin($"{originName}Origin")
+                var origin = new FrontDoorOrigin($"{originBicepId}Origin")
                 {
                     Parent = originGroup,
                     Name = BicepFunction.Take(BicepFunction.Interpolate($"{originName}-origin-{BicepFunction.GetUniqueString(BicepFunction.GetResourceGroup().Id)}"), 90),
@@ -131,7 +132,7 @@ public static class AzureFrontDoorExtensions
                 infrastructure.Add(origin);
 
                 // Route
-                var route = new FrontDoorRoute($"{originName}Route")
+                var route = new FrontDoorRoute($"{originBicepId}Route")
                 {
                     Parent = endpoint,
                     Name = BicepFunction.Take(BicepFunction.Interpolate($"{originName}-route-{BicepFunction.GetUniqueString(BicepFunction.GetResourceGroup().Id)}"), 90),
@@ -147,7 +148,7 @@ public static class AzureFrontDoorExtensions
                 infrastructure.Add(route);
 
                 // Output the endpoint URL for this origin
-                infrastructure.Add(new ProvisioningOutput($"{originName}_endpointUrl", typeof(string))
+                infrastructure.Add(new ProvisioningOutput($"{originBicepId}_endpointUrl", typeof(string))
                 {
                     Value = BicepFunction.Interpolate($"https://{endpoint.HostName}")
                 });

@@ -64,7 +64,7 @@ public class AzureFrontDoorTests
 
         builder.AddAzureContainerAppEnvironment("env");
 
-        var api = builder.AddProject<Project>("api", launchProfileName: null)
+        var api = builder.AddProject<Project>("my-api", launchProfileName: null)
             .WithHttpsEndpoint()
             .WithExternalHttpEndpoints();
 
@@ -78,6 +78,10 @@ public class AzureFrontDoorTests
         var (_, bicep) = await GetManifestWithBicep(frontDoor.Resource);
 
         await Verify(bicep, "bicep");
+
+        // Verify GetEndpointUrl normalizes the dashed name to match the bicep output
+        var endpointUrl = frontDoor.Resource.GetEndpointUrl("my-api");
+        Assert.Equal("my_api_endpointUrl", endpointUrl.Name);
     }
 
     [Fact]
