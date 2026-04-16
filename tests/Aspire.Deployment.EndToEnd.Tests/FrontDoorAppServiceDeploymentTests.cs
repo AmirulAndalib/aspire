@@ -10,11 +10,11 @@ using Xunit;
 namespace Aspire.Deployment.EndToEnd.Tests;
 
 /// <summary>
-/// End-to-end tests for deploying Aspire applications with Azure Front Door and App Service.
+/// End-to-end tests for deploying Aspire applications with Azure Front Door and Azure Container Apps.
 /// </summary>
 public sealed class FrontDoorAppServiceDeploymentTests(ITestOutputHelper output)
 {
-    // Timeout set to 40 minutes to allow for Azure Front Door and App Service provisioning.
+    // Timeout set to 40 minutes to allow for Azure Front Door and ACA provisioning.
     // Full deployments can take up to 30 minutes if Azure infrastructure is backed up.
     private static readonly TimeSpan s_testTimeout = TimeSpan.FromMinutes(40);
 
@@ -91,9 +91,9 @@ public sealed class FrontDoorAppServiceDeploymentTests(ITestOutputHelper output)
             await auto.EnterAsync();
             await auto.WaitForSuccessPromptAsync(counter);
 
-            // Step 5: Add Azure App Service and Front Door hosting packages
-            output.WriteLine("Step 5: Adding Azure App Service hosting package...");
-            await auto.TypeAsync("aspire add Aspire.Hosting.Azure.AppService");
+            // Step 5: Add Azure Container Apps and Front Door hosting packages
+            output.WriteLine("Step 5: Adding Azure Container Apps hosting package...");
+            await auto.TypeAsync("aspire add Aspire.Hosting.Azure.AppContainers");
             await auto.EnterAsync();
 
             if (DeploymentE2ETestHelpers.IsRunningInCI)
@@ -116,7 +116,7 @@ public sealed class FrontDoorAppServiceDeploymentTests(ITestOutputHelper output)
 
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(180));
 
-            // Step 6: Modify AppHost.cs to add Azure App Service Environment and Front Door
+            // Step 6: Modify AppHost.cs to add Azure Container App Environment and Front Door
             var projectDir = Path.Combine(workspace.WorkspaceRoot.FullName, projectName);
             var appHostDir = Path.Combine(projectDir, $"{projectName}.AppHost");
             var appHostFilePath = Path.Combine(appHostDir, "AppHost.cs");
@@ -128,8 +128,8 @@ public sealed class FrontDoorAppServiceDeploymentTests(ITestOutputHelper output)
             // Insert Azure infrastructure before builder.Build().Run();
             var buildRunPattern = "builder.Build().Run();";
             var replacement = """
-// Add Azure App Service Environment for deployment
-builder.AddAzureAppServiceEnvironment("infra");
+// Add Azure Container App Environment for deployment
+builder.AddAzureContainerAppEnvironment("aca");
 
 // Add Azure Front Door in front of the web frontend
 builder.AddAzureFrontDoor("frontdoor")
@@ -166,16 +166,16 @@ builder.Build().Run();
             await auto.TypeAsync($"RG_NAME=\"{resourceGroupName}\" && " +
                   "echo \"Resource group: $RG_NAME\" && " +
                   "if ! az group show -n \"$RG_NAME\" &>/dev/null; then echo \"❌ Resource group not found\"; exit 1; fi && " +
-                  // Check App Service endpoints
-                  "urls=$(az webapp list -g \"$RG_NAME\" --query \"[].defaultHostName\" -o tsv 2>/dev/null) && " +
-                  "if [ -z \"$urls\" ]; then echo \"❌ No App Service endpoints found\"; exit 1; fi && " +
+                  // Check ACA endpoints (exclude internal endpoints)
+                  "urls=$(az containerapp list -g \"$RG_NAME\" --query \"[].properties.configuration.ingress.fqdn\" -o tsv 2>/dev/null | grep -v '\\.internal\\.') && " +
+                  "if [ -z \"$urls\" ]; then echo \"❌ No external container app endpoints found\"; exit 1; fi && " +
                   // Check Front Door endpoints
                   "fdurls=$(az afd endpoint list -g \"$RG_NAME\" --profile-name $(az afd profile list -g \"$RG_NAME\" --query \"[0].name\" -o tsv 2>/dev/null) --query \"[].hostName\" -o tsv 2>/dev/null) && " +
                   "echo \"Front Door endpoints: $fdurls\" && " +
                   "failed=0 && " +
-                  // Verify App Service endpoints
+                  // Verify ACA endpoints
                   "for url in $urls; do " +
-                  "echo \"Checking App Service https://$url...\"; " +
+                  "echo \"Checking ACA https://$url...\"; " +
                   "success=0; " +
                   "for i in $(seq 1 18); do " +
                   "STATUS=$(curl -s -o /dev/null -w \"%{http_code}\" \"https://$url\" --max-time 30 2>/dev/null); " +
