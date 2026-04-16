@@ -528,8 +528,8 @@ var aks = builder.AddAzureKubernetesService("aks")
 - ✅ ACR auto-creation + AcrPull role assignment in Bicep
 - ✅ Kubeconfig retrieval via `az aks get-credentials` to isolated temp file
 - ✅ Multi-environment support (scoped Helm chart names, per-env kubeconfig)
-- ✅ `WithVersion()`, `WithSkuTier()`, `WithContainerRegistry()`
-- ✅ `AsPrivateCluster()` — sets `apiServerAccessProfile.enablePrivateCluster`
+- ✅ `WithContainerRegistry()`
+- ❌ ~~`WithVersion()`, `WithSkuTier()`, `AsPrivateCluster()`~~ — **Removed** in initial sweep; use `ConfigureInfrastructure()` instead
 - ✅ Push step dependency wiring for container image builds
 
 #### Phase 2: Workload Identity

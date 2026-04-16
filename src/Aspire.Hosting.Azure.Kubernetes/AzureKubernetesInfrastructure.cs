@@ -6,6 +6,7 @@
 #pragma warning disable ASPIREFILESYSTEM001 // IFileSystemService/TempDirectory are experimental
 
 using System.Text;
+using System.Text.RegularExpressions;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Dcp.Process;
 using Aspire.Hosting.Eventing;
@@ -23,7 +24,7 @@ namespace Aspire.Hosting.Azure.Kubernetes;
 /// Infrastructure eventing subscriber that processes compute resources
 /// targeting an AKS environment.
 /// </summary>
-internal sealed class AzureKubernetesInfrastructure(
+internal sealed partial class AzureKubernetesInfrastructure(
     ILogger<AzureKubernetesInfrastructure> logger)
     : IDistributedApplicationEventingSubscriber
 {
@@ -196,6 +197,7 @@ internal sealed class AzureKubernetesInfrastructure(
         // Pool was added via NodePools config but not via AddNodePool — create the resource
         var config = environment.NodePools.First(p => p.Name == poolName);
         var pool = new AksNodePoolResource(poolName, config, environment);
+        pool.Annotations.Add(ManifestPublishingCallbackAnnotation.Ignore);
         appModel.Resources.Add(pool);
         return pool;
     }
@@ -255,6 +257,11 @@ internal sealed class AzureKubernetesInfrastructure(
                 var azPath = FindAzCli();
                 var resourceGroup = await GetResourceGroupAsync(azPath, clusterName, context)
                     .ConfigureAwait(false);
+
+                // Defense-in-depth: validate that values used as CLI arguments
+                // contain only expected characters (alphanumeric, hyphens, underscores, dots).
+                ValidateAzureResourceName(clusterName, "cluster name");
+                ValidateAzureResourceName(resourceGroup, "resource group");
 
                 // Fetch kubeconfig content to stdout using --file - to avoid az CLI
                 // writing credentials with potentially permissive file permissions.
@@ -412,4 +419,22 @@ internal sealed class AzureKubernetesInfrastructure(
     }
 
     private sealed record AzCommandResult(int ExitCode, string StandardOutput, string StandardError);
+
+    /// <summary>
+    /// Validates that an Azure resource name contains only expected characters.
+    /// Azure resource names and resource group names allow alphanumeric, hyphens,
+    /// underscores, parentheses, and dots.
+    /// </summary>
+    private static void ValidateAzureResourceName(string value, string parameterDescription)
+    {
+        if (!AzureResourceNamePattern().IsMatch(value))
+        {
+            throw new InvalidOperationException(
+                $"The {parameterDescription} '{value}' contains unexpected characters. " +
+                $"Expected only alphanumeric characters, hyphens, underscores, parentheses, and dots.");
+        }
+    }
+
+    [GeneratedRegex(@"^[a-zA-Z0-9\-_\.\(\)]+$")]
+    private static partial Regex AzureResourceNamePattern();
 }
