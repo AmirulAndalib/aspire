@@ -100,10 +100,13 @@ internal class ExtensionInteractionService : IExtensionInteractionService
 
     public async Task<string> PromptForStringAsync(string promptText, Func<string, ValidationResult>? validator = null, bool isSecret = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
     {
-        // Delegate binding resolution to the console interaction service which handles
-        // ParseResult checking, non-interactive defaults, and error messages.
-        // If a CLI arg was explicitly provided, ConsoleInteractionService returns it immediately
-        // without prompting, so we don't need to check here.
+        // Check binding first — if a CLI arg was explicitly provided, return it immediately
+        // without prompting through either the extension or console path.
+        var (wasProvided, value, _) = PromptBinding.Resolve(binding);
+        if (wasProvided && value is not null)
+        {
+            return value;
+        }
 
         if (_extensionPromptEnabled)
         {
@@ -153,6 +156,12 @@ internal class ExtensionInteractionService : IExtensionInteractionService
 
     public async Task<string> PromptForFilePathAsync(string promptText, Func<string, ValidationResult>? validator = null, bool directory = false, bool required = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default)
     {
+        var (wasProvided, value, _) = PromptBinding.Resolve(binding);
+        if (wasProvided && value is not null)
+        {
+            return value;
+        }
+
         if (_extensionPromptEnabled)
         {
             var hasFilePickersCapability = await Backchannel.HasCapabilityAsync(KnownCapabilities.FilePickers, _cancellationToken).ConfigureAwait(false);
@@ -205,6 +214,12 @@ internal class ExtensionInteractionService : IExtensionInteractionService
 
     public async Task<bool> ConfirmAsync(string promptText, PromptBinding<bool>? binding = null, CancellationToken cancellationToken = default)
     {
+        var (wasProvided, value, _) = PromptBinding.Resolve(binding);
+        if (wasProvided)
+        {
+            return value;
+        }
+
         if (_extensionPromptEnabled)
         {
             var tcs = new TaskCompletionSource<bool>();
@@ -237,6 +252,12 @@ internal class ExtensionInteractionService : IExtensionInteractionService
     public async Task<T> PromptForSelectionAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter,
         PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull
     {
+        var (wasProvided, value, _) = PromptBinding.Resolve(binding);
+        if (wasProvided && value is not null)
+        {
+            return _consoleInteractionService.MatchChoiceOrThrow(value, binding!, choices, choiceFormatter);
+        }
+
         if (_extensionPromptEnabled)
         {
             var tcs = new TaskCompletionSource<T>();
@@ -269,6 +290,12 @@ internal class ExtensionInteractionService : IExtensionInteractionService
     public async Task<IReadOnlyList<T>> PromptForSelectionsAsync<T>(string promptText, IEnumerable<T> choices, Func<T, string> choiceFormatter,
         IEnumerable<T>? preSelected = null, bool optional = false, PromptBinding<string?>? binding = null, CancellationToken cancellationToken = default) where T : notnull
     {
+        var (wasProvided, value, _) = PromptBinding.Resolve(binding);
+        if (wasProvided && value is not null)
+        {
+            return _consoleInteractionService.MatchChoicesOrThrow(value, binding!, choices, choiceFormatter);
+        }
+
         if (_extensionPromptEnabled)
         {
             var tcs = new TaskCompletionSource<IReadOnlyList<T>>();

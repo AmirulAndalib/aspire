@@ -48,6 +48,13 @@ internal sealed class PromptBinding<T>
     /// provided by the user and the resolved value.
     /// </summary>
     public (bool WasProvided, T? Value) Resolve() => _resolver(ParseResult);
+
+    /// <summary>
+    /// Creates a copy of this binding with a different default value.
+    /// Useful when the default is computed later than the binding is created.
+    /// </summary>
+    public PromptBinding<T> WithDefault(T? newDefault) =>
+        new(ParseResult, SymbolDisplayName, _resolver, newDefault);
 }
 
 /// <summary>

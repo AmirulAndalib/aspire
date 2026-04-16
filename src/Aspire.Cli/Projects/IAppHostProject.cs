@@ -31,16 +31,16 @@ internal sealed class UpdatePackagesContext
     public required Packaging.PackageChannel Channel { get; init; }
 
     /// <summary>
-    /// Gets or sets the prompt binding for confirmation prompts.
-    /// When provided, enables non-interactive confirmation via CLI options (e.g. <c>--yes</c>).
+    /// Gets the prompt binding for confirmation prompts.
+    /// Enables non-interactive confirmation via CLI options (e.g. <c>--yes</c>).
     /// </summary>
-    public Interaction.PromptBinding<bool>? ConfirmBinding { get; init; }
+    public required Interaction.PromptBinding<bool> ConfirmBinding { get; init; }
 
     /// <summary>
-    /// Gets or sets the prompt binding for the NuGet config directory prompt.
-    /// When provided, enables non-interactive selection via CLI options (e.g. <c>--nuget-config-dir</c>).
+    /// Gets the prompt binding for the NuGet config directory prompt.
+    /// Enables non-interactive selection via CLI options (e.g. <c>--nuget-config-dir</c>).
     /// </summary>
-    public Interaction.PromptBinding<string?>? NuGetConfigDirBinding { get; init; }
+    public required Interaction.PromptBinding<string?> NuGetConfigDirBinding { get; init; }
 }
 
 /// <summary>

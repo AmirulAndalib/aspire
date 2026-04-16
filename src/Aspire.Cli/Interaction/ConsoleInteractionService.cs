@@ -468,16 +468,6 @@ internal class ConsoleInteractionService : IInteractionService
 
         if (!_hostEnvironment.SupportsInteractiveInput)
         {
-            if (binding is not null)
-            {
-                if (defaultValue)
-                {
-                    return binding.DefaultValue;
-                }
-
-                ThrowNonInteractiveError(binding.SymbolDisplayName);
-            }
-
             throw new InvalidOperationException(InteractionServiceStrings.InteractiveInputNotSupported);
         }
 
@@ -528,13 +518,13 @@ internal class ConsoleInteractionService : IInteractionService
         _errorConsole.MarkupLine(string.Format(CultureInfo.CurrentCulture, InteractionServiceStrings.MoreInfoNewCliVersion, UpdateUrl));
     }
 
-    private static T? MatchChoice<T>(string value, IEnumerable<T> choices, Func<T, string> choiceFormatter) where T : notnull
+    internal static T? MatchChoice<T>(string value, IEnumerable<T> choices, Func<T, string> choiceFormatter) where T : notnull
     {
         return choices.FirstOrDefault(c => string.Equals(choiceFormatter(c), value, StringComparison.OrdinalIgnoreCase))
             ?? choices.FirstOrDefault(c => string.Equals(c.ToString(), value, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static IReadOnlyList<T>? MatchChoices<T>(string commaSeparatedValues, IReadOnlyList<T> choices, Func<T, string> choiceFormatter) where T : notnull
+    internal static IReadOnlyList<T>? MatchChoices<T>(string commaSeparatedValues, IReadOnlyList<T> choices, Func<T, string> choiceFormatter) where T : notnull
     {
         if (string.Equals(commaSeparatedValues, "all", StringComparison.OrdinalIgnoreCase))
         {
@@ -568,12 +558,37 @@ internal class ConsoleInteractionService : IInteractionService
     }
 
     [DoesNotReturn]
-    private void ThrowNonInteractiveInvalidValue<T>(string value, string symbolDisplayName, IEnumerable<T> choices, Func<T, string> choiceFormatter) where T : notnull
+    internal void ThrowNonInteractiveInvalidValue<T>(string value, string symbolDisplayName, IEnumerable<T> choices, Func<T, string> choiceFormatter) where T : notnull
     {
         DisplayError(string.Format(CultureInfo.CurrentCulture, InteractionServiceStrings.NonInteractiveInvalidValue, value, symbolDisplayName));
         var availableChoices = string.Join(", ", choices.Select(c => choiceFormatter(c)));
         DisplaySubtleMessage(string.Format(CultureInfo.CurrentCulture, InteractionServiceStrings.NonInteractiveAvailableValues, availableChoices));
         throw new NonInteractiveException(symbolDisplayName);
+    }
+
+    internal T MatchChoiceOrThrow<T>(string value, PromptBinding<string?> binding, IEnumerable<T> choices, Func<T, string> choiceFormatter) where T : notnull
+    {
+        var match = MatchChoice(value, choices, choiceFormatter);
+        if (match is not null)
+        {
+            return match;
+        }
+
+        ThrowNonInteractiveInvalidValue(value, binding.SymbolDisplayName, choices, choiceFormatter);
+        return default; // unreachable
+    }
+
+    internal IReadOnlyList<T> MatchChoicesOrThrow<T>(string value, PromptBinding<string?> binding, IEnumerable<T> choices, Func<T, string> choiceFormatter) where T : notnull
+    {
+        var choicesList = choices.ToList();
+        var matched = MatchChoices(value, choicesList, choiceFormatter);
+        if (matched is not null)
+        {
+            return matched;
+        }
+
+        ThrowNonInteractiveInvalidValue(value, binding.SymbolDisplayName, choicesList, choiceFormatter);
+        return default; // unreachable
     }
 
     [DoesNotReturn]

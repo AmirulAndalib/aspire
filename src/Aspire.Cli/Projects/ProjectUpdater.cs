@@ -108,9 +108,14 @@ internal sealed partial class ProjectUpdater(ILogger<ProjectUpdater> logger, IDo
 
             interactionService.DisplayEmptyLine();
 
+            // Carry the recommended directory as the default on the binding.
+            // The original binding (from UpdateCommand) may not have a default because
+            // the recommended directory is computed here, after NuGet config discovery.
+            var nugetConfigDirBinding = context.NuGetConfigDirBinding.WithDefault(recommendedNuGetConfigFileDirectory.EscapeMarkup());
+
             var selectedPathForNewNuGetConfigFile = await interactionService.PromptForFilePathAsync(
                 promptText: UpdateCommandStrings.WhichDirectoryNuGetConfigPrompt,
-                binding: context.NuGetConfigDirBinding,
+                binding: nugetConfigDirBinding,
                 validator: null,
                 directory: true,
                 required: true,
