@@ -15,7 +15,6 @@ namespace Aspire.Cli.EndToEnd.Tests;
 public sealed class EmptyAppHostTemplateTests(ITestOutputHelper output)
 {
     [Fact]
-    [CaptureWorkspaceOnFailure]
     public async Task CreateAndRunEmptyAppHostProject()
     {
         var repoRoot = CliE2ETestHelpers.GetRepoRoot();

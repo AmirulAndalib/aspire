@@ -10,7 +10,7 @@ namespace Aspire.Cli.Agents;
 /// <summary>
 /// Represents a skill that can be installed into a skill location.
 /// </summary>
-[DebuggerDisplay("{Name}")]
+[DebuggerDisplay("Name = {Name}, Description = {Description}, IsDefault = {IsDefault}")]
 internal sealed class SkillDefinition
 {
     /// <summary>
@@ -153,7 +153,4 @@ internal sealed class SkillDefinition
     /// Gets all available skill definitions.
     /// </summary>
     public static IReadOnlyList<SkillDefinition> All { get; } = [Aspire, PlaywrightCli, DotnetInspect];
-
-    /// <inheritdoc />
-    public override string ToString() => Name;
 }

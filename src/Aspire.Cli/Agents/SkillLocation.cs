@@ -9,7 +9,7 @@ namespace Aspire.Cli.Agents;
 /// <summary>
 /// Represents a location where skill files can be installed.
 /// </summary>
-[DebuggerDisplay("{Id}")]
+[DebuggerDisplay("Id = {Id}, DisplayName = {DisplayName}, Description = {Description}, IsDefault = {IsDefault}")]
 internal sealed class SkillLocation
 {
     /// <summary>
@@ -100,7 +100,4 @@ internal sealed class SkillLocation
     /// Gets all available skill locations.
     /// </summary>
     public static IReadOnlyList<SkillLocation> All { get; } = [Standard, ClaudeCode, GitHubSkills, OpenCode];
-
-    /// <inheritdoc />
-    public override string ToString() => Id;
 }

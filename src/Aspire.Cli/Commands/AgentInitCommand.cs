@@ -62,7 +62,6 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
         Options.Add(s_workspaceRootOption);
         Options.Add(s_skillLocationsOption);
         Options.Add(s_skillsOption);
-        Options.Add(s_configureMcpOption);
     }
 
     private static readonly Option<string?> s_workspaceRootOption = new("--workspace-root")
@@ -78,11 +77,6 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
     private static readonly Option<string?> s_skillsOption = new("--skills")
     {
         Description = AgentCommandStrings.InitCommand_SkillsOptionDescription
-    };
-
-    private static readonly Option<bool> s_configureMcpOption = new("--configure-mcp")
-    {
-        Description = AgentCommandStrings.InitCommand_ConfigureMcpOptionDescription
     };
 
     protected override bool UpdateNotificationsEnabled => false;
@@ -214,53 +208,62 @@ internal sealed class AgentInitCommand : BaseCommand, IPackageMetaPrefetchingCom
             binding: skillLocationsBinding,
             cancellationToken: cancellationToken);
 
-        // --- Phase 2: Skill selection (only if locations were selected) ---
+        // --- Phase 2: Skill and MCP server selection (only if locations were selected) ---
         IReadOnlyList<SkillDefinition> selectedSkills = [];
         AgentEnvironmentApplicator? combinedMcpApplicator = null;
         var mcpApplicators = userChoices.Where(a => a.PromptGroup == McpInitPromptGroup.AgentEnvironments).ToList();
 
         if (selectedLocations.Count > 0)
         {
+            // Build prompt items: skills first, then MCP as a separate non-default item
+            var skillChoices = new List<object>();
+            skillChoices.AddRange(availableSkills);
+
+            if (mcpApplicators.Count > 0)
+            {
+                combinedMcpApplicator = new AgentEnvironmentApplicator(
+                    AgentCommandStrings.InitCommand_ConfigureMcpServer,
+                    async ct =>
+                    {
+                        foreach (var mcp in mcpApplicators)
+                        {
+                            await mcp.ApplyAsync(ct);
+                            _interactionService.DisplayMessage(KnownEmojis.CheckMark, mcp.Description);
+                        }
+                    },
+                    promptGroup: McpInitPromptGroup.AdditionalOptions);
+                skillChoices.Add(combinedMcpApplicator);
+            }
+
+            var preSelectedItems = new List<object>();
+            preSelectedItems.AddRange(availableSkills.Where(s => s.IsDefault));
+            // MCP is intentionally NOT pre-selected
+
             var defaultSkillNames = string.Join(",", availableSkills.Where(s => s.IsDefault).Select(s => s.Name));
             var skillsBinding = parseResult is not null
                 ? PromptBinding.Create(parseResult, s_skillsOption, defaultSkillNames)
                 : PromptBinding.CreateDefault<string?>(defaultSkillNames);
 
-            selectedSkills = await _interactionService.PromptForSelectionsAsync(
+            var selectedItems = await _interactionService.PromptForSelectionsAsync(
                 AgentCommandStrings.InitCommand_SelectSkills,
-                availableSkills,
-                skill => $"{skill.Name} — {skill.Description}",
-                preSelected: availableSkills.Where(s => s.IsDefault),
+                skillChoices,
+                item => item switch
+                {
+                    SkillDefinition skill => $"{skill.Name} — {skill.Description}",
+                    AgentEnvironmentApplicator app => $"[bold]{app.Description}[/] [dim]{AgentCommandStrings.InitCommand_ConfiguresDetectedAgentEnvironments}[/]",
+                    _ => item.ToString()!
+                },
+                preSelected: preSelectedItems,
                 optional: true,
                 binding: skillsBinding,
                 cancellationToken: cancellationToken);
 
-            // --- Phase 2b: MCP server configuration (only if applicators detected) ---
-            if (mcpApplicators.Count > 0)
+            selectedSkills = selectedItems.OfType<SkillDefinition>().ToList();
+
+            // Clear MCP applicator if it was not selected by the user.
+            if (combinedMcpApplicator is not null && !selectedItems.Contains(combinedMcpApplicator))
             {
-                var configureMcpBinding = parseResult is not null
-                    ? PromptBinding.Create(parseResult, s_configureMcpOption, false)
-                    : PromptBinding.CreateDefault(false);
-
-                var shouldConfigureMcp = await _interactionService.ConfirmAsync(
-                    AgentCommandStrings.InitCommand_ConfigureMcpPrompt,
-                    binding: configureMcpBinding,
-                    cancellationToken: cancellationToken);
-
-                if (shouldConfigureMcp)
-                {
-                    combinedMcpApplicator = new AgentEnvironmentApplicator(
-                        AgentCommandStrings.InitCommand_ConfigureMcpServer,
-                        async ct =>
-                        {
-                            foreach (var mcp in mcpApplicators)
-                            {
-                                await mcp.ApplyAsync(ct);
-                                _interactionService.DisplayMessage(KnownEmojis.CheckMark, mcp.Description);
-                            }
-                        },
-                        promptGroup: McpInitPromptGroup.AdditionalOptions);
-                }
+                combinedMcpApplicator = null;
             }
         }
 
