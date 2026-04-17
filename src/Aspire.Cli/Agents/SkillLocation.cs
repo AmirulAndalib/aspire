@@ -100,4 +100,7 @@ internal sealed class SkillLocation
     /// Gets all available skill locations.
     /// </summary>
     public static IReadOnlyList<SkillLocation> All { get; } = [Standard, ClaudeCode, GitHubSkills, OpenCode];
+
+    /// <inheritdoc />
+    public override string ToString() => Id;
 }
