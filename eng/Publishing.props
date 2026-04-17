@@ -62,6 +62,8 @@
       <_CliPackProjects Include="$(RepoRoot)eng\clipack\Aspire.Cli.*.csproj" />
       <_ExpectedRids Include="@(_CliPackProjects->'%(Filename)'->Replace('Aspire.Cli.', ''))" />
       <_CliToolRidPackageFiles Include="$(ArtifactsPackagesDir)\**\Aspire.Cli.*.nupkg" Exclude="$(ArtifactsPackagesDir)\**\*.symbols.nupkg" />
+      <!-- Include CLI tool packages from signed-archives (non-Windows RIDs downloaded from build_sign_native) -->
+      <_CliToolRidPackageFiles Include="$(_SignedArchivesDir)\**\Aspire.Cli.*.nupkg" Exclude="$(_SignedArchivesDir)\**\*.symbols.nupkg" />
       <_CliToolPointerPackageFiles Include="$(ArtifactsPackagesDir)\**\Aspire.Cli.*.nupkg" Exclude="$(ArtifactsPackagesDir)\**\*.symbols.nupkg" />
       <_CliToolPointerPackageFiles Remove="@(_CliToolPointerPackageFiles)" Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('%(_CliToolPointerPackageFiles.FileName)', '^Aspire\.Cli\.\d+'))" />
     </ItemGroup>
