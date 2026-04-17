@@ -255,12 +255,14 @@ internal sealed partial class AzureKubernetesInfrastructure(
                     ?? environment.Name;
 
                 var azPath = FindAzCli();
-                var resourceGroup = await GetResourceGroupAsync(azPath, clusterName, context)
-                    .ConfigureAwait(false);
 
                 // Defense-in-depth: validate that values used as CLI arguments
                 // contain only expected characters (alphanumeric, hyphens, underscores, dots).
                 ValidateAzureResourceName(clusterName, "cluster name");
+
+                var resourceGroup = await GetResourceGroupAsync(azPath, clusterName, context)
+                    .ConfigureAwait(false);
+
                 ValidateAzureResourceName(resourceGroup, "resource group");
 
                 // Fetch kubeconfig content to stdout using --file - to avoid az CLI

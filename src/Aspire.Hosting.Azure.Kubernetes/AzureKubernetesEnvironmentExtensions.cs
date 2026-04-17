@@ -284,6 +284,17 @@ public static class AzureKubernetesEnvironmentExtensions
         // Set the explicit registry via annotation on both the AKS environment
         // and the inner K8s environment (so KubernetesInfrastructure finds it)
         builder.WithAnnotation(new ContainerRegistryReferenceAnnotation(registry.Resource));
+
+        // Remove any stale container registry annotations from the inner K8s environment
+        // before adding the new one (the default ACR annotation was added during
+        // AddAzureKubernetesEnvironment and now references a removed resource).
+        var staleAnnotations = builder.Resource.KubernetesEnvironment.Annotations
+            .OfType<ContainerRegistryReferenceAnnotation>().ToList();
+        foreach (var old in staleAnnotations)
+        {
+            builder.Resource.KubernetesEnvironment.Annotations.Remove(old);
+        }
+
         builder.Resource.KubernetesEnvironment.Annotations.Add(
             new ContainerRegistryReferenceAnnotation(registry.Resource));
 
@@ -515,12 +526,18 @@ public static class AzureKubernetesEnvironmentExtensions
         {
             Value = new MemberExpression(new MemberExpression(aksId, "properties"), "fqdn")
         });
-        infrastructure.Add(new ProvisioningOutput("oidcIssuerUrl", typeof(string))
+        // OIDC issuer URL and kubelet identity outputs are only valid when the
+        // corresponding features are enabled on the cluster.
+        if (aksResource.OidcIssuerEnabled)
         {
-            Value = new MemberExpression(
-                new MemberExpression(new MemberExpression(aksId, "properties"), "oidcIssuerProfile"),
-                "issuerURL")
-        });
+            infrastructure.Add(new ProvisioningOutput("oidcIssuerUrl", typeof(string))
+            {
+                Value = new MemberExpression(
+                    new MemberExpression(new MemberExpression(aksId, "properties"), "oidcIssuerProfile"),
+                    "issuerURL")
+            });
+        }
+
         infrastructure.Add(new ProvisioningOutput("kubeletIdentityObjectId", typeof(string))
         {
             Value = new MemberExpression(
